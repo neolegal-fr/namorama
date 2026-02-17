@@ -61,6 +61,7 @@ export class WizardComponent implements OnInit {
   // Projets
   projectId = signal<string | null>(null);
   projectName = signal('');
+  isEditingName = signal(false);
 
   // Étape 1
   description = signal('');
@@ -164,6 +165,22 @@ export class WizardComponent implements OnInit {
       this.activeIndex.set(index);
       this.cdr.detectChanges();
     }
+  }
+
+  finishEditingName() {
+    this.isEditingName.set(false);
+    if (this.projectId() && this.projectName()) {
+      this.projectService.updateProject(this.projectId()!, { name: this.projectName() }).subscribe(() => {
+        this.projectService.refreshProjects().subscribe();
+      });
+    }
+  }
+
+  // Gestion des projets
+  openProjects() {
+    this.projectService.refreshProjects().subscribe();
+    this.projectService.showDrawer.set(true);
+    this.cdr.detectChanges();
   }
 
   loadProject(id: string) {
@@ -274,6 +291,8 @@ export class WizardComponent implements OnInit {
       next: (res: { refined: string }) => {
         this.refinedDescription.set(res.refined);
         this.loading.set(false);
+        // Suggérer un nom dès que la description est raffinée
+        this.autoSuggestName(res.refined);
         this.cdr.detectChanges();
       },
       error: () => {
@@ -283,10 +302,30 @@ export class WizardComponent implements OnInit {
     });
   }
 
+  autoSuggestName(description: string) {
+    // Ne suggérer que si le nom est vide ou générique
+    if (!this.projectName() || this.projectName().includes('...')) {
+      this.domainService.suggestProjectName(description).subscribe(res => {
+        if (res.suggestedName) {
+          this.projectName.set(res.suggestedName);
+          this.cdr.detectChanges();
+        }
+      });
+    }
+  }
+
   async goToKeywords() {
     this.loading.set(true);
     this.cdr.detectChanges();
     const descToUse = this.refinedDescription() || this.description();
+    
+    // Suggérer un nom avant de passer aux mots-clés si ce n'est pas déjà fait
+    if (!this.projectName() || this.projectName().includes('...')) {
+      this.domainService.suggestProjectName(descToUse).subscribe(res => {
+        if (res.suggestedName) this.projectName.set(res.suggestedName);
+      });
+    }
+
     this.domainService.generateKeywords(descToUse).subscribe({
       next: (res: { keywords: string[] }) => {
         this.keywords.set(res.keywords);

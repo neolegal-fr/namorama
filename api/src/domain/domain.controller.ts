@@ -22,6 +22,13 @@ export class DomainController {
   }
 
   @Public()
+  @Post('suggest-name')
+  async suggestName(@Body() dto: RefineDescriptionDto) {
+    const suggestedName = await this.domainService.suggestProjectName(dto.description);
+    return { suggestedName };
+  }
+
+  @Public()
   @Post('keywords')
   async generateKeywords(@Body() dto: RefineDescriptionDto) {
     const keywords = await this.domainService.generateKeywords(dto.description);

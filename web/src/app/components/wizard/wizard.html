@@ -1,5 +1,38 @@
 <div class="max-w-4xl mx-auto mt-10 p-4">
-  <p-card [header]="'WIZARD.STEP' + (activeIndex() + 1) + '.TITLE' | translate">
+  <!-- Barre d'outils supérieure avec priorité absolue -->
+  <div class="flex justify-end mb-4 upper-toolbar-container" *ngIf="isLoggedIn()">
+    <button 
+      class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all font-medium"
+      (click)="openProjects()">
+      <i class="pi pi-folder"></i>
+      {{ 'APP.MY_PROJECTS' | translate }}
+    </button>
+  </div>
+
+  <p-card>
+    <ng-template pTemplate="title">
+      <div class="flex items-center gap-3">
+        <!-- Affichage du nom avec clic pour éditer -->
+        <h2 *ngIf="!isEditingName()" 
+            (click)="isEditingName.set(true)" 
+            class="text-2xl font-bold cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-2 group">
+          {{ projectName() || ('WIZARD.STEPS.' + (activeIndex() === 0 ? 'DESCRIPTION' : activeIndex() === 1 ? 'KEYWORDS' : 'DOMAINS') | translate) }}
+          <i class="pi pi-pencil text-sm opacity-0 group-hover:opacity-100 text-gray-400"></i>
+        </h2>
+
+        <!-- Mode édition du nom -->
+        <div *ngIf="isEditingName()" class="flex items-center gap-2 w-full max-w-md">
+          <input pInputText 
+                 [(ngModel)]="projectName" 
+                 (keydown.enter)="finishEditingName()" 
+                 (blur)="finishEditingName()"
+                 class="w-full text-xl font-bold"
+                 autoFocus>
+          <p-button icon="pi pi-check" severity="success" [text]="true" (onClick)="finishEditingName()"></p-button>
+        </div>
+      </div>
+    </ng-template>
+
     <p-steps [model]="items" [activeIndex]="activeIndex()" (activeIndexChange)="onStepChange($event)"></p-steps>
 
     <div class="mt-8">
@@ -7,12 +40,7 @@
       <div *ngIf="activeIndex() === 0" class="flex flex-col gap-4">
         <h3 class="text-xl font-semibold">{{ 'WIZARD.STEP1.TITLE' | translate }}</h3>
         
-        <div class="flex flex-col gap-2">
-          <label class="font-bold text-sm text-gray-600">{{ 'WIZARD.STEP1.PROJECT_NAME_TITLE' | translate }}</label>
-          <input pInputText type="text" [(ngModel)]="projectName" class="w-full" [placeholder]="'WIZARD.STEP1.PROJECT_NAME_TITLE' | translate">
-        </div>
-
-        <p class="text-gray-600 mt-2">{{ 'WIZARD.STEP1.SUBTITLE' | translate }}</p>
+        <p class="text-gray-600">{{ 'WIZARD.STEP1.SUBTITLE' | translate }}</p>
         <textarea 
           pInputTextarea 
           [(ngModel)]="description" 
@@ -179,7 +207,7 @@
   </p-drawer>
 
   <!-- Dialogue d'achat de crédits factice sécurisé -->
-  <p-dialog [header]="'WIZARD.CREDIT_DIALOG.TITLE' | translate" [(visible)]="showCreditDialog" [modal]="true" [style]="{ width: '25rem' }" [appendTo]="'body'">
+  <p-dialog [header]="'WIZARD.CREDIT_DIALOG.TITLE' | translate" [visible]="showCreditDialog()" (visibleChange)="showCreditDialog.set($event)" [modal]="true" [style]="{ width: '25rem' }" [appendTo]="'body'">
     <span class="p-text-secondary block mb-5">{{ 'WIZARD.CREDIT_DIALOG.MESSAGE' | translate }}</span>
     <div class="flex items-center gap-3 mb-5">
         <label for="credits" class="font-semibold w-24">{{ 'WIZARD.CREDIT_DIALOG.QUANTITY' | translate }}</label>

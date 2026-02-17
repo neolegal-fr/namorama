@@ -24,6 +24,10 @@ export class ProjectService {
     return this.http.get<any>(`${this.apiUrl}/${id}`);
   }
 
+  updateProject(id: string, data: any): Observable<any> {
+    return this.http.patch<any>(`${this.apiUrl}/${id}`, data);
+  }
+
   toggleFavorite(suggestionId: string): Observable<{ isFavorite: boolean }> {
     return this.http.patch<{ isFavorite: boolean }>(`${this.apiUrl}/suggestions/${suggestionId}/favorite`, {});
   }

@@ -81,17 +81,44 @@ export class ProjectsService {
     await this.suggestionsRepository.save(suggestions);
   }
 
-  async toggleFavorite(suggestionId: string, user: User): Promise<boolean> {
-    const suggestion = await this.suggestionsRepository.findOne({
-      where: { id: suggestionId, project: { user: { id: user.id } } },
-    });
+    async toggleFavorite(suggestionId: string, user: User): Promise<boolean> {
 
-    if (!suggestion) {
-      throw new NotFoundException('Suggestion non trouvée');
+      const suggestion = await this.suggestionsRepository.findOne({
+
+        where: { id: suggestionId, project: { user: { id: user.id } } },
+
+      });
+
+  
+
+      if (!suggestion) {
+
+        throw new NotFoundException('Suggestion non trouvée');
+
+      }
+
+  
+
+      suggestion.isFavorite = !suggestion.isFavorite;
+
+      await this.suggestionsRepository.save(suggestion);
+
+      return suggestion.isFavorite;
+
     }
 
-    suggestion.isFavorite = !suggestion.isFavorite;
-    await this.suggestionsRepository.save(suggestion);
-    return suggestion.isFavorite;
+  
+
+    async update(id: string, user: User, data: Partial<Project>): Promise<Project> {
+
+      const project = await this.findOne(id, user);
+
+      Object.assign(project, data);
+
+      return this.projectsRepository.save(project);
+
+    }
+
   }
-}
+
+  

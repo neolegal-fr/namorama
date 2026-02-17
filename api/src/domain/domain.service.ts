@@ -39,6 +39,27 @@ export class DomainService {
     }
   }
 
+  async suggestProjectName(description: string): Promise<string> {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'Tu es un expert en branding. Suggère UNIQUEMENT un seul mot (nom propre ou mot inventé) qui soit extrêmement évocateur, moderne et mémorisable pour le projet décrit. Pas de ponctuation, pas de phrase.',
+          },
+          { role: 'user', content: description },
+        ],
+        max_tokens: 10,
+      });
+
+      return response.choices[0].message.content?.trim().replace(/[^a-zA-Z0-9]/g, '') ?? '';
+    } catch (error) {
+      this.logger.error('Erreur lors de la suggestion du nom de projet:', error);
+      return '';
+    }
+  }
+
   async generateKeywords(description: string): Promise<string[]> {
     try {
       const response = await this.openai.chat.completions.create({

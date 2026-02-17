@@ -14,6 +14,10 @@ export class DomainService {
     return this.http.post<{ refined: string }>(`${this.apiUrl}/refine`, { description });
   }
 
+  suggestProjectName(description: string): Observable<{ suggestedName: string }> {
+    return this.http.post<{ suggestedName: string }>(`${this.apiUrl}/suggest-name`, { description });
+  }
+
     generateKeywords(description: string): Observable<{ keywords: string[] }> {
 
       return this.http.post<{ keywords: string[] }>(`${this.apiUrl}/keywords`, { description });
