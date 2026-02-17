@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@import "primeicons/primeicons.css";
+
+/* Configuration de Tailwind 4 pour Angular */
+@source "./src/**/*.{html,ts}";
+
+body {
+    margin: 0;
+    font-family: var(--font-family, sans-serif);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}

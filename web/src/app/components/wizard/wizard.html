@@ -1,0 +1,100 @@
+<div class="max-w-4xl mx-auto mt-10 p-4">
+  <p-card header="Namespoter - Trouvez votre domaine idéal">
+    <p-steps [model]="items" [(activeIndex)]="activeIndex" [readonly]="true"></p-steps>
+
+    <div class="mt-8">
+      <!-- Étape 1 : Description -->
+      <div *ngIf="activeIndex() === 0" class="flex flex-col gap-4">
+        <h3 class="text-xl font-semibold">Décrivez votre projet</h3>
+        <p class="text-gray-600">Expliquez ce que vous faites, votre cible et vos valeurs.</p>
+        
+        <textarea 
+          pInputTextarea 
+          [(ngModel)]="description" 
+          rows="5" 
+          class="w-full p-3 border rounded-md"
+          placeholder="Ex: Une plateforme de livraison de fleurs locales et éco-responsables...">
+        </textarea>
+
+        <div class="flex justify-between items-center mt-4">
+          <p-button 
+            label="Reformuler avec l'IA" 
+            icon="pi pi-sparkles" 
+            [loading]="loading()" 
+            (onClick)="refine()"
+            severity="secondary">
+          </p-button>
+          
+          <p-button 
+            label="Continuer vers les mots-clés" 
+            icon="pi pi-arrow-right" 
+            [disabled]="!description()" 
+            [loading]="loading()"
+            (onClick)="goToKeywords()">
+          </p-button>
+        </div>
+
+        <div *ngIf="refinedDescription()" class="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+          <h4 class="font-bold text-blue-700 mb-2">Reformulation suggérée :</h4>
+          <p class="italic text-gray-800">{{ refinedDescription() }}</p>
+          <div class="mt-2 text-right">
+             <p-button label="Utiliser cette version" severity="info" size="small" (onClick)="description.set(refinedDescription())"></p-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Étape 2 : Mots-clés -->
+      <div *ngIf="activeIndex() === 1" class="flex flex-col gap-4">
+        <h3 class="text-xl font-semibold">Vos mots-clés</h3>
+        <p class="text-gray-600">L'IA a identifié ces termes. Vous pouvez en ajouter ou en supprimer.</p>
+        
+        <div class="flex gap-2">
+          <input pInputText type="text" [(ngModel)]="newKeyword" class="flex-1" placeholder="Ajouter un mot-clé..." (keydown.enter)="addKeyword()">
+          <p-button icon="pi pi-plus" (onClick)="addKeyword()"></p-button>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mt-4">
+          <p-chip *ngFor="let keyword of keywords()" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
+        </div>
+
+        <div class="flex justify-between mt-6">
+          <p-button label="Retour" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
+          <p-button 
+            label="Rechercher des domaines" 
+            icon="pi pi-search" 
+            [loading]="loading()"
+            (onClick)="findDomains()">
+          </p-button>
+        </div>
+      </div>
+
+      <!-- Étape 3 : Résultats -->
+      <div *ngIf="activeIndex() === 2" class="flex flex-col gap-4">
+        <h3 class="text-xl font-semibold text-green-600">Domaines .com disponibles</h3>
+        <p class="text-gray-600">Voici nos suggestions pour votre projet.</p>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div *ngFor="let domain of domains()" class="p-4 border rounded-lg bg-white shadow-sm flex justify-between items-center hover:border-blue-500 transition-colors">
+            <span class="text-lg font-mono font-medium">{{ domain }}</span>
+            <p-button icon="pi pi-external-link" severity="success" size="small" [text]="true" label="Acheter"></p-button>
+          </div>
+        </div>
+
+        <div *ngIf="domains().length === 0 && !loading()" class="text-center py-10">
+          <p class="text-gray-500">Aucun domaine trouvé. Essayez de changer vos mots-clés.</p>
+        </div>
+
+        <div class="flex justify-center mt-8">
+          <p-button label="Recommencer" icon="pi pi-refresh" severity="secondary" (onClick)="activeIndex.set(0)"></p-button>
+        </div>
+      </div>
+    </div>
+  </p-card>
+
+  <div *ngIf="loading()" class="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
+     <div class="text-center">
+        <p-progressSpinner></p-progressSpinner>
+        <p class="mt-4 font-semibold text-blue-600">L'IA travaille pour vous...</p>
+     </div>
+  </div>
+</div>
