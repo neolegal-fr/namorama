@@ -113,11 +113,11 @@
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-result>
-              <tr [class.!bg-green-100]="isFullyAvailable(result)">
-                <td class="font-bold text-lg font-mono">{{ result.name }}</td>
+              <tr>
+                <td class="font-bold text-lg font-mono" [style.color]="isFullyAvailable(result) ? '#16a34a' : null">{{ result.name }}</td>
                 <td *ngFor="let ext of selectedExtensions()" class="text-center">
-                  <i *ngIf="result.allExtensions[ext]" class="pi pi-check-square text-green-600 text-2xl" title="Disponible"></i>
-                  <i *ngIf="!result.allExtensions[ext]" class="pi pi-times-circle text-red-400 text-xl" title="Indisponible"></i>
+                  <i *ngIf="result.allExtensions[ext]" class="pi pi-check text-2xl font-bold" [style.color]="isFullyAvailable(result) ? '#16a34a' : '#22c55e'" title="Disponible"></i>
+                  <i *ngIf="!result.allExtensions[ext]" class="pi pi-times text-red-400 text-xl" title="Indisponible"></i>
                 </td>
               </tr>
             </ng-template>
