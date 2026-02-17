@@ -57,6 +57,7 @@ export class WizardComponent implements OnInit {
 
   // Étape 3
   domains = signal<string[]>([]);
+  totalChecked = signal(0);
 
   constructor(
     private domainService: DomainService,
@@ -163,6 +164,7 @@ export class WizardComponent implements OnInit {
     this.loading.set(true);
     this.domainService.searchDomains(this.refinedDescription() || this.description(), this.keywords()).subscribe({
       next: (res: any) => {
+        this.totalChecked.set(res.totalChecked || 0);
         if (append) {
           this.domains.update(d => [...new Set([...d, ...res.domains])]);
         } else {

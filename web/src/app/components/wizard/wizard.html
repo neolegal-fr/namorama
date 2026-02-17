@@ -73,6 +73,10 @@
         <h3 class="text-xl font-semibold text-green-600">Domaines .com disponibles</h3>
         <p class="text-gray-600">Voici nos suggestions pour votre projet.</p>
 
+        <div *ngIf="domains().length > 0 && domains().length < 10" class="p-3 bg-amber-50 border-l-4 border-amber-400 rounded text-sm text-amber-800 italic">
+          Note : Nous avons analysé {{ totalChecked() }} idées de noms, mais seulement {{ domains().length }} étaient réellement disponibles en .com.
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           <div *ngFor="let domain of domains()" class="p-4 border rounded-lg bg-white shadow-sm flex justify-between items-center hover:border-blue-500 transition-colors">
             <span class="text-lg font-mono font-medium">{{ domain }}</span>

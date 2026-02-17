@@ -69,7 +69,7 @@ export class DomainService {
     const vocabStr = keywords.join(', ');
     const prompt = `
       Tu es un expert en branding et naming de classe mondiale. 
-      Ta mission est de générer 20 noms de marque percutants pour le projet suivant :
+      Ta mission est de générer 30 noms de marque percutants pour le projet suivant :
       Description : "${description}"
       Mots-clés sémantiques : ${vocabStr}
 
@@ -93,8 +93,8 @@ export class DomainService {
       const response = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 500,
-        temperature: 0.9, // Favorise l'originalité marketing
+        max_tokens: 600,
+        temperature: 0.95, // Légèrement augmenté pour plus de variété
         response_format: { type: 'json_object' }
       });
 
@@ -145,32 +145,86 @@ export class DomainService {
     }
   }
 
-  async findAvailableDomains(description: string, keywords: string[], targetCount = 10): Promise<string[]> {
-    const availableDomains: string[] = [];
-    let attempts = 0;
-    const maxAttempts = 2;
+    async findAvailableDomains(description: string, keywords: string[], targetCount = 10): Promise<{ domains: string[], totalChecked: number }> {
 
-    while (availableDomains.length < targetCount && attempts < maxAttempts) {
-      const ideas = await this.generateDomainIdeas(description, keywords);
-      
-      const batchSize = 5;
-      for (let i = 0; i < ideas.length; i += batchSize) {
-        if (availableDomains.length >= targetCount) break;
+      const availableDomains: string[] = [];
+
+      const checkedDomains = new Set<string>();
+
+      let attempts = 0;
+
+      const maxAttempts = 5;
+
+  
+
+      while (availableDomains.length < targetCount && attempts < maxAttempts) {
+
+        const ideas = await this.generateDomainIdeas(description, keywords);
+
         
-        const batch = ideas.slice(i, i + batchSize);
-        const results = await Promise.all(
-          batch.map(domain => this.isDomainAvailable(domain))
-        );
 
-        batch.forEach((domain, idx) => {
-          if (results[idx] && availableDomains.length < targetCount) {
-            availableDomains.push(domain);
-          }
-        });
+        const newIdeas = ideas.filter(domain => !checkedDomains.has(domain));
+
+        newIdeas.forEach(domain => checkedDomains.add(domain));
+
+  
+
+        if (newIdeas.length === 0) {
+
+          attempts++;
+
+          continue;
+
+        }
+
+  
+
+        const batchSize = 5;
+
+        for (let i = 0; i < newIdeas.length; i += batchSize) {
+
+          if (availableDomains.length >= targetCount) break;
+
+          
+
+          const batch = newIdeas.slice(i, i + batchSize);
+
+          const results = await Promise.all(
+
+            batch.map(domain => this.isDomainAvailable(domain))
+
+          );
+
+  
+
+          batch.forEach((domain, idx) => {
+
+            if (results[idx] && availableDomains.length < targetCount) {
+
+              availableDomains.push(domain);
+
+            }
+
+          });
+
+        }
+
+        attempts++;
+
       }
-      attempts++;
+
+  
+
+      return {
+
+        domains: availableDomains,
+
+        totalChecked: checkedDomains.size
+
+      };
+
     }
 
-    return availableDomains;
   }
-}
+
+  

@@ -39,7 +39,8 @@ export class DomainController {
     const limit = Math.min(10, currentCredits);
 
     // 3. Trouver les domaines
-    const domains = await this.domainService.findAvailableDomains(dto.description, dto.keywords, limit);
+    const result = await this.domainService.findAvailableDomains(dto.description, dto.keywords, limit);
+    const { domains, totalChecked } = result;
     
     // 4. Débiter le montant réel
     const actualCost = domains.length;
@@ -49,6 +50,7 @@ export class DomainController {
 
     return { 
       domains,
+      totalChecked,
       creditsDebited: actualCost,
       remainingCredits: currentCredits - actualCost
     };
