@@ -1,10 +1,10 @@
 <div class="w-full">
   <p-card styleClass="p-4 md:p-8">
-    <div class="w-full text-center mb-10" *ngIf="activeIndex() > 0">
+    <div class="w-full mb-10" style="text-align: center" *ngIf="activeIndex() > 0">
       <!-- Affichage du nom avec clic pour éditer -->
-      <div *ngIf="!isEditingName()" 
-           (click)="isEditingName.set(true)" 
-           class="group cursor-pointer inline-flex items-center justify-center gap-3">
+      <div *ngIf="!isEditingName()"
+           (click)="isEditingName.set(true)"
+           class="group cursor-pointer inline-flex items-center gap-3">
         <h2 class="text-2xl md:text-4xl font-black text-surface-900 tracking-tight">
           {{ projectName() || ('WIZARD.STEPS.' + (activeIndex() === 0 ? 'DESCRIPTION' : activeIndex() === 1 ? 'KEYWORDS' : 'DOMAINS') | translate) }}
         </h2>
@@ -121,7 +121,7 @@
       </div>
 
       <!-- Étape 3 : Résultats -->
-      <div *ngIf="activeIndex() === 2" class="flex flex-col gap-4">
+      <div *ngIf="activeIndex() === 2" class="flex flex-col gap-4" style="align-items: center; text-align: center">
         <h3 class="text-xl font-semibold text-green-600">{{ 'WIZARD.STEP3.TITLE' | translate:{ extensions: selectedExtensions().join(', ') } }}</h3>
         <p class="text-gray-600">{{ 'WIZARD.STEP3.SUBTITLE' | translate }}</p>
 
@@ -129,40 +129,38 @@
           {{ 'WIZARD.STEP3.NOTE' | translate:{ total: totalChecked(), count: domains().length } }}
         </div>
 
-        <div class="mt-6 max-w-2xl mx-auto border rounded-lg overflow-hidden shadow-sm bg-white">
-          <div class="overflow-x-auto">
-            <p-table [value]="domains()" [responsiveLayout]="'scroll'" styleClass="p-datatable-sm">
+        <div class="mt-6 border rounded-lg shadow-sm bg-white overflow-x-auto" style="width: 100%; max-width: 36rem; margin: 0 auto">
+            <p-table [value]="domains()" styleClass="p-datatable-sm">
               <ng-template pTemplate="header">
                 <tr>
-                  <th class="bg-gray-50 min-w-[150px]">Nom de domaine</th>
-                  <th *ngFor="let ext of selectedExtensions()" class="text-center bg-gray-50">{{ ext }}</th>
+                  <th class="bg-gray-50 min-w-[100px] md:min-w-[150px]">Nom de domaine</th>
+                  <th *ngFor="let ext of selectedExtensions()" class="text-center bg-gray-50 px-1 md:px-3">{{ ext }}</th>
                 </tr>
               </ng-template>
               <ng-template pTemplate="body" let-result>
                 <tr class="hover:bg-gray-50 transition-colors">
-                  <td class="font-bold text-base md:text-lg font-mono py-2 md:py-3">
-                    <div class="flex items-center">
-                      <button (click)="toggleFavorite(result)" class="text-xl transition-transform active:scale-125 mr-2 md:mr-4">
+                  <td class="font-bold text-sm md:text-lg font-mono py-2 md:py-3 px-2 md:px-4">
+                    <div class="flex items-center" style="gap: 0.75rem">
+                      <button (click)="toggleFavorite(result)" class="text-lg md:text-xl transition-transform active:scale-125 shrink-0">
                         <i class="pi" [class.pi-heart-fill]="result.isFavorite" [class.pi-heart]="!result.isFavorite" [style.color]="result.isFavorite ? '#ef4444' : '#9ca3af'"></i>
                       </button>
-                      <span [style.color]="isFullyAvailable(result) ? '#16a34a' : null">{{ result.name }}</span>
+                      <span class="truncate" [style.color]="isFullyAvailable(result) ? '#16a34a' : null">{{ result.name }}</span>
                     </div>
                   </td>
                   <td *ngFor="let ext of selectedExtensions()" class="text-center px-1">
-                    <i *ngIf="result.allExtensions[ext]" class="pi pi-check text-xl font-bold" [style.color]="isFullyAvailable(result) ? '#16a34a' : '#22c55e'" title="Disponible"></i>
-                    <i *ngIf="!result.allExtensions[ext]" class="pi pi-times text-red-400 text-lg" title="Indisponible"></i>
+                    <i *ngIf="result.allExtensions[ext]" class="pi pi-check text-lg md:text-xl font-bold" [style.color]="isFullyAvailable(result) ? '#16a34a' : '#22c55e'" title="Disponible"></i>
+                    <i *ngIf="!result.allExtensions[ext]" class="pi pi-times text-red-400 text-base md:text-lg" title="Indisponible"></i>
                   </td>
                 </tr>
               </ng-template>
             </p-table>
-          </div>
         </div>
 
         <div *ngIf="domains().length === 0 && !loading()" class="text-center py-10">
           <p class="text-gray-500">{{ 'WIZARD.STEP3.NO_RESULTS' | translate }}</p>
         </div>
 
-        <div class="flex flex-col md:flex-row justify-center gap-4 mt-8">
+        <div class="flex flex-col md:flex-row gap-4 mt-8" style="justify-content: center">
           <p-button 
             [label]="'WIZARD.STEP3.MORE_BTN' | translate" 
             icon="pi pi-plus-circle" 
