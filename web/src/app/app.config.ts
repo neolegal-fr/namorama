@@ -5,13 +5,28 @@ import { provideAnimations } from '@angular/platform-browser/animations';
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
 import { KeycloakService, KeycloakBearerInterceptor } from 'keycloak-angular';
-import { HTTP_INTERCEPTORS } from '@angular/common/http';
+import { HTTP_INTERCEPTORS, HttpClient } from '@angular/common/http';
+import { TranslateModule, TranslateLoader, TranslateService } from '@ngx-translate/core';
+import { importProvidersFrom } from '@angular/core';
+import { Observable } from 'rxjs';
 
 import { routes } from './app.routes';
 
-function initializeKeycloak(keycloak: KeycloakService) {
-  return () =>
-    keycloak.init({
+export class CustomTranslateLoader implements TranslateLoader {
+  constructor(private http: HttpClient) {}
+  getTranslation(lang: string): Observable<any> {
+    return this.http.get(`./assets/i18n/${lang}.json`);
+  }
+}
+
+export function HttpLoaderFactory(http: HttpClient) {
+  return new CustomTranslateLoader(http);
+}
+
+function initializeApp(keycloak: KeycloakService, translate: TranslateService) {
+  return async () => {
+    // 1. Initialiser Keycloak
+    await keycloak.init({
       config: {
         url: 'http://localhost:8080',
         realm: 'namespoter',
@@ -25,6 +40,14 @@ function initializeKeycloak(keycloak: KeycloakService) {
       },
       bearerExcludedUrls: ['/assets']
     });
+
+    // 2. Initialiser la langue
+    translate.addLangs(['fr', 'en']);
+    translate.setDefaultLang('fr');
+    
+    const browserLang = translate.getBrowserLang();
+    translate.use(browserLang?.match(/en|fr/) ? browserLang : 'fr');
+  };
 }
 
 export const appConfig: ApplicationConfig = {
@@ -38,11 +61,20 @@ export const appConfig: ApplicationConfig = {
             preset: Aura
         }
     }),
+    importProvidersFrom(
+      TranslateModule.forRoot({
+        loader: {
+          provide: TranslateLoader,
+          useFactory: HttpLoaderFactory,
+          deps: [HttpClient]
+        }
+      })
+    ),
     {
       provide: APP_INITIALIZER,
-      useFactory: initializeKeycloak,
+      useFactory: initializeApp,
       multi: true,
-      deps: [KeycloakService]
+      deps: [KeycloakService, TranslateService]
     },
     KeycloakService,
     {

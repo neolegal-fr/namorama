@@ -38,18 +38,24 @@ export class DomainController {
     // 2. Limiter la recherche à ce que l'utilisateur peut s'offrir (max 10 par requête)
     const limit = Math.min(10, currentCredits);
 
-    // 3. Trouver les domaines
-    const result = await this.domainService.findAvailableDomains(dto.description, dto.keywords, limit);
-    const { domains, totalChecked } = result;
+    // 3. Trouver les domaines avec support multi-extensions
+    const result = await this.domainService.findAvailableDomains(
+      dto.description, 
+      dto.keywords, 
+      limit,
+      dto.extensions,
+      dto.matchMode
+    );
+    const { results, totalChecked } = result;
     
     // 4. Débiter le montant réel
-    const actualCost = domains.length;
+    const actualCost = results.length;
     if (actualCost > 0) {
       await this.usersService.decrementCredits(user.sub, actualCost);
     }
 
     return { 
-      domains,
+      domains: results, // Maintenant une liste d'objets avec détail des extensions
       totalChecked,
       creditsDebited: actualCost,
       remainingCredits: currentCredits - actualCost

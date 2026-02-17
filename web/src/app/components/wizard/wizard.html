@@ -1,24 +1,24 @@
 <div class="max-w-4xl mx-auto mt-10 p-4">
-  <p-card header="Namespoter - Trouvez votre domaine idéal">
+  <p-card [header]="'WIZARD.STEP' + (activeIndex() + 1) + '.TITLE' | translate">
     <p-steps [model]="items" [activeIndex]="activeIndex()" (activeIndexChange)="onStepChange($event)"></p-steps>
 
     <div class="mt-8">
       <!-- Étape 1 : Description -->
       <div *ngIf="activeIndex() === 0" class="flex flex-col gap-4">
-        <h3 class="text-xl font-semibold">Décrivez votre projet</h3>
-        <p class="text-gray-600">Expliquez ce que vous faites, votre cible et vos valeurs.</p>
+        <h3 class="text-xl font-semibold">{{ 'WIZARD.STEP1.TITLE' | translate }}</h3>
+        <p class="text-gray-600">{{ 'WIZARD.STEP1.SUBTITLE' | translate }}</p>
         
         <textarea 
           pInputTextarea 
           [(ngModel)]="description" 
           rows="5" 
           class="w-full p-3 border rounded-md"
-          placeholder="Ex: Une plateforme de livraison de fleurs locales et éco-responsables...">
+          [placeholder]="'WIZARD.STEP1.PLACEHOLDER' | translate">
         </textarea>
 
         <div class="flex justify-between items-center mt-4">
           <p-button 
-            label="Reformuler avec l'IA" 
+            [label]="'WIZARD.STEP1.REFINE_BTN' | translate" 
             icon="pi pi-sparkles" 
             [loading]="loading()" 
             (onClick)="refine()"
@@ -26,7 +26,7 @@
           </p-button>
           
           <p-button 
-            label="Continuer vers les mots-clés" 
+            [label]="'WIZARD.STEP1.CONTINUE_BTN' | translate" 
             icon="pi pi-arrow-right" 
             [disabled]="!description()" 
             [loading]="loading()"
@@ -35,33 +35,60 @@
         </div>
 
         <div *ngIf="refinedDescription()" class="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
-          <h4 class="font-bold text-blue-700 mb-2">Reformulation suggérée :</h4>
+          <h4 class="font-bold text-blue-700 mb-2">{{ 'WIZARD.STEP1.SUGGESTION_TITLE' | translate }}</h4>
           <p class="italic text-gray-800">{{ refinedDescription() }}</p>
           <div class="mt-2 text-right">
-             <p-button label="Utiliser cette version" severity="info" size="small" (onClick)="description.set(refinedDescription())"></p-button>
+             <p-button [label]="'WIZARD.STEP1.USE_VERSION' | translate" severity="info" size="small" (onClick)="description.set(refinedDescription())"></p-button>
           </div>
         </div>
       </div>
 
-      <!-- Étape 2 : Mots-clés -->
-      <div *ngIf="activeIndex() === 1" class="flex flex-col gap-4">
-        <h3 class="text-xl font-semibold">Vos mots-clés</h3>
-        <p class="text-gray-600">L'IA a identifié ces termes. Vous pouvez en ajouter ou en supprimer.</p>
-        
-        <div class="flex gap-2">
-          <input pInputText type="text" [(ngModel)]="newKeyword" class="flex-1" placeholder="Ajouter un mot-clé..." (keydown.enter)="addKeyword()">
-          <p-button icon="pi pi-plus" (onClick)="addKeyword()"></p-button>
+      <!-- Étape 2 : Configuration (Mots-clés + Extensions) -->
+      <div *ngIf="activeIndex() === 1" class="flex flex-col gap-6">
+        <div>
+          <h3 class="text-xl font-semibold">{{ 'WIZARD.STEP2.TITLE' | translate }}</h3>
+          <p class="text-gray-600">{{ 'WIZARD.STEP2.SUBTITLE' | translate }}</p>
         </div>
 
-        <div class="flex flex-wrap gap-2 mt-4">
-          <p-chip *ngFor="let keyword of keywords()" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <!-- Colonne Mots-clés -->
+          <div class="flex flex-col gap-4">
+            <h4 class="font-bold border-b pb-2">{{ 'WIZARD.STEP2.KEYWORDS_TITLE' | translate }}</h4>
+            <div class="flex gap-2">
+              <input pInputText type="text" [(ngModel)]="newKeyword" class="flex-1" [placeholder]="'WIZARD.STEP2.ADD_PLACEHOLDER' | translate" (keydown.enter)="addKeyword()">
+              <p-button icon="pi pi-plus" (onClick)="addKeyword()"></p-button>
+            </div>
+            <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-gray-50 rounded border">
+              <p-chip *ngFor="let keyword of keywords()" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
+            </div>
+          </div>
+
+          <!-- Colonne Extensions -->
+          <div class="flex flex-col gap-4">
+            <h4 class="font-bold border-b pb-2">{{ 'WIZARD.STEP2.EXTENSIONS_TITLE' | translate }}</h4>
+            <p-multiSelect 
+              [options]="availableExtensions" 
+              [(ngModel)]="selectedExtensions" 
+              optionLabel="label" 
+              optionValue="value"
+              class="w-full">
+            </p-multiSelect>
+
+            <h4 class="font-bold border-b pb-2 mt-2">{{ 'WIZARD.STEP2.MATCH_MODE' | translate }}</h4>
+            <p-selectButton 
+              [options]="matchOptions()" 
+              [(ngModel)]="matchMode" 
+              class="w-full">
+            </p-selectButton>
+          </div>
         </div>
 
-        <div class="flex justify-between mt-6">
-          <p-button label="Retour" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
+        <div class="flex justify-between mt-6 pt-6 border-t">
+          <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
           <p-button 
-            label="Rechercher des domaines" 
+            [label]="'WIZARD.STEP2.SEARCH_BTN' | translate" 
             icon="pi pi-search" 
+            [disabled]="selectedExtensions().length === 0"
             [loading]="loading()"
             (onClick)="findDomains()">
           </p-button>
@@ -70,26 +97,35 @@
 
       <!-- Étape 3 : Résultats -->
       <div *ngIf="activeIndex() === 2" class="flex flex-col gap-4">
-        <h3 class="text-xl font-semibold text-green-600">Domaines .com disponibles</h3>
-        <p class="text-gray-600">Voici nos suggestions pour votre projet.</p>
+        <h3 class="text-xl font-semibold text-green-600">{{ 'WIZARD.STEP3.TITLE' | translate }}</h3>
+        <p class="text-gray-600">{{ 'WIZARD.STEP3.SUBTITLE' | translate }}</p>
 
         <div *ngIf="domains().length > 0 && domains().length < 10" class="p-3 bg-amber-50 border-l-4 border-amber-400 rounded text-sm text-amber-800 italic">
-          Note : Nous avons analysé {{ totalChecked() }} idées de noms, mais seulement {{ domains().length }} étaient réellement disponibles en .com.
+          {{ 'WIZARD.STEP3.NOTE' | translate:{ total: totalChecked(), count: domains().length } }}
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div *ngFor="let domain of domains()" class="p-4 border rounded-lg bg-white shadow-sm flex justify-between items-center hover:border-blue-500 transition-colors">
-            <span class="text-lg font-mono font-medium">{{ domain }}</span>
+          <div *ngFor="let result of domains()" class="p-4 border rounded-lg bg-white shadow-sm flex flex-col gap-3 hover:border-blue-500 transition-colors">
+            <span class="text-xl font-mono font-bold text-gray-800">{{ result.name }}</span>
+            <div class="flex flex-wrap gap-2">
+              <p-tag 
+                *ngFor="let ext of selectedExtensions()" 
+                [value]="ext" 
+                [severity]="result.allExtensions[ext] ? 'success' : 'secondary'"
+                [icon]="result.allExtensions[ext] ? 'pi pi-check' : 'pi pi-times'"
+                class="opacity-80">
+              </p-tag>
+            </div>
           </div>
         </div>
 
         <div *ngIf="domains().length === 0 && !loading()" class="text-center py-10">
-          <p class="text-gray-500">Aucun domaine trouvé. Essayez de changer vos mots-clés.</p>
+          <p class="text-gray-500">{{ 'WIZARD.STEP3.NO_RESULTS' | translate }}</p>
         </div>
 
         <div class="flex flex-col md:flex-row justify-center gap-4 mt-8">
           <p-button 
-            label="Plus de suggestions" 
+            [label]="'WIZARD.STEP3.MORE_BTN' | translate" 
             icon="pi pi-plus-circle" 
             severity="info" 
             [loading]="loading()"
@@ -97,7 +133,7 @@
           </p-button>
           
           <p-button 
-            label="Nouveau projet" 
+            [label]="'WIZARD.STEP3.NEW_PROJECT_BTN' | translate" 
             icon="pi pi-refresh" 
             severity="secondary" 
             (onClick)="resetProject()">
@@ -108,22 +144,22 @@
   </p-card>
 
   <!-- Dialogue d'achat de crédits factice -->
-  <p-dialog header="Crédits insuffisants" [(visible)]="showCreditDialog" [modal]="true" [style]="{ width: '25rem' }">
-    <span class="p-text-secondary block mb-5">Vous n'avez plus assez de crédits. Combien voulez-vous en acheter (test) ?</span>
+  <p-dialog [header]="'WIZARD.CREDIT_DIALOG.TITLE' | translate" [(visible)]="showCreditDialog" [modal]="true" [style]="{ width: '25rem' }">
+    <span class="p-text-secondary block mb-5">{{ 'WIZARD.CREDIT_DIALOG.MESSAGE' | translate }}</span>
     <div class="flex items-center gap-3 mb-5">
-        <label for="credits" class="font-semibold w-24">Quantité</label>
+        <label for="credits" class="font-semibold w-24">{{ 'WIZARD.CREDIT_DIALOG.QUANTITY' | translate }}</label>
         <p-inputNumber [(ngModel)]="creditsToBuy" inputId="credits" class="flex-auto" [min]="1"></p-inputNumber>
     </div>
     <div class="flex justify-end gap-2">
-        <p-button label="Annuler" severity="secondary" (onClick)="showCreditDialog.set(false)" />
-        <p-button label="Acheter" (onClick)="buyCredits()" />
+        <p-button [label]="'WIZARD.CREDIT_DIALOG.CANCEL' | translate" severity="secondary" (onClick)="showCreditDialog.set(false)" />
+        <p-button [label]="'WIZARD.CREDIT_DIALOG.BUY' | translate" (onClick)="buyCredits()" />
     </div>
   </p-dialog>
 
   <div *ngIf="loading()" class="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
      <div class="text-center">
         <p-progressSpinner></p-progressSpinner>
-        <p class="mt-4 font-semibold text-blue-600">L'IA travaille pour vous...</p>
+        <p class="mt-4 font-semibold text-blue-600">{{ 'WIZARD.LOADING' | translate }}</p>
      </div>
   </div>
 </div>

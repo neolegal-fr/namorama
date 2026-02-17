@@ -14,11 +14,20 @@ export class DomainService {
     return this.http.post<{ refined: string }>(`${this.apiUrl}/refine`, { description });
   }
 
-  generateKeywords(description: string): Observable<{ keywords: string[] }> {
-    return this.http.post<{ keywords: string[] }>(`${this.apiUrl}/keywords`, { description });
+    generateKeywords(description: string): Observable<{ keywords: string[] }> {
+
+      return this.http.post<{ keywords: string[] }>(`${this.apiUrl}/keywords`, { description });
+
+    }
+
+  
+
+    searchDomains(description: string, keywords: string[], extensions: string[], matchMode: string): Observable<any> {
+
+      return this.http.post<any>(`${this.apiUrl}/search`, { description, keywords, extensions, matchMode });
+
+    }
+
   }
 
-  searchDomains(description: string, keywords: string[]): Observable<{ domains: string[] }> {
-    return this.http.post<{ domains: string[] }>(`${this.apiUrl}/search`, { description, keywords });
-  }
-}
+  

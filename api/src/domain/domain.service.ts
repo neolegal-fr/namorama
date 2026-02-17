@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { MatchMode } from './dto/search-domains.dto';
 
 const execAsync = promisify(exec);
 
@@ -53,7 +54,7 @@ export class DomainService {
           { role: 'user', content: description },
         ],
         max_tokens: 300,
-        temperature: 0.8, // Augmenté pour plus de diversité
+        temperature: 0.8,
       });
 
       const content = response.choices[0].message.content;
@@ -85,7 +86,7 @@ export class DomainService {
       - Noms évocateurs (métaphores liées au bénéfice client).
       - Noms inventés avec une racine latine ou anglo-saxonne forte.
 
-      Ta réponse doit être UNIQUEMENT un objet JSON avec une clé "names" contenant une liste de chaînes de caractères (uniquement le nom, sans l'extension .com).
+      Ta réponse doit être UNIQUEMENT un objet JSON avec une clé "names" contenant une liste de chaînes de caractères (uniquement le nom, sans l'extension).
       Exemple: {"names": ["Altro", "Velora", "Flowly"]}
     `;
 
@@ -94,7 +95,7 @@ export class DomainService {
         model: 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 600,
-        temperature: 0.95, // Légèrement augmenté pour plus de variété
+        temperature: 0.95,
         response_format: { type: 'json_object' }
       });
 
@@ -105,11 +106,8 @@ export class DomainService {
       const names: string[] = parsed.names || [];
       
       return names
-        .map(name => {
-          const cleanName = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-          return cleanName ? `${cleanName}.com` : null;
-        })
-        .filter((idea): idea is string => idea !== null && idea.length > 4);
+        .map(name => name.trim().toLowerCase().replace(/[^a-z0-9]/g, ''))
+        .filter(name => name.length > 3);
     } catch (error) {
       this.logger.error('Erreur lors de la génération des noms:', error);
       return [];
@@ -118,11 +116,9 @@ export class DomainService {
 
   async isDomainAvailable(domain: string): Promise<boolean> {
     try {
-      // On utilise la commande système 'whois' avec un timeout de 5s
       const { stdout } = await execAsync(`whois ${domain}`, { timeout: 5000 });
       const output = stdout.toLowerCase();
 
-      // Indicateurs d'occupation (si l'un d'eux est présent, le domaine est pris)
       const patterns = [
         'domain name:',
         'registrar:',
@@ -131,100 +127,68 @@ export class DomainService {
         'reserved'
       ];
 
-      const isTaken = patterns.some(pattern => output.includes(pattern));
-      return !isTaken;
+      return !patterns.some(pattern => output.includes(pattern));
     } catch (error: any) {
-      // Si whois renvoie un code d'erreur (ex: 1), c'est souvent parce qu'il n'a rien trouvé
-      // On vérifie si l'erreur contient des messages de disponibilité
       const errorMsg = error.stdout?.toLowerCase() || error.message?.toLowerCase() || '';
-      if (errorMsg.includes('no match') || errorMsg.includes('not found') || errorMsg.includes('available')) {
-        return true;
-      }
+      return errorMsg.includes('no match') || errorMsg.includes('not found') || errorMsg.includes('available');
+    }
+  }
+
+  async findAvailableDomains(
+    description: string, 
+    keywords: string[], 
+    targetCount = 10,
+    extensions = ['.com'],
+    matchMode = MatchMode.ANY
+  ): Promise<{ results: any[], totalChecked: number }> {
+    const finalResults: any[] = [];
+    const checkedNames = new Set<string>();
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (finalResults.length < targetCount && attempts < maxAttempts) {
+      const names = await this.generateDomainIdeas(description, keywords);
       
-      return false; // Par sécurité, on ne propose pas en cas d'erreur inconnue ou timeout
-    }
-  }
+      const newNames = names.filter(name => !checkedNames.has(name));
+      newNames.forEach(name => checkedNames.add(name));
 
-    async findAvailableDomains(description: string, keywords: string[], targetCount = 10): Promise<{ domains: string[], totalChecked: number }> {
-
-      const availableDomains: string[] = [];
-
-      const checkedDomains = new Set<string>();
-
-      let attempts = 0;
-
-      const maxAttempts = 5;
-
-  
-
-      while (availableDomains.length < targetCount && attempts < maxAttempts) {
-
-        const ideas = await this.generateDomainIdeas(description, keywords);
-
-        
-
-        const newIdeas = ideas.filter(domain => !checkedDomains.has(domain));
-
-        newIdeas.forEach(domain => checkedDomains.add(domain));
-
-  
-
-        if (newIdeas.length === 0) {
-
-          attempts++;
-
-          continue;
-
-        }
-
-  
-
-        const batchSize = 5;
-
-        for (let i = 0; i < newIdeas.length; i += batchSize) {
-
-          if (availableDomains.length >= targetCount) break;
-
-          
-
-          const batch = newIdeas.slice(i, i + batchSize);
-
-          const results = await Promise.all(
-
-            batch.map(domain => this.isDomainAvailable(domain))
-
-          );
-
-  
-
-          batch.forEach((domain, idx) => {
-
-            if (results[idx] && availableDomains.length < targetCount) {
-
-              availableDomains.push(domain);
-
-            }
-
-          });
-
-        }
-
+      if (newNames.length === 0) {
         attempts++;
-
+        continue;
       }
 
-  
+      for (const name of newNames) {
+        if (finalResults.length >= targetCount) break;
 
-      return {
+        const extStatus: Record<string, boolean> = {};
+        
+        await Promise.all(extensions.map(async (ext) => {
+          extStatus[ext] = await this.isDomainAvailable(`${name}${ext}`);
+        }));
 
-        domains: availableDomains,
+        const availableExts = Object.keys(extStatus).filter(ext => extStatus[ext]);
+        
+        let isMatch = false;
+        if (matchMode === MatchMode.ALL) {
+          isMatch = availableExts.length === extensions.length;
+        } else {
+          isMatch = availableExts.length > 0;
+        }
 
-        totalChecked: checkedDomains.size
-
-      };
-
+        if (isMatch) {
+          finalResults.push({
+            name,
+            availableExtensions: availableExts,
+            allExtensions: extStatus
+          });
+        }
+      }
+      attempts++;
     }
 
+    return {
+      results: finalResults,
+      totalChecked: checkedNames.size
+    };
   }
-
-  
+}

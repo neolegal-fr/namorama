@@ -1,0 +1,55 @@
+{
+  "APP": {
+    "TITLE": "Namespoter",
+    "CREDITS": "Crédits",
+    "LOGOUT": "Déconnexion",
+    "LOGIN": "Connexion / S'inscrire",
+    "FOOTER": "Propulsé par BMad Master",
+    "SECURE_ACCESS": "Accès Sécurisé",
+    "LOGIN_REQUIRED": "Veuillez vous connecter pour commencer à chercher vos noms de domaine."
+  },
+  "WIZARD": {
+    "STEPS": {
+      "DESCRIPTION": "Description",
+      "KEYWORDS": "Mots-clés",
+      "DOMAINS": "Domaines"
+    },
+    "STEP1": {
+      "TITLE": "Décrivez votre projet",
+      "SUBTITLE": "Expliquez ce que vous faites, votre cible et vos valeurs.",
+      "PLACEHOLDER": "Ex: Une plateforme de livraison de fleurs locales et éco-responsables...",
+      "REFINE_BTN": "Reformuler avec l'IA",
+      "CONTINUE_BTN": "Continuer vers les mots-clés",
+      "SUGGESTION_TITLE": "Reformulation suggérée :",
+      "USE_VERSION": "Utiliser cette version"
+    },
+    "STEP2": {
+      "TITLE": "Configuration",
+      "SUBTITLE": "Ajustez vos mots-clés et choisissez les extensions à vérifier.",
+      "KEYWORDS_TITLE": "Mots-clés",
+      "EXTENSIONS_TITLE": "Extensions de domaine",
+      "ADD_PLACEHOLDER": "Ajouter un mot-clé...",
+      "MATCH_MODE": "Critère de disponibilité",
+      "MATCH_ANY": "Au moins une extension libre",
+      "MATCH_ALL": "Toutes les extensions libres",
+      "BACK_BTN": "Retour",
+      "SEARCH_BTN": "Rechercher des domaines"
+    },
+    "STEP3": {
+      "TITLE": "Domaines .com disponibles",
+      "SUBTITLE": "Voici nos suggestions pour votre projet.",
+      "NOTE": "Note : Nous avons analysé {{total}} idées de noms, mais seulement {{count}} étaient réellement disponibles en .com.",
+      "NO_RESULTS": "Aucun domaine trouvé. Essayez de changer vos mots-clés.",
+      "MORE_BTN": "Plus de suggestions",
+      "NEW_PROJECT_BTN": "Nouveau projet"
+    },
+    "LOADING": "L'IA travaille pour vous...",
+    "CREDIT_DIALOG": {
+      "TITLE": "Crédits insuffisants",
+      "MESSAGE": "Vous n'avez plus assez de crédits. Combien voulez-vous en acheter (test) ?",
+      "QUANTITY": "Quantité",
+      "CANCEL": "Annuler",
+      "BUY": "Acheter"
+    }
+  }
+}
