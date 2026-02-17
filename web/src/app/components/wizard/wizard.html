@@ -1,14 +1,4 @@
 <div class="max-w-4xl mx-auto mt-10 p-4">
-  <!-- Barre d'outils supérieure avec priorité absolue -->
-  <div class="flex justify-end mb-4 upper-toolbar-container" *ngIf="isLoggedIn()">
-    <button 
-      class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all font-medium"
-      (click)="openProjects()">
-      <i class="pi pi-folder"></i>
-      {{ 'APP.MY_PROJECTS' | translate }}
-    </button>
-  </div>
-
   <p-card>
     <ng-template pTemplate="title">
       <div class="flex items-center gap-3">
