@@ -68,20 +68,33 @@ export class DomainService {
   async generateDomainIdeas(description: string, keywords: string[]): Promise<string[]> {
     const vocabStr = keywords.join(', ');
     const prompt = `
-      Je cherche un nom de marque pour un produit.
-      Le nom doit être court, moderne et facile à mémoriser.
+      Tu es un expert en branding et naming de classe mondiale. 
+      Ta mission est de générer 20 noms de marque percutants pour le projet suivant :
       Description : "${description}"
-      Mots-clés : ${vocabStr}
-      Génère 20 idées de noms de marque originaux (sans l'extension).
-      Ta réponse doit être UNIQUEMENT un objet JSON avec une clé "names" contenant une liste de chaînes de caractères.
-      Exemple: {"names": ["brand1", "brand2"]}
+      Mots-clés sémantiques : ${vocabStr}
+
+      Critères de qualité (IMPÉRATIF) :
+      1. Court (2-3 syllabes max).
+      2. Facile à prononcer et à épeler (doit passer le "test de la radio").
+      3. Éviter les chiffres et les tirets.
+      4. Sonorité moderne et mémorisable.
+
+      Utilise un mélange de ces techniques de naming :
+      - Portmanteaux (fusion de 2 mots pertinents).
+      - Mots composés courts et élégants.
+      - Noms évocateurs (métaphores liées au bénéfice client).
+      - Noms inventés avec une racine latine ou anglo-saxonne forte.
+
+      Ta réponse doit être UNIQUEMENT un objet JSON avec une clé "names" contenant une liste de chaînes de caractères (uniquement le nom, sans l'extension .com).
+      Exemple: {"names": ["Altro", "Velora", "Flowly"]}
     `;
 
     try {
       const response = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 400,
+        max_tokens: 500,
+        temperature: 0.9, // Favorise l'originalité marketing
         response_format: { type: 'json_object' }
       });
 
