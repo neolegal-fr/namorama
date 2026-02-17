@@ -11,7 +11,6 @@ import { MenubarModule } from 'primeng/menubar';
 import { AvatarModule } from 'primeng/avatar';
 import { MenuItem } from 'primeng/api';
 
-import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 
 import { Dialog } from 'primeng/dialog';
@@ -28,7 +27,6 @@ import { InputNumber } from 'primeng/inputnumber';
     ButtonModule, 
     MenubarModule, 
     AvatarModule,
-    SelectModule,
     FormsModule,
     Dialog,
     InputNumber
@@ -46,26 +44,10 @@ import { InputNumber } from 'primeng/inputnumber';
         <ng-template pTemplate="end">
           <div class="flex items-center gap-2 md:gap-4">
             
-            <!-- Langue Dropdown Compact -->
-            <p-select 
-              [options]="languages" 
-              [(ngModel)]="selectedLang" 
-              optionValue="code"
-              (onChange)="onLangChange($event)"
-              styleClass="w-16 border-none bg-transparent"
-              [selectOnFocus]="true">
-              <ng-template pTemplate="selectedItem" let-selectedOption>
-                <div class="flex items-center justify-center">
-                  <span [class]="'fi fi-' + selectedOption.flag + ' text-lg'"></span>
-                </div>
-              </ng-template>
-              <ng-template pTemplate="item" let-lang>
-                <div class="flex items-center gap-2">
-                  <span [class]="'fi fi-' + lang.flag"></span>
-                  <span class="text-xs font-bold">{{ lang.label }}</span>
-                </div>
-              </ng-template>
-            </p-select>
+            <!-- Langue Toggle -->
+            <button (click)="toggleLang()" class="cursor-pointer p-2 rounded-full hover:bg-surface-100 transition-colors">
+              <span [class]="'fi fi-' + (selectedLang === 'fr' ? 'fr' : 'gb')" style="font-size: 1.25rem"></span>
+            </button>
 
             <ng-container *ngIf="isLoggedIn()">
               <p-button 
@@ -219,8 +201,8 @@ export class AppComponent implements OnInit {
     this.selectedLang = lang;
   }
 
-  onLangChange(event: any) {
-    this.setLang(event.value);
+  toggleLang() {
+    this.setLang(this.selectedLang === 'fr' ? 'en' : 'fr');
   }
 
   loadCredits() {
