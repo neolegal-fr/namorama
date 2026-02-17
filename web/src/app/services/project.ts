@@ -1,17 +1,23 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProjectService {
   private apiUrl = 'http://localhost:3000/projects';
+  
+  // État partagé
+  showDrawer = signal(false);
+  projects = signal<any[]>([]);
 
   constructor(private http: HttpClient) {}
 
-  getProjects(): Observable<any[]> {
-    return this.http.get<any[]>(this.apiUrl);
+  refreshProjects(): Observable<any[]> {
+    return this.http.get<any[]>(this.apiUrl).pipe(
+      tap(projects => this.projects.set(projects))
+    );
   }
 
   getProject(id: string): Observable<any> {

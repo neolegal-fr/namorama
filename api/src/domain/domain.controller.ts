@@ -48,35 +48,56 @@ export class DomainController {
     );
     const { results, totalChecked } = result;
     
-    const actualCost = results.length;
-    if (actualCost > 0) {
-      await this.usersService.decrementCredits(user.keycloakId, actualCost);
-      
-      const project = await this.projectsService.createOrUpdate(user, {
-        id: dto.projectId,
-        name: dto.projectName,
-        description: dto.description,
-        keywords: dto.keywords,
-        extensions: dto.extensions || ['.com'],
-        matchMode: dto.matchMode || 'any'
-      });
-
-      await this.projectsService.addSuggestions(project, results);
-      
-      return { 
-        domains: results,
-        totalChecked,
-        projectId: project.id,
-        creditsDebited: actualCost,
-        remainingCredits: currentCredits - actualCost
-      };
+        const actualCost = results.length;
+    
+        
+    
+        // Sauvegarder ou mettre à jour le projet systématiquement
+    
+        const project = await this.projectsService.createOrUpdate(user, {
+    
+          id: dto.projectId,
+    
+          name: dto.projectName,
+    
+          description: dto.description,
+    
+          keywords: dto.keywords,
+    
+          extensions: dto.extensions || ['.com'],
+    
+          matchMode: dto.matchMode || 'any'
+    
+        });
+    
+    
+    
+        if (actualCost > 0) {
+    
+          await this.usersService.decrementCredits(user.keycloakId, actualCost);
+    
+          await this.projectsService.addSuggestions(project, results);
+    
+        }
+    
+    
+    
+        return { 
+    
+          domains: results,
+    
+          totalChecked,
+    
+          projectId: project.id,
+    
+          creditsDebited: actualCost,
+    
+          remainingCredits: user.credits - actualCost
+    
+        };
+    
+      }
+    
     }
-
-    return { 
-      domains: [],
-      totalChecked,
-      creditsDebited: 0,
-      remainingCredits: currentCredits
-    };
-  }
-}
+    
+    

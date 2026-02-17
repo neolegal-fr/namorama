@@ -1,10 +1,12 @@
-import { Controller, Get, Param, Patch } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Logger } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { AuthenticatedUser } from 'nest-keycloak-connect';
 import { UsersService } from '../users/users.service';
 
 @Controller('projects')
 export class ProjectsController {
+  private readonly logger = new Logger(ProjectsController.name);
+
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly usersService: UsersService

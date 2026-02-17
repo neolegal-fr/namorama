@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from './entities/project.entity';
@@ -7,6 +7,8 @@ import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class ProjectsService {
+  private readonly logger = new Logger(ProjectsService.name);
+
   constructor(
     @InjectRepository(Project)
     private projectsRepository: Repository<Project>,
@@ -31,7 +33,6 @@ export class ProjectsService {
       throw new NotFoundException('Projet non trouvé');
     }
 
-    // Trier les suggestions pour mettre les favoris en premier
     project.suggestions.sort((a, b) => {
       if (a.isFavorite === b.isFavorite) return 0;
       return a.isFavorite ? -1 : 1;
@@ -51,8 +52,13 @@ export class ProjectsService {
     } else {
       project = this.projectsRepository.create({
         user,
-        name: data.name || data.description.substring(0, 30) + '...',
+        name: data.name || (data.description.substring(0, 30) + '...'),
       });
+    }
+
+    // Mettre à jour le nom si fourni
+    if (data.name) {
+      project.name = data.name;
     }
 
     project.description = data.description;

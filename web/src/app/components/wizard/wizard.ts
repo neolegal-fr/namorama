@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomainService } from '../../services/domain';
 import { KeycloakService } from 'keycloak-angular';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Steps } from 'primeng/steps';
 import { Card } from 'primeng/card';
 import { Button } from 'primeng/button';
@@ -53,16 +54,13 @@ export class WizardComponent implements OnInit {
   loading = signal(false);
   isLoggedIn = signal(false);
   
-  // Utilisation de booleens simples pour une liaison bidirectionnelle stable
-  showCreditDialog = false;
-  showProjectsDrawer = false;
+  showCreditDialog = signal(false);
   
   creditsToBuy = signal(100);
 
   // Projets
   projectId = signal<string | null>(null);
   projectName = signal('');
-  projects = signal<any[]>([]);
 
   // Étape 1
   description = signal('');
@@ -87,13 +85,23 @@ export class WizardComponent implements OnInit {
     public projectService: ProjectService,
     public keycloak: KeycloakService,
     private translate: TranslateService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   async ngOnInit() {
     this.isLoggedIn.set(await this.keycloak.isLoggedIn());
     this.updateLabels();
     this.translate.onLangChange.subscribe(() => this.updateLabels());
+
+    // S'abonner aux changements de paramètres d'URL
+    this.route.params.subscribe(params => {
+      const id = params['id'];
+      if (id && id !== this.projectId()) {
+        this.loadProject(id);
+      }
+    });
 
     const savedState = localStorage.getItem('wizard_state');
     if (savedState) {
@@ -158,51 +166,41 @@ export class WizardComponent implements OnInit {
     }
   }
 
-  // Gestion des projets
-  openProjects() {
-    this.showProjectsDrawer = true;
-    this.projectService.getProjects().subscribe(res => {
-      this.projects.set(res);
-      this.cdr.detectChanges();
-    });
-  }
-
   loadProject(id: string) {
-    // 1. On ferme d'abord le volet
-    this.showProjectsDrawer = false;
+    this.projectService.showDrawer.set(false);
+    this.loading.set(true);
     this.cdr.detectChanges();
 
-    // 2. On laisse un court instant pour l'animation avant de charger
-    setTimeout(() => {
-      this.loading.set(true);
-      this.cdr.detectChanges();
+    this.projectService.getProject(id).subscribe({
+      next: (project) => {
+        this.projectId.set(project.id);
+        this.projectName.set(project.name);
+        this.description.set(project.description);
+        this.selectedExtensions.set(project.extensions);
+        this.matchMode.set(project.matchMode);
+        
+        this.domains.set(project.suggestions.map((s: any) => ({
+          id: s.id,
+          name: s.domainName,
+          allExtensions: s.availability,
+          isFavorite: s.isFavorite
+        })));
 
-      this.projectService.getProject(id).subscribe({
-        next: (project) => {
-          this.projectId.set(project.id);
-          this.projectName.set(project.name);
-          this.description.set(project.description);
-          this.selectedExtensions.set(project.extensions);
-          this.matchMode.set(project.matchMode);
-          
-          this.domains.set(project.suggestions.map((s: any) => ({
-            id: s.id,
-            name: s.domainName,
-            allExtensions: s.availability,
-            isFavorite: s.isFavorite
-          })));
-
-          this.activeIndex.set(2);
-          this.maxActiveIndex.set(2);
-          this.loading.set(false);
-          this.cdr.detectChanges();
-        },
-        error: () => {
-          this.loading.set(false);
-          this.cdr.detectChanges();
+        this.activeIndex.set(2);
+        this.maxActiveIndex.set(2);
+        this.loading.set(false);
+        
+        if (this.router.url !== `/projects/${id}`) {
+          this.router.navigate(['/projects', id], { replaceUrl: true });
         }
-      });
-    }, 100);
+        
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loading.set(false);
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   resetProject() {
@@ -218,6 +216,7 @@ export class WizardComponent implements OnInit {
     this.matchMode.set('any');
     this.activeIndex.set(0);
     this.maxActiveIndex.set(0);
+    this.router.navigate(['/']);
     this.cdr.detectChanges();
   }
 
@@ -267,6 +266,7 @@ export class WizardComponent implements OnInit {
     return this.selectedExtensions().every(ext => result.allExtensions[ext]);
   }
 
+  // Actions IA
   async refine() {
     this.loading.set(true);
     this.cdr.detectChanges();
@@ -292,6 +292,7 @@ export class WizardComponent implements OnInit {
         this.keywords.set(res.keywords);
         this.loading.set(false);
         this.nextStep();
+        this.cdr.detectChanges();
       },
       error: () => {
         this.loading.set(false);
@@ -303,7 +304,7 @@ export class WizardComponent implements OnInit {
   async buyCredits() {
     this.userService.addCredits(this.creditsToBuy()).subscribe({
       next: () => {
-        this.showCreditDialog = false;
+        this.showCreditDialog.set(false);
         this.cdr.detectChanges();
       }
     });
@@ -337,6 +338,11 @@ export class WizardComponent implements OnInit {
     ).subscribe({
       next: (res: any) => {
         this.totalChecked.set(res.totalChecked || 0);
+        
+        if (!this.projectId() && res.projectId) {
+          this.router.navigate(['/projects', res.projectId], { replaceUrl: true });
+        }
+        
         this.projectId.set(res.projectId);
 
         const newDomains = res.domains.map((d: any) => ({
@@ -356,6 +362,9 @@ export class WizardComponent implements OnInit {
         if (res.remainingCredits !== undefined) {
           this.userService.updateCredits(res.remainingCredits);
         }
+
+        // Rafraîchir la liste globale
+        this.projectService.refreshProjects().subscribe();
         
         this.loading.set(false);
         this.cdr.detectChanges();
@@ -363,7 +372,7 @@ export class WizardComponent implements OnInit {
       error: (err: any) => {
         this.loading.set(false);
         if (err.status === 403) {
-          this.showCreditDialog = true;
+          this.showCreditDialog.set(true);
         }
         this.cdr.detectChanges();
       }

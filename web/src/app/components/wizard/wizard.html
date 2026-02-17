@@ -1,14 +1,4 @@
 <div class="max-w-4xl mx-auto mt-10 p-4">
-  <!-- Barre d'outils supérieure avec priorité absolue -->
-  <div class="flex justify-end mb-4 upper-toolbar-container" *ngIf="isLoggedIn()">
-    <button 
-      class="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all font-medium"
-      (click)="openProjects()">
-      <i class="pi pi-folder"></i>
-      {{ 'APP.MY_PROJECTS' | translate }}
-    </button>
-  </div>
-
   <p-card [header]="'WIZARD.STEP' + (activeIndex() + 1) + '.TITLE' | translate">
     <p-steps [model]="items" [activeIndex]="activeIndex()" (activeIndexChange)="onStepChange($event)"></p-steps>
 
@@ -170,11 +160,11 @@
   </p-card>
 
   <!-- Volet des projets sécurisé -->
-  <p-drawer [(visible)]="showProjectsDrawer" [header]="'PROJECTS.TITLE' | translate" position="left" [style]="{ width: '25rem' }" [appendTo]="'body'" [modal]="true" [dismissible]="true">
+  <p-drawer [visible]="projectService.showDrawer()" (visibleChange)="projectService.showDrawer.set($event)" [header]="'PROJECTS.TITLE' | translate" position="left" [style]="{ width: '25rem' }" [appendTo]="'body'" [modal]="true" [dismissible]="true">
     <p class="text-gray-600 mb-6 text-sm">{{ 'PROJECTS.SUBTITLE' | translate }}</p>
     
     <div class="flex flex-col gap-2">
-      <div *ngFor="let project of projects()" 
+      <div *ngFor="let project of projectService.projects()" 
            class="p-3 border rounded-md hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-colors bg-white shadow-sm flex justify-between items-center" 
            (click)="loadProject(project.id)"
            [pTooltip]="project.description" tooltipPosition="bottom" [appendTo]="'body'">
@@ -182,7 +172,7 @@
         <i class="pi pi-chevron-right text-xs text-gray-400"></i>
       </div>
       
-      <div *ngIf="projects().length === 0" class="text-center py-10 text-gray-400">
+      <div *ngIf="projectService.projects().length === 0" class="text-center py-10 text-gray-400">
         {{ 'PROJECTS.EMPTY' | translate }}
       </div>
     </div>
@@ -196,7 +186,7 @@
         <p-inputNumber [(ngModel)]="creditsToBuy" inputId="credits" class="flex-auto" [min]="1"></p-inputNumber>
     </div>
     <div class="flex justify-end gap-2">
-        <p-button [label]="'WIZARD.CREDIT_DIALOG.CANCEL' | translate" severity="secondary" (onClick)="showCreditDialog = false" />
+        <p-button [label]="'WIZARD.CREDIT_DIALOG.CANCEL' | translate" severity="secondary" (onClick)="showCreditDialog.set(false)" />
         <p-button [label]="'WIZARD.CREDIT_DIALOG.BUY' | translate" (onClick)="buyCredits()" />
     </div>
   </p-dialog>
