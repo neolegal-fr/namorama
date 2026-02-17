@@ -1,12 +1,20 @@
 {
   "APP": {
     "TITLE": "Namespoter",
+    "MY_PROJECTS": "Mes projets",
     "CREDITS": "Crédits",
     "LOGOUT": "Déconnexion",
     "LOGIN": "Connexion / S'inscrire",
     "FOOTER": "Propulsé par BMad Master",
     "SECURE_ACCESS": "Accès Sécurisé",
     "LOGIN_REQUIRED": "Veuillez vous connecter pour commencer à chercher vos noms de domaine."
+  },
+  "PROJECTS": {
+    "TITLE": "Mes Projets",
+    "SUBTITLE": "Reprenez vos recherches là où vous vous étiez arrêté.",
+    "EMPTY": "Aucun projet pour le moment.",
+    "OPEN": "Ouvrir",
+    "DATE": "Dernière mise à jour"
   },
   "WIZARD": {
     "STEPS": {
@@ -15,8 +23,9 @@
       "DOMAINS": "Domaines"
     },
     "STEP1": {
-      "TITLE": "Décrivez votre projet",
-      "SUBTITLE": "Expliquez ce que vous faites, votre cible et vos valeurs.",
+      "TITLE": "Votre Projet",
+      "PROJECT_NAME_TITLE": "Nom du projet (optionnel)",
+      "SUBTITLE": "Décrivez votre solution, votre cible et vos valeurs.",
       "PLACEHOLDER": "Ex: Une plateforme de livraison de fleurs locales et éco-responsables...",
       "REFINE_BTN": "Reformuler avec l'IA",
       "CONTINUE_BTN": "Continuer vers les mots-clés",

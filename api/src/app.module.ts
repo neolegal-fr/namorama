@@ -14,6 +14,7 @@ import {
 } from 'nest-keycloak-connect';
 import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from './users/users.module';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
   imports: [
@@ -43,7 +44,8 @@ import { UsersModule } from './users/users.module';
       inject: [ConfigService],
     }),
     DomainModule,
-    UsersModule
+    UsersModule,
+    ProjectsModule
   ],
   controllers: [AppController],
   providers: [

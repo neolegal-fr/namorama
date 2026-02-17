@@ -22,4 +22,12 @@ export class SearchDomainsDto {
   @IsEnum(MatchMode)
   @IsOptional()
   matchMode?: MatchMode;
+
+  @IsString()
+  @IsOptional()
+  projectId?: string;
+
+  @IsString()
+  @IsOptional()
+  projectName?: string;
 }

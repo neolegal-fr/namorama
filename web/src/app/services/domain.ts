@@ -22,12 +22,26 @@ export class DomainService {
 
   
 
-    searchDomains(description: string, keywords: string[], extensions: string[], matchMode: string): Observable<any> {
+        searchDomains(description: string, keywords: string[], extensions: string[], matchMode: string, projectId?: string, projectName?: string): Observable<any> {
 
-      return this.http.post<any>(`${this.apiUrl}/search`, { description, keywords, extensions, matchMode });
+  
 
-    }
+          return this.http.post<any>(`${this.apiUrl}/search`, { description, keywords, extensions, matchMode, projectId, projectName });
 
-  }
+  
+
+        }
+
+  
+
+      }
+
+  
+
+      
+
+  
+
+    
 
   

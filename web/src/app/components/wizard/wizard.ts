@@ -14,8 +14,11 @@ import { Dialog } from 'primeng/dialog';
 import { InputNumber } from 'primeng/inputnumber';
 import { TableModule } from 'primeng/table';
 import { SelectButton } from 'primeng/selectbutton';
+import { Drawer } from 'primeng/drawer';
+import { Tooltip } from 'primeng/tooltip';
 import { MenuItem } from 'primeng/api';
 import { UserService } from '../../services/user';
+import { ProjectService } from '../../services/project';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -35,6 +38,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     InputNumber,
     TableModule,
     SelectButton,
+    Drawer,
+    Tooltip,
     TranslateModule
   ],
   templateUrl: './wizard.html',
@@ -48,6 +53,12 @@ export class WizardComponent implements OnInit {
   loading = signal(false);
   showCreditDialog = signal(false);
   creditsToBuy = signal(100);
+
+  // Projets
+  projectId = signal<string | null>(null);
+  projectName = signal('');
+  showProjectsDrawer = signal(false);
+  projects = signal<any[]>([]);
 
   // Étape 1
   description = signal('');
@@ -67,9 +78,10 @@ export class WizardComponent implements OnInit {
   totalChecked = signal(0);
 
   constructor(
-    private domainService: DomainService,
-    private userService: UserService,
-    private keycloak: KeycloakService,
+    public domainService: DomainService,
+    public userService: UserService,
+    public projectService: ProjectService,
+    public keycloak: KeycloakService,
     private translate: TranslateService
   ) {}
 
@@ -82,15 +94,21 @@ export class WizardComponent implements OnInit {
     if (savedState) {
       const state = JSON.parse(savedState);
       this.description.set(state.description);
+      this.projectName.set(state.projectName || '');
       this.refinedDescription.set(state.refinedDescription);
       this.keywords.set(state.keywords);
       this.selectedExtensions.set(state.selectedExtensions || ['.com', '.net']);
       this.matchMode.set(state.matchMode || 'any');
+      this.projectId.set(state.projectId || null);
       localStorage.removeItem('wizard_state');
       
       if (await this.keycloak.isLoggedIn()) {
-        this.activeIndex.set(1);
-        this.maxActiveIndex.set(1);
+        if (this.projectId()) {
+          this.loadProject(this.projectId()!);
+        } else {
+          this.activeIndex.set(1);
+          this.maxActiveIndex.set(1);
+        }
       }
     }
   }
@@ -115,6 +133,7 @@ export class WizardComponent implements OnInit {
     });
   }
 
+  // Navigation
   nextStep() {
     this.activeIndex.update(val => val + 1);
     this.maxActiveIndex.set(Math.max(this.maxActiveIndex(), this.activeIndex()));
@@ -130,17 +149,69 @@ export class WizardComponent implements OnInit {
     }
   }
 
+  // Gestion des projets
+  openProjects() {
+    this.projectService.getProjects().subscribe(res => {
+      this.projects.set(res);
+      this.showProjectsDrawer.set(true);
+    });
+  }
+
+  loadProject(id: string) {
+    this.loading.set(true);
+    this.projectService.getProject(id).subscribe({
+      next: (project) => {
+        this.projectId.set(project.id);
+        this.projectName.set(project.name);
+        this.description.set(project.description);
+        this.keywords.set(project.keywords);
+        this.selectedExtensions.set(project.extensions);
+        this.matchMode.set(project.matchMode);
+        
+        // Formater les suggestions pour le tableau
+        this.domains.set(project.suggestions.map((s: any) => ({
+          id: s.id,
+          name: s.domainName,
+          allExtensions: s.availability,
+          isFavorite: s.isFavorite
+        })));
+
+        this.activeIndex.set(2);
+        this.maxActiveIndex.set(2);
+        this.showProjectsDrawer.set(false);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false)
+    });
+  }
+
   resetProject() {
+    this.projectId.set(null);
+    this.projectName.set('');
     this.description.set('');
     this.refinedDescription.set('');
     this.keywords.set([]);
     this.domains.set([]);
+    this.newKeyword.set('');
+    this.newExtension.set('');
     this.selectedExtensions.set(['.com', '.net']);
     this.matchMode.set('any');
     this.activeIndex.set(0);
     this.maxActiveIndex.set(0);
   }
 
+  toggleFavorite(result: any) {
+    if (!result.id) return;
+    this.projectService.toggleFavorite(result.id).subscribe(res => {
+      result.isFavorite = res.isFavorite;
+      this.domains.update(d => [...d].sort((a, b) => {
+        if (a.isFavorite === b.isFavorite) return 0;
+        return a.isFavorite ? -1 : 1;
+      }));
+    });
+  }
+
+  // Gestion des saisies
   addKeyword() {
     if (this.newKeyword() && !this.keywords().includes(this.newKeyword())) {
       this.keywords.update(k => [...k, this.newKeyword()]);
@@ -171,6 +242,7 @@ export class WizardComponent implements OnInit {
     return this.selectedExtensions().every(ext => result.allExtensions[ext]);
   }
 
+  // Actions IA
   async refine() {
     this.loading.set(true);
     this.domainService.refineDescription(this.description()).subscribe({
@@ -207,10 +279,12 @@ export class WizardComponent implements OnInit {
     if (!(await this.keycloak.isLoggedIn())) {
       const state = {
         description: this.description(),
+        projectName: this.projectName(),
         refinedDescription: this.refinedDescription(),
         keywords: this.keywords(),
         selectedExtensions: this.selectedExtensions(),
-        matchMode: this.matchMode()
+        matchMode: this.matchMode(),
+        projectId: this.projectId()
       };
       localStorage.setItem('wizard_state', JSON.stringify(state));
       this.keycloak.login();
@@ -222,14 +296,25 @@ export class WizardComponent implements OnInit {
       this.refinedDescription() || this.description(), 
       this.keywords(),
       this.selectedExtensions(),
-      this.matchMode()
+      this.matchMode(),
+      this.projectId() || undefined,
+      this.projectName() || undefined
     ).subscribe({
       next: (res: any) => {
         this.totalChecked.set(res.totalChecked || 0);
+        this.projectId.set(res.projectId);
+
+        const newDomains = res.domains.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          allExtensions: d.allExtensions,
+          isFavorite: false
+        }));
+
         if (append) {
-          this.domains.update(d => [...new Set([...d, ...res.domains])]);
+          this.domains.update(d => [...d, ...newDomains]);
         } else {
-          this.domains.set(res.domains);
+          this.domains.set(newDomains);
           this.nextStep();
         }
         

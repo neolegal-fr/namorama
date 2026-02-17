@@ -4,12 +4,14 @@ import { RefineDescriptionDto } from './dto/refine-description.dto';
 import { SearchDomainsDto } from './dto/search-domains.dto';
 import { AuthenticatedUser, Public } from 'nest-keycloak-connect';
 import { UsersService } from '../users/users.service';
+import { ProjectsService } from '../projects/projects.service';
 
 @Controller('domain')
 export class DomainController {
   constructor(
     private readonly domainService: DomainService,
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
+    private readonly projectsService: ProjectsService
   ) {}
 
   @Public()
@@ -27,18 +29,16 @@ export class DomainController {
   }
 
   @Post('search')
-  async search(@Body() dto: SearchDomainsDto, @AuthenticatedUser() user: any) {
-    // 1. Vérifier le solde actuel
-    const currentCredits = await this.usersService.getCredits(user.sub);
+  async search(@Body() dto: SearchDomainsDto, @AuthenticatedUser() keycloakUser: any) {
+    const user = await this.usersService.findOrCreate(keycloakUser.sub);
+    const currentCredits = user.credits;
     
     if (currentCredits <= 0) {
       throw new ForbiddenException('Crédits insuffisants');
     }
 
-    // 2. Limiter la recherche à ce que l'utilisateur peut s'offrir (max 10 par requête)
     const limit = Math.min(10, currentCredits);
 
-    // 3. Trouver les domaines avec support multi-extensions
     const result = await this.domainService.findAvailableDomains(
       dto.description, 
       dto.keywords, 
@@ -48,17 +48,35 @@ export class DomainController {
     );
     const { results, totalChecked } = result;
     
-    // 4. Débiter le montant réel
     const actualCost = results.length;
     if (actualCost > 0) {
-      await this.usersService.decrementCredits(user.sub, actualCost);
+      await this.usersService.decrementCredits(user.keycloakId, actualCost);
+      
+      const project = await this.projectsService.createOrUpdate(user, {
+        id: dto.projectId,
+        name: dto.projectName,
+        description: dto.description,
+        keywords: dto.keywords,
+        extensions: dto.extensions || ['.com'],
+        matchMode: dto.matchMode || 'any'
+      });
+
+      await this.projectsService.addSuggestions(project, results);
+      
+      return { 
+        domains: results,
+        totalChecked,
+        projectId: project.id,
+        creditsDebited: actualCost,
+        remainingCredits: currentCredits - actualCost
+      };
     }
 
     return { 
-      domains: results, // Maintenant une liste d'objets avec détail des extensions
+      domains: [],
       totalChecked,
-      creditsDebited: actualCost,
-      remainingCredits: currentCredits - actualCost
+      creditsDebited: 0,
+      remainingCredits: currentCredits
     };
   }
 }
