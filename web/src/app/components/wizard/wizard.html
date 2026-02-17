@@ -25,42 +25,42 @@
     </div>
 
     <div class="mb-10 w-full overflow-hidden">
-      <p-steps [model]="items" [activeIndex]="activeIndex()" (activeIndexChange)="onStepChange($event)" styleClass="w-full"></p-steps>
+      <p-steps [model]="items" [activeIndex]="activeIndex()" (activeIndexChange)="onStepChange($event)" [readonly]="false" styleClass="w-full"></p-steps>
     </div>
 
     <div class="mt-8">
       <!-- Étape 1 : Description -->
-      <div *ngIf="activeIndex() === 0" class="flex flex-col gap-4">
+      <div *ngIf="activeIndex() === 0" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem">
         <h3 class="text-xl font-semibold">{{ 'WIZARD.STEP1.TITLE' | translate }}</h3>
-        
         <p class="text-gray-600">{{ 'WIZARD.STEP1.SUBTITLE' | translate }}</p>
-        <textarea 
-          pInputTextarea 
-          [(ngModel)]="description" 
-          rows="5" 
+        <textarea
+          pInputTextarea
+          [(ngModel)]="description"
+          rows="5"
           class="w-full p-3 border rounded-md"
+          style="max-width: 48rem; text-align: left"
           [placeholder]="'WIZARD.STEP1.PLACEHOLDER' | translate">
         </textarea>
 
-        <div class="flex justify-between items-center mt-4">
-          <p-button 
-            [label]="'WIZARD.STEP1.REFINE_BTN' | translate" 
-            icon="pi pi-sparkles" 
-            [loading]="loading()" 
+        <div class="flex items-center mt-4" style="justify-content: center; gap: 1rem">
+          <p-button
+            [label]="'WIZARD.STEP1.REFINE_BTN' | translate"
+            icon="pi pi-sparkles"
+            [loading]="loading()"
             (onClick)="refine()"
             severity="secondary">
           </p-button>
-          
-          <p-button 
-            [label]="'WIZARD.STEP1.CONTINUE_BTN' | translate" 
-            icon="pi pi-arrow-right" 
-            [disabled]="!description()" 
+
+          <p-button
+            [label]="'WIZARD.STEP1.CONTINUE_BTN' | translate"
+            icon="pi pi-arrow-right"
+            [disabled]="!description()"
             [loading]="loading()"
             (onClick)="goToKeywords()">
           </p-button>
         </div>
 
-        <div *ngIf="refinedDescription()" class="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+        <div *ngIf="refinedDescription()" class="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded" style="max-width: 48rem; width: 100%; text-align: left">
           <h4 class="font-bold text-blue-700 mb-2">{{ 'WIZARD.STEP1.SUGGESTION_TITLE' | translate }}</h4>
           <p class="italic text-gray-800">{{ refinedDescription() }}</p>
           <div class="mt-2 text-right">
@@ -70,13 +70,13 @@
       </div>
 
       <!-- Étape 2 : Configuration (Mots-clés + Extensions) -->
-      <div *ngIf="activeIndex() === 1" class="flex flex-col gap-6">
+      <div *ngIf="activeIndex() === 1" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.5rem">
         <div>
           <h3 class="text-xl font-semibold">{{ 'WIZARD.STEP2.TITLE' | translate }}</h3>
           <p class="text-gray-600">{{ 'WIZARD.STEP2.SUBTITLE' | translate }}</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8" style="width: 100%; max-width: 42rem; text-align: left">
           <!-- Colonne Mots-clés -->
           <div class="flex flex-col gap-4">
             <h4 class="font-bold border-b pb-2">{{ 'WIZARD.STEP2.KEYWORDS_TITLE' | translate }}</h4>
@@ -101,19 +101,19 @@
             </div>
 
             <h4 class="font-bold border-b pb-2 mt-2">{{ 'WIZARD.STEP2.MATCH_MODE' | translate }}</h4>
-            <p-selectButton 
-              [options]="matchOptions()" 
-              [(ngModel)]="matchMode" 
+            <p-selectButton
+              [options]="matchOptions()"
+              [(ngModel)]="matchMode"
               class="w-full">
             </p-selectButton>
           </div>
         </div>
 
-        <div class="flex justify-between mt-6 pt-6 border-t">
+        <div class="flex mt-6 pt-6 border-t" style="width: 100%; max-width: 42rem; justify-content: space-between">
           <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
-          <p-button 
-            [label]="'WIZARD.STEP2.SEARCH_BTN' | translate" 
-            icon="pi pi-search" 
+          <p-button
+            [label]="'WIZARD.STEP2.SEARCH_BTN' | translate"
+            icon="pi pi-search"
             [disabled]="selectedExtensions().length === 0"
             [loading]="loading()"
             (onClick)="findDomains()">
@@ -122,7 +122,7 @@
       </div>
 
       <!-- Étape 3 : Résultats -->
-      <div *ngIf="activeIndex() === 2" class="flex flex-col gap-4" style="align-items: center; text-align: center">
+      <div *ngIf="activeIndex() === 2" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem">
         <h3 class="text-xl font-semibold text-green-600">{{ 'WIZARD.STEP3.TITLE' | translate:{ extensions: selectedExtensions().join(', ') } }}</h3>
         <p class="text-gray-600">{{ 'WIZARD.STEP3.SUBTITLE' | translate }}</p>
 
@@ -200,8 +200,8 @@
     </div>
   </p-drawer>
 
-  <div *ngIf="loading()" class="fixed inset-0 bg-white/50 backdrop-blur-sm flex items-center justify-center z-50">
-     <div class="text-center">
+  <div *ngIf="loading()" style="position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 50; background: rgba(255,255,255,0.5); backdrop-filter: blur(4px)">
+     <div style="text-align: center">
         <p-progressSpinner></p-progressSpinner>
         <p class="mt-4 font-semibold text-blue-600">{{ 'WIZARD.LOADING' | translate }}</p>
      </div>
