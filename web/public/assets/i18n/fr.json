@@ -36,7 +36,7 @@
       "SEARCH_BTN": "Rechercher des domaines"
     },
     "STEP3": {
-      "TITLE": "Domaines .com disponibles",
+      "TITLE": "Domaines {{extensions}} disponibles",
       "SUBTITLE": "Voici nos suggestions pour votre projet.",
       "NOTE": "Note : Nous avons analysé {{total}} idées de noms, mais seulement {{count}} étaient réellement disponibles en .com.",
       "NO_RESULTS": "Aucun domaine trouvé. Essayez de changer vos mots-clés.",

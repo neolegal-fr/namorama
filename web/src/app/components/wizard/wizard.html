@@ -97,7 +97,7 @@
 
       <!-- Étape 3 : Résultats -->
       <div *ngIf="activeIndex() === 2" class="flex flex-col gap-4">
-        <h3 class="text-xl font-semibold text-green-600">{{ 'WIZARD.STEP3.TITLE' | translate }}</h3>
+        <h3 class="text-xl font-semibold text-green-600">{{ 'WIZARD.STEP3.TITLE' | translate:{ extensions: selectedExtensions().join(', ') } }}</h3>
         <p class="text-gray-600">{{ 'WIZARD.STEP3.SUBTITLE' | translate }}</p>
 
         <div *ngIf="domains().length > 0 && domains().length < 10" class="p-3 bg-amber-50 border-l-4 border-amber-400 rounded text-sm text-amber-800 italic">
@@ -113,10 +113,10 @@
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-result>
-              <tr [class.bg-green-50]="matchMode() === 'any' && isFullyAvailable(result)">
+              <tr [class.!bg-green-100]="isFullyAvailable(result)">
                 <td class="font-bold text-lg font-mono">{{ result.name }}</td>
                 <td *ngFor="let ext of selectedExtensions()" class="text-center">
-                  <i *ngIf="result.allExtensions[ext]" class="pi pi-check-circle text-green-500 text-xl" title="Disponible"></i>
+                  <i *ngIf="result.allExtensions[ext]" class="pi pi-check-square text-green-600 text-2xl" title="Disponible"></i>
                   <i *ngIf="!result.allExtensions[ext]" class="pi pi-times-circle text-red-400 text-xl" title="Indisponible"></i>
                 </td>
               </tr>
