@@ -42,6 +42,7 @@ export class WizardComponent implements OnInit {
   ];
 
   activeIndex = signal(0);
+  maxActiveIndex = signal(0);
   loading = signal(false);
   showCreditDialog = signal(false);
   creditsToBuy = signal(100);
@@ -74,17 +75,25 @@ export class WizardComponent implements OnInit {
       localStorage.removeItem('wizard_state');
       
       if (await this.keycloak.isLoggedIn()) {
-        this.activeIndex.set(1); // Retourner à l'étape des mots-clés, prêt à chercher
+        this.activeIndex.set(1);
+        this.maxActiveIndex.set(1);
       }
     }
   }
 
   nextStep() {
     this.activeIndex.update(val => val + 1);
+    this.maxActiveIndex.set(Math.max(this.maxActiveIndex(), this.activeIndex()));
   }
 
   prevStep() {
     this.activeIndex.update(val => val - 1);
+  }
+
+  onStepChange(index: number) {
+    if (index <= this.maxActiveIndex()) {
+      this.activeIndex.set(index);
+    }
   }
 
   resetProject() {
@@ -93,6 +102,7 @@ export class WizardComponent implements OnInit {
     this.keywords.set([]);
     this.domains.set([]);
     this.activeIndex.set(0);
+    this.maxActiveIndex.set(0);
   }
 
   addKeyword() {
@@ -109,7 +119,7 @@ export class WizardComponent implements OnInit {
   async refine() {
     this.loading.set(true);
     this.domainService.refineDescription(this.description()).subscribe({
-      next: (res) => {
+      next: (res: { refined: string }) => {
         this.refinedDescription.set(res.refined);
         this.loading.set(false);
       },
@@ -121,7 +131,7 @@ export class WizardComponent implements OnInit {
     this.loading.set(true);
     const descToUse = this.refinedDescription() || this.description();
     this.domainService.generateKeywords(descToUse).subscribe({
-      next: (res) => {
+      next: (res: { keywords: string[] }) => {
         this.keywords.set(res.keywords);
         this.loading.set(false);
         this.nextStep();
@@ -138,80 +148,40 @@ export class WizardComponent implements OnInit {
     });
   }
 
-    async findDomains(append = false) {
-
-      if (!(await this.keycloak.isLoggedIn())) {
-
-        const state = {
-
-          description: this.description(),
-
-          refinedDescription: this.refinedDescription(),
-
-          keywords: this.keywords()
-
-        };
-
-        localStorage.setItem('wizard_state', JSON.stringify(state));
-
-        this.keycloak.login();
-
-        return;
-
-      }
-
-  
-
-      this.loading.set(true);
-
-      this.domainService.searchDomains(this.refinedDescription() || this.description(), this.keywords()).subscribe({
-
-        next: (res: any) => {
-
-          if (append) {
-
-            this.domains.update(d => [...new Set([...d, ...res.domains])]);
-
-          } else {
-
-            this.domains.set(res.domains);
-
-            this.nextStep();
-
-          }
-
-          
-
-          // Mettre à jour les crédits via le service
-
-          if (res.remainingCredits !== undefined) {
-
-            this.userService.updateCredits(res.remainingCredits);
-
-          }
-
-          
-
-          this.loading.set(false);
-
-        },
-
-        error: (err) => {
-
-          this.loading.set(false);
-
-          if (err.status === 403) {
-
-            this.showCreditDialog.set(true);
-
-          }
-
-        }
-
-      });
-
+  async findDomains(append = false) {
+    if (!(await this.keycloak.isLoggedIn())) {
+      const state = {
+        description: this.description(),
+        refinedDescription: this.refinedDescription(),
+        keywords: this.keywords()
+      };
+      localStorage.setItem('wizard_state', JSON.stringify(state));
+      this.keycloak.login();
+      return;
     }
 
+    this.loading.set(true);
+    this.domainService.searchDomains(this.refinedDescription() || this.description(), this.keywords()).subscribe({
+      next: (res: any) => {
+        if (append) {
+          this.domains.update(d => [...new Set([...d, ...res.domains])]);
+        } else {
+          this.domains.set(res.domains);
+          this.nextStep();
+        }
+        
+        if (res.remainingCredits !== undefined) {
+          this.userService.updateCredits(res.remainingCredits);
+        }
+        
+        this.loading.set(false);
+      },
+      error: (err: any) => {
+        this.loading.set(false);
+        if (err.status === 403) {
+          this.showCreditDialog.set(true);
+        }
+      }
+    });
   }
-
-  
+}

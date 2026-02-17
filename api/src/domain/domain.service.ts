@@ -45,12 +45,15 @@ export class DomainService {
         messages: [
           {
             role: 'system',
-            content: 'Identifie 20 mots-clés pertinents pour la description suivante. Retourne UNIQUEMENT une liste de mots séparés par des virgules.',
+            content: `Tu es un expert en SEO et sémantique. 
+            Identifie AU MOINS 20 mots-clés et termes associés pertinents pour la description suivante. 
+            Varie les angles : synonymes, termes techniques, bénéfices utilisateurs, et concepts abstraits liés au domaine.
+            Retourne UNIQUEMENT une liste de mots séparés par des virgules, sans numérotation.`,
           },
           { role: 'user', content: description },
         ],
-        max_tokens: 150,
-        response_format: { type: 'text' },
+        max_tokens: 300,
+        temperature: 0.8, // Augmenté pour plus de diversité
       });
 
       const content = response.choices[0].message.content;

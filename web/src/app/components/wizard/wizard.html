@@ -1,6 +1,6 @@
 <div class="max-w-4xl mx-auto mt-10 p-4">
   <p-card header="Namespoter - Trouvez votre domaine idéal">
-    <p-steps [model]="items" [(activeIndex)]="activeIndex" [readonly]="true"></p-steps>
+    <p-steps [model]="items" [activeIndex]="activeIndex()" (activeIndexChange)="onStepChange($event)"></p-steps>
 
     <div class="mt-8">
       <!-- Étape 1 : Description -->
