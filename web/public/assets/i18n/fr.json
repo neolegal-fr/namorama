@@ -42,6 +42,7 @@
     "STEPS": {
       "DESCRIPTION": "Description",
       "KEYWORDS": "Mots-clés",
+      "EXTENSIONS": "Extensions",
       "DOMAINS": "Domaines"
     },
     "STEP1": {
@@ -56,7 +57,7 @@
     },
     "STEP2": {
       "TITLE": "Configuration",
-      "SUBTITLE": "Ajustez vos mots-clés et choisissez les extensions à vérifier.",
+      "SUBTITLE": "Ajustez vos mots-clés et définissez votre cible.",
       "KEYWORDS_TITLE": "Mots-clés",
       "EXTENSIONS_TITLE": "Extensions de domaine",
       "ADD_PLACEHOLDER": "Ajouter un mot-clé...",
@@ -64,6 +65,7 @@
       "MATCH_ANY": "Au moins une extension disponible",
       "MATCH_ALL": "Toutes les extensions disponibles",
       "BACK_BTN": "Retour",
+      "NEXT_BTN": "Continuer vers les extensions",
       "SEARCH_BTN": "Rechercher des domaines",
       "TARGET_TITLE": "Cible",
       "TARGET_INTL": "International",

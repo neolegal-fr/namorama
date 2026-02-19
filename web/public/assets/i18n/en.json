@@ -42,6 +42,7 @@
     "STEPS": {
       "DESCRIPTION": "Description",
       "KEYWORDS": "Keywords",
+      "EXTENSIONS": "Extensions",
       "DOMAINS": "Domains"
     },
     "STEP1": {
@@ -56,7 +57,7 @@
     },
     "STEP2": {
       "TITLE": "Configuration",
-      "SUBTITLE": "Adjust your keywords and choose extensions to check.",
+      "SUBTITLE": "Adjust your keywords and define your target audience.",
       "KEYWORDS_TITLE": "Keywords",
       "EXTENSIONS_TITLE": "Domain extensions",
       "ADD_PLACEHOLDER": "Add a keyword...",
@@ -64,6 +65,7 @@
       "MATCH_ANY": "At least one available",
       "MATCH_ALL": "All extensions available",
       "BACK_BTN": "Back",
+      "NEXT_BTN": "Continue to extensions",
       "SEARCH_BTN": "Search for domains",
       "TARGET_TITLE": "Target audience",
       "TARGET_INTL": "International",

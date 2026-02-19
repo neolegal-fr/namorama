@@ -197,8 +197,8 @@ export class WizardComponent implements OnInit {
           this.loadProject(this.projectId()!);
         } else if (state.pendingSearch) {
           // L'utilisateur avait cliqué "Rechercher" avant d'être invité à se connecter
-          this.activeIndex.set(1);
-          this.maxActiveIndex.set(1);
+          this.activeIndex.set(2);
+          this.maxActiveIndex.set(2);
           this.findDomains();
         } else {
           this.activeIndex.set(1);
@@ -212,6 +212,7 @@ export class WizardComponent implements OnInit {
     this.translate.get([
       'WIZARD.STEPS.DESCRIPTION',
       'WIZARD.STEPS.KEYWORDS',
+      'WIZARD.STEPS.EXTENSIONS',
       'WIZARD.STEPS.DOMAINS',
       'WIZARD.STEP2.MATCH_ANY',
       'WIZARD.STEP2.MATCH_ALL'
@@ -219,6 +220,7 @@ export class WizardComponent implements OnInit {
       this.items = [
         { label: res['WIZARD.STEPS.DESCRIPTION'] },
         { label: res['WIZARD.STEPS.KEYWORDS'] },
+        { label: res['WIZARD.STEPS.EXTENSIONS'] },
         { label: res['WIZARD.STEPS.DOMAINS'] }
       ];
       this.matchOptions.set([
@@ -231,6 +233,10 @@ export class WizardComponent implements OnInit {
 
   startFromLanding() {
     this.showLanding.set(false);
+  }
+
+  goToExtensions() {
+    this.nextStep(); // step 1 (keywords) → step 2 (extensions)
   }
 
   // Navigation
@@ -289,8 +295,8 @@ export class WizardComponent implements OnInit {
           isFavorite: s.isFavorite
         })));
 
-        this.activeIndex.set(2);
-        this.maxActiveIndex.set(2);
+        this.activeIndex.set(3);
+        this.maxActiveIndex.set(3);
         this.loading.set(false);
         
         if (this.router.url !== `/projects/${id}`) {
@@ -488,7 +494,7 @@ export class WizardComponent implements OnInit {
           accept: () => { /* on continue d'attendre */ },
           reject: () => {
             this.loading.set(false);
-            this.activeIndex.set(1);
+            this.activeIndex.set(2);
             this.cdr.detectChanges();
           }
         });
