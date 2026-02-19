@@ -32,20 +32,20 @@ import { InputNumber } from 'primeng/inputnumber';
     InputNumber
   ],
   template: `
-    <main class="min-h-screen bg-gray-50 font-sans">
-      <p-menubar styleClass="border-0 border-b border-surface bg-surface-0 px-4 md:px-8 h-16 sticky top-0 z-10">
+    <main class="min-h-screen">
+      <p-menubar styleClass="border-0 border-b border-surface bg-surface-0 px-3 md:px-5 sticky top-0 z-10" style="height: 4rem">
         <ng-template pTemplate="start">
-          <div class="flex items-center gap-2 cursor-pointer" (click)="goToHome()">
+          <div class="flex align-items-center gap-2 cursor-pointer" (click)="goToHome()">
             <i class="pi pi-compass text-2xl text-primary"></i>
-            <span class="text-xl font-bold tracking-tight text-surface-900">NameSpotter</span>
+            <span class="text-xl font-bold text-900">NameSpotter</span>
           </div>
         </ng-template>
 
         <ng-template pTemplate="end">
-          <div class="flex items-center gap-2 md:gap-4">
-            
+          <div class="flex align-items-center gap-2">
+
             <!-- Langue Toggle -->
-            <button (click)="toggleLang()" class="cursor-pointer p-2 rounded-full hover:bg-surface-100 transition-colors">
+            <button (click)="toggleLang()" class="lang-toggle cursor-pointer border-circle p-2" style="background: none; border: none; transition: background 0.15s">
               <span [class]="'fi fi-' + (selectedLang === 'fr' ? 'fr' : 'gb')" style="font-size: 1.25rem"></span>
             </button>
 
@@ -63,15 +63,15 @@ import { InputNumber } from 'primeng/inputnumber';
                   icon="pi pi-user"
                   shape="circle"
                   class="cursor-pointer ml-2"
-                  styleClass="bg-primary text-primary-contrast shadow-sm"
+                  styleClass="bg-primary text-primary-contrast shadow-1"
                   (click)="userMenu.toggle($event)">
                 </p-avatar>
                 <p-menu #userMenu [model]="profileMenuItems" [popup]="true"></p-menu>
             </ng-container>
 
-            <p-button 
-              *ngIf="!isLoggedIn()" 
-              [label]="'APP.LOGIN' | translate" 
+            <p-button
+              *ngIf="!isLoggedIn()"
+              [label]="'APP.LOGIN' | translate"
               icon="pi pi-sign-in"
               [rounded]="true"
               (onClick)="login()">
@@ -79,9 +79,9 @@ import { InputNumber } from 'primeng/inputnumber';
           </div>
         </ng-template>
       </p-menubar>
-      
-      <div class="flex flex-col items-center w-full px-4 py-4 md:py-8">
-        <div class="w-full max-w-4xl">
+
+      <div class="flex flex-column align-items-center w-full px-3 py-3 md:py-5">
+        <div class="w-full" style="max-width: 56rem">
           <router-outlet></router-outlet>
         </div>
       </div>
@@ -94,19 +94,19 @@ import { InputNumber } from 'primeng/inputnumber';
                 [style]="{ width: '25rem' }" 
                 [draggable]="false" 
                 [resizable]="false">
-        <span class="p-text-secondary block mb-5">{{ 'WIZARD.CREDIT_DIALOG.MESSAGE' | translate }}</span>
-        <div class="flex items-center gap-3 mb-5">
-            <label for="credits" class="font-semibold w-24">{{ 'WIZARD.CREDIT_DIALOG.QUANTITY' | translate }}</label>
+        <span class="p-text-secondary block mb-3">{{ 'WIZARD.CREDIT_DIALOG.MESSAGE' | translate }}</span>
+        <div class="flex align-items-center gap-2 mb-3">
+            <label for="credits" class="font-semibold" style="min-width: 6rem">{{ 'WIZARD.CREDIT_DIALOG.QUANTITY' | translate }}</label>
             <p-inputNumber [(ngModel)]="creditsToBuy" inputId="credits" class="flex-auto" [min]="1"></p-inputNumber>
         </div>
-        <div class="flex justify-end gap-2">
+        <div class="flex justify-content-end gap-2">
             <p-button [label]="'WIZARD.CREDIT_DIALOG.CANCEL' | translate" severity="secondary" (onClick)="projectService.showCreditDialog.set(false)" />
             <p-button [label]="'WIZARD.CREDIT_DIALOG.BUY' | translate" (onClick)="buyCredits()" />
         </div>
       </p-dialog>
 
-      <footer class="mt-20 py-12 border-t bg-white text-center text-gray-400 text-sm">
-        <div class="mb-2 font-bold text-gray-500">NameSpotter &copy; 2026</div>
+      <footer class="mt-8 py-6 border-top-1 border-solid text-center text-400 text-sm" style="background: white">
+        <div class="mb-2 font-bold text-500">NameSpotter &copy; 2026</div>
         {{ 'APP.FOOTER' | translate }}
       </footer>
     </main>

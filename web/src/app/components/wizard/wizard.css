@@ -7,3 +7,13 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* Hover sur l'icône crayon du nom de projet */
+.edit-name-trigger:hover .pi-pencil {
+    opacity: 1 !important;
+}
+
+/* Hover sur les lignes du tableau de domaines */
+.domain-row:hover {
+    background: var(--p-surface-50, #f9fafb);
+}

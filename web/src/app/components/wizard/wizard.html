@@ -1,48 +1,48 @@
 <div class="w-full">
-  <p-card styleClass="p-4 md:p-8">
-    <div class="w-full mb-10" style="text-align: center" *ngIf="activeIndex() > 0">
+  <p-card styleClass="p-3 md:p-5">
+    <div class="w-full mb-5" style="text-align: center" *ngIf="activeIndex() > 0">
       <!-- Affichage du nom avec clic pour éditer -->
       <div *ngIf="!isEditingName()"
            (click)="isEditingName.set(true)"
-           class="group cursor-pointer"
+           class="edit-name-trigger cursor-pointer"
            style="display: inline-flex; align-items: center; gap: 0.75rem">
-        <h1 class="font-black text-primary tracking-tight" style="margin: 0; font-size: 2.5rem; text-transform: uppercase">
+        <h1 class="font-bold text-primary" style="margin: 0; font-size: 2.5rem; text-transform: uppercase; font-weight: 900; letter-spacing: -0.05em">
           {{ projectName() || ('WIZARD.STEPS.' + (activeIndex() === 0 ? 'DESCRIPTION' : activeIndex() === 1 ? 'KEYWORDS' : 'DOMAINS') | translate) }}
         </h1>
-        <i class="pi pi-pencil text-lg opacity-0 group-hover:opacity-100 text-surface-400 transition-all" style="flex-shrink: 0"></i>
+        <i class="pi pi-pencil text-lg text-400" style="flex-shrink: 0; opacity: 0; transition: opacity 0.2s ease"></i>
       </div>
 
       <!-- Mode édition du nom -->
-      <div *ngIf="isEditingName()" class="flex items-center gap-2 justify-center w-full max-w-lg mx-auto">
-        <input pInputText 
-               [(ngModel)]="projectName" 
-               (keydown.enter)="finishEditingName()" 
+      <div *ngIf="isEditingName()" class="flex align-items-center gap-2 justify-content-center w-full mx-auto" style="max-width: 32rem">
+        <input pInputText
+               [(ngModel)]="projectName"
+               (keydown.enter)="finishEditingName()"
                (blur)="finishEditingName()"
-               class="w-full text-xl md:text-2xl font-bold text-center border-primary shadow-sm"
+               class="w-full text-xl font-bold text-center shadow-1"
                autoFocus>
         <p-button icon="pi pi-check" [rounded]="true" severity="success" (onClick)="finishEditingName()"></p-button>
       </div>
     </div>
 
-    <div class="mb-10 w-full overflow-hidden">
+    <div class="mb-5 w-full overflow-hidden">
       <p-steps [model]="items" [activeIndex]="activeIndex()" (activeIndexChange)="onStepChange($event)" [readonly]="false" styleClass="w-full"></p-steps>
     </div>
 
-    <div class="mt-8">
+    <div class="mt-5">
       <!-- Étape 1 : Description -->
       <div *ngIf="activeIndex() === 0" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem">
         <h3 class="text-xl font-semibold">{{ 'WIZARD.STEP1.TITLE' | translate }}</h3>
-        <p class="text-gray-600">{{ 'WIZARD.STEP1.SUBTITLE' | translate }}</p>
+        <p class="text-600">{{ 'WIZARD.STEP1.SUBTITLE' | translate }}</p>
         <textarea
           pInputTextarea
           [(ngModel)]="description"
           rows="5"
-          class="w-full p-3 border rounded-md"
+          class="w-full p-2 border-round-md"
           style="max-width: 48rem; text-align: left"
           [placeholder]="'WIZARD.STEP1.PLACEHOLDER' | translate">
         </textarea>
 
-        <div class="flex items-center mt-4" style="justify-content: center; gap: 1rem">
+        <div class="flex align-items-center mt-3" style="justify-content: center; gap: 1rem">
           <p-button
             [label]="'WIZARD.STEP1.REFINE_BTN' | translate"
             icon="pi pi-sparkles"
@@ -60,9 +60,9 @@
           </p-button>
         </div>
 
-        <div *ngIf="refinedDescription()" class="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded" style="max-width: 48rem; width: 100%; text-align: left">
-          <h4 class="font-bold text-blue-700 mb-2">{{ 'WIZARD.STEP1.SUGGESTION_TITLE' | translate }}</h4>
-          <p class="italic text-gray-800">{{ refinedDescription() }}</p>
+        <div *ngIf="refinedDescription()" class="mt-4 p-3 border-left-4 border-solid border-round" style="max-width: 48rem; width: 100%; text-align: left; background: #eff6ff; border-color: #3b82f6">
+          <h4 class="font-bold mb-2" style="color: #1d4ed8">{{ 'WIZARD.STEP1.SUGGESTION_TITLE' | translate }}</h4>
+          <p class="font-italic text-800">{{ refinedDescription() }}</p>
           <div class="mt-2 text-right">
              <p-button [label]="'WIZARD.STEP1.USE_VERSION' | translate" severity="info" size="small" (onClick)="description.set(refinedDescription())"></p-button>
           </div>
@@ -73,43 +73,43 @@
       <div *ngIf="activeIndex() === 1" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.5rem">
         <div>
           <h3 class="text-xl font-semibold">{{ 'WIZARD.STEP2.TITLE' | translate }}</h3>
-          <p class="text-gray-600">{{ 'WIZARD.STEP2.SUBTITLE' | translate }}</p>
+          <p class="text-600">{{ 'WIZARD.STEP2.SUBTITLE' | translate }}</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8" style="width: 100%; max-width: 42rem; text-align: left">
+        <div class="grid" style="width: 100%; max-width: 42rem; text-align: left">
           <!-- Colonne Mots-clés -->
-          <div class="flex flex-col gap-4">
-            <h4 class="font-bold border-b pb-2">{{ 'WIZARD.STEP2.KEYWORDS_TITLE' | translate }}</h4>
+          <div class="col-12 md:col-6 flex flex-column gap-3">
+            <h4 class="font-bold border-bottom-1 border-solid pb-2">{{ 'WIZARD.STEP2.KEYWORDS_TITLE' | translate }}</h4>
             <div class="flex gap-2">
               <input pInputText type="text" [(ngModel)]="newKeyword" class="flex-1" [placeholder]="'WIZARD.STEP2.ADD_PLACEHOLDER' | translate" (keydown.enter)="addKeyword()">
               <p-button icon="pi pi-plus" (onClick)="addKeyword()"></p-button>
             </div>
-            <div class="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-2 bg-gray-50 rounded border">
+            <div class="flex flex-wrap gap-2 overflow-y-auto p-2 border-round border-1 border-solid" style="max-height: 12rem; background: var(--p-surface-50)">
               <p-chip *ngFor="let keyword of keywords()" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
             </div>
           </div>
 
           <!-- Colonne Extensions -->
-          <div class="flex flex-col gap-4">
-            <h4 class="font-bold border-b pb-2">{{ 'WIZARD.STEP2.EXTENSIONS_TITLE' | translate }}</h4>
+          <div class="col-12 md:col-6 flex flex-column gap-3">
+            <h4 class="font-bold border-bottom-1 border-solid pb-2">{{ 'WIZARD.STEP2.EXTENSIONS_TITLE' | translate }}</h4>
             <div class="flex gap-2">
               <input pInputText type="text" [(ngModel)]="newExtension" class="flex-1" placeholder=".com, .fr, .io..." (keydown.enter)="addExtension()">
               <p-button icon="pi pi-plus" (onClick)="addExtension()"></p-button>
             </div>
-            <div class="flex flex-wrap gap-2 p-2 bg-gray-50 rounded border">
+            <div class="flex flex-wrap gap-2 p-2 border-round border-1 border-solid" style="background: var(--p-surface-50)">
               <p-chip *ngFor="let ext of selectedExtensions()" [label]="ext" [removable]="true" (onRemove)="removeExtension(ext)"></p-chip>
             </div>
 
-            <h4 class="font-bold border-b pb-2 mt-2">{{ 'WIZARD.STEP2.MATCH_MODE' | translate }}</h4>
+            <h4 class="font-bold border-bottom-1 border-solid pb-2 mt-2">{{ 'WIZARD.STEP2.MATCH_MODE' | translate }}</h4>
             <p-selectButton
               [options]="matchOptions()"
               [(ngModel)]="matchMode"
-              class="w-full">
+              styleClass="w-full">
             </p-selectButton>
           </div>
         </div>
 
-        <div class="flex mt-6 pt-6 border-t" style="width: 100%; max-width: 42rem; justify-content: space-between">
+        <div class="flex mt-4 pt-4 border-top-1 border-solid" style="width: 100%; max-width: 42rem; justify-content: space-between">
           <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
           <p-button
             [label]="'WIZARD.STEP2.SEARCH_BTN' | translate"
@@ -124,23 +124,23 @@
       <!-- Étape 3 : Résultats -->
       <div *ngIf="activeIndex() === 2" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem">
         <h3 class="text-xl font-semibold text-green-600">{{ 'WIZARD.STEP3.TITLE' | translate:{ extensions: selectedExtensions().join(', ') } }}</h3>
-        <p class="text-gray-600">{{ 'WIZARD.STEP3.SUBTITLE' | translate }}</p>
+        <p class="text-600">{{ 'WIZARD.STEP3.SUBTITLE' | translate }}</p>
 
-        <div *ngIf="domains().length > 0 && domains().length < 10" class="p-3 bg-amber-50 border-l-4 border-amber-400 rounded text-sm text-amber-800 italic">
+        <div *ngIf="domains().length > 0 && domains().length < 10" class="p-2 border-left-4 border-solid border-round text-sm font-italic" style="background: #fffbeb; border-color: #f59e0b; color: #92400e">
           {{ 'WIZARD.STEP3.NOTE' | translate:{ total: totalChecked(), count: domains().length } }}
         </div>
 
-        <div class="mt-6 border rounded-lg shadow-sm bg-white overflow-x-auto" style="width: 100%; max-width: 36rem; margin: 0 auto">
+        <div class="mt-4 border-1 border-solid border-round-lg shadow-1 overflow-x-auto" style="width: 100%; max-width: 36rem; margin: 0 auto; background: white">
             <p-table [value]="domains()" styleClass="p-datatable-sm">
               <ng-template pTemplate="header">
                 <tr>
-                  <th class="bg-gray-50 min-w-[100px] md:min-w-[150px]">Nom de domaine</th>
-                  <th *ngFor="let ext of selectedExtensions()" class="text-center bg-gray-50 px-1 md:px-3">{{ ext }}</th>
+                  <th style="background: var(--p-surface-50); min-width: 100px">Nom de domaine</th>
+                  <th *ngFor="let ext of selectedExtensions()" class="text-center px-1" style="background: var(--p-surface-50)">{{ ext }}</th>
                 </tr>
               </ng-template>
               <ng-template pTemplate="body" let-result>
-                <tr class="hover:bg-gray-50 transition-colors">
-                  <td class="font-bold text-sm md:text-lg font-mono py-2 md:py-3 px-2 md:px-4">
+                <tr class="domain-row">
+                  <td class="font-bold text-sm py-2 px-2" style="font-family: monospace">
                     <div style="display: flex; align-items: center; gap: 0.75rem">
                       <button type="button" (click)="toggleFavorite(result); $event.stopPropagation()" style="background: none; border: none; cursor: pointer; font-size: 1.25rem; flex-shrink: 0; padding: 0">
                         <i class="pi" [class.pi-heart-fill]="result.isFavorite" [class.pi-heart]="!result.isFavorite" [style.color]="result.isFavorite ? '#ef4444' : '#9ca3af'"></i>
@@ -149,31 +149,31 @@
                     </div>
                   </td>
                   <td *ngFor="let ext of selectedExtensions()" class="text-center px-1">
-                    <i *ngIf="result.allExtensions[ext]" class="pi pi-check text-lg md:text-xl font-bold" [style.color]="isFullyAvailable(result) ? '#16a34a' : '#22c55e'" title="Disponible"></i>
-                    <i *ngIf="!result.allExtensions[ext]" class="pi pi-times text-red-400 text-base md:text-lg" title="Indisponible"></i>
+                    <i *ngIf="result.allExtensions[ext]" class="pi pi-check text-lg font-bold" [style.color]="isFullyAvailable(result) ? '#16a34a' : '#22c55e'" title="Disponible"></i>
+                    <i *ngIf="!result.allExtensions[ext]" class="pi pi-times text-red-400 text-base" title="Indisponible"></i>
                   </td>
                 </tr>
               </ng-template>
             </p-table>
         </div>
 
-        <div *ngIf="domains().length === 0 && !loading()" class="text-center py-10">
-          <p class="text-gray-500">{{ 'WIZARD.STEP3.NO_RESULTS' | translate }}</p>
+        <div *ngIf="domains().length === 0 && !loading()" class="text-center" style="padding: 2.5rem 0">
+          <p class="text-500">{{ 'WIZARD.STEP3.NO_RESULTS' | translate }}</p>
         </div>
 
-        <div class="flex flex-col md:flex-row gap-4 mt-8" style="justify-content: center">
-          <p-button 
-            [label]="'WIZARD.STEP3.MORE_BTN' | translate" 
-            icon="pi pi-plus-circle" 
-            severity="info" 
+        <div class="flex flex-column md:flex-row gap-3 mt-5" style="justify-content: center">
+          <p-button
+            [label]="'WIZARD.STEP3.MORE_BTN' | translate"
+            icon="pi pi-plus-circle"
+            severity="info"
             [loading]="loading()"
             (onClick)="findDomains(true)">
           </p-button>
-          
-          <p-button 
-            [label]="'WIZARD.STEP3.NEW_PROJECT_BTN' | translate" 
-            icon="pi pi-refresh" 
-            severity="secondary" 
+
+          <p-button
+            [label]="'WIZARD.STEP3.NEW_PROJECT_BTN' | translate"
+            icon="pi pi-refresh"
+            severity="secondary"
             (onClick)="resetProject()">
           </p-button>
         </div>
@@ -191,8 +191,8 @@
            (click)="loadProject(project.id)"
            [pTooltip]="project.description" tooltipPosition="bottom" [appendTo]="'body'">
         <div style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1">{{ project.name }}</div>
-        
-        <div class="flex items-center gap-2">
+
+        <div style="display: flex; align-items: center; gap: 0.5rem">
           <p-button icon="pi pi-trash" [text]="true" severity="danger" (onClick)="deleteProject($event, project.id)" size="small"></p-button>
           <i class="pi pi-chevron-right" style="font-size: 0.75rem; color: #9ca3af; flex-shrink: 0"></i>
         </div>
@@ -210,7 +210,7 @@
   <div *ngIf="loading()" style="position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 50; background: rgba(255,255,255,0.5); backdrop-filter: blur(4px)">
      <div style="text-align: center">
         <p-progressSpinner></p-progressSpinner>
-        <p class="mt-4 font-semibold text-blue-600">{{ 'WIZARD.LOADING' | translate }}</p>
+        <p class="mt-3 font-semibold" style="color: #2563eb">{{ 'WIZARD.LOADING' | translate }}</p>
      </div>
   </div>
 </div>

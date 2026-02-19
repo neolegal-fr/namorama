@@ -1,16 +1,20 @@
-@import "tailwindcss";
+@import "primeflex/primeflex.css";
 @import "primeicons/primeicons.css";
-
-/* Configuration de Tailwind 4 pour Angular */
-@source "./src/**/*.{html,ts}";
 
 body {
     margin: 0;
     font-family: var(--font-family, sans-serif);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: var(--p-surface-50, #f9fafb);
 }
 
+/* Bouton langue (flag toggle) */
+.lang-toggle:hover {
+    background: var(--p-surface-100);
+}
+
+/* Items de la liste de projets dans le drawer */
 .project-item {
     display: flex;
     align-items: center;
