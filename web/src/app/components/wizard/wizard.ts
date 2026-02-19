@@ -212,7 +212,6 @@ export class WizardComponent implements OnInit {
     this.translate.get([
       'WIZARD.STEPS.DESCRIPTION',
       'WIZARD.STEPS.KEYWORDS',
-      'WIZARD.STEPS.EXTENSIONS',
       'WIZARD.STEPS.DOMAINS',
       'WIZARD.STEP2.MATCH_ANY',
       'WIZARD.STEP2.MATCH_ALL'
@@ -220,7 +219,6 @@ export class WizardComponent implements OnInit {
       this.items = [
         { label: res['WIZARD.STEPS.DESCRIPTION'] },
         { label: res['WIZARD.STEPS.KEYWORDS'] },
-        { label: res['WIZARD.STEPS.EXTENSIONS'] },
         { label: res['WIZARD.STEPS.DOMAINS'] }
       ];
       this.matchOptions.set([
@@ -295,8 +293,8 @@ export class WizardComponent implements OnInit {
           isFavorite: s.isFavorite
         })));
 
-        this.activeIndex.set(3);
-        this.maxActiveIndex.set(3);
+        this.activeIndex.set(2);
+        this.maxActiveIndex.set(2);
         this.loading.set(false);
         
         if (this.router.url !== `/projects/${id}`) {
@@ -678,8 +676,6 @@ export class WizardComponent implements OnInit {
           } else {
 
             this.domains.set(newDomains);
-
-            this.nextStep();
 
           }
 

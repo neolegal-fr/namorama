@@ -43,7 +43,7 @@
            class="edit-name-trigger cursor-pointer"
            style="display: inline-flex; align-items: center; gap: 0.75rem">
         <h1 class="font-bold text-primary" style="margin: 0; font-size: 2.5rem; text-transform: uppercase; font-weight: 900; letter-spacing: -0.05em">
-          {{ projectName() || ('WIZARD.STEPS.' + (activeIndex() === 0 ? 'DESCRIPTION' : activeIndex() === 1 ? 'KEYWORDS' : activeIndex() === 2 ? 'EXTENSIONS' : 'DOMAINS') | translate) }}
+          {{ projectName() || ('WIZARD.STEPS.' + (activeIndex() === 0 ? 'DESCRIPTION' : activeIndex() === 1 ? 'KEYWORDS' : 'DOMAINS') | translate) }}
         </h1>
         <i class="pi pi-pencil text-lg text-400" style="flex-shrink: 0; opacity: 0; transition: opacity 0.2s ease"></i>
       </div>
@@ -160,55 +160,18 @@
         </div>
       </div>
 
-      <!-- Étape 3 : Extensions + Recherche -->
+      <!-- Étape 3 : Extensions + Recherche + Résultats -->
       <div *ngIf="activeIndex() === 2" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.5rem">
-        <div>
-          <h2 class="font-bold text-900" style="font-size: 1.5rem; margin: 0 0 0.375rem 0">{{ 'WIZARD.STEP2.EXTENSIONS_TITLE' | translate }}</h2>
-          <p class="text-500" style="margin: 0; font-size: 0.9rem">{{ 'WIZARD.STEP2.MATCH_MODE' | translate }}</p>
-        </div>
 
         <!-- Extensions -->
-        <div style="width: 100%; max-width: 32rem; text-align: left; display: flex; flex-direction: column; gap: 0.75rem">
-          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap">
-            <div style="display: flex; flex-wrap: wrap; gap: 0.375rem; flex: 1">
-              <p-chip *ngFor="let ext of selectedExtensions()" [label]="ext" [removable]="true" (onRemove)="removeExtension(ext)"></p-chip>
-            </div>
-            <div style="display: flex; gap: 0.375rem; align-items: center; flex-shrink: 0">
-              <input pInputText [(ngModel)]="newExtension" placeholder=".io .fr net" style="width: 9rem; height: 2rem; font-size: 0.85rem" (keydown.enter)="addExtension()">
-              <p-button icon="pi pi-plus" size="small" (onClick)="addExtension()"></p-button>
-            </div>
-          </div>
-          <div *ngIf="selectedExtensions().length > 1">
-            <p-selectButton [options]="matchOptions()" [(ngModel)]="matchMode" styleClass="select-btn-full"></p-selectButton>
-          </div>
-        </div>
-
-        <div class="flex mt-3" style="width: 100%; max-width: 32rem; justify-content: space-between">
-          <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
-          <p-button
-            [label]="'WIZARD.STEP2.SEARCH_BTN' | translate"
-            icon="pi pi-search"
-            [disabled]="selectedExtensions().length === 0"
-            [loading]="loading()"
-            (onClick)="findDomains()">
-          </p-button>
-        </div>
-      </div>
-
-      <!-- Étape 4 : Résultats -->
-      <div *ngIf="activeIndex() === 3" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1rem">
-        <h2 class="font-bold" style="font-size: 1.5rem; margin: 0 0 0.375rem 0; color: #16a34a">{{ 'WIZARD.STEP3.TITLE' | translate:{ extensions: selectedExtensions().join(', ') } }}</h2>
-        <p class="text-500" style="margin: 0; font-size: 0.9rem">{{ 'WIZARD.STEP3.SUBTITLE' | translate }}</p>
-
-        <!-- Bandeau ajustement extensions post-recherche -->
-        <div class="extensions-bar" style="width: 100%">
+        <div class="extensions-bar" style="width: 100%; max-width: 36rem">
           <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap">
             <h4 class="section-label" style="margin: 0; white-space: nowrap">{{ 'WIZARD.STEP2.EXTENSIONS_TITLE' | translate }}</h4>
             <div style="display: flex; flex-wrap: wrap; gap: 0.375rem; flex: 1">
               <p-chip *ngFor="let ext of selectedExtensions()" [label]="ext" [removable]="true" (onRemove)="removeExtension(ext)"></p-chip>
             </div>
-            <div style="display: flex; gap: 0.375rem; align-items: center">
-              <input pInputText [(ngModel)]="newExtension" placeholder=".io" style="width: 5rem; height: 2rem; font-size: 0.85rem" (keydown.enter)="addExtension()">
+            <div style="display: flex; gap: 0.375rem; align-items: center; flex-shrink: 0">
+              <input pInputText [(ngModel)]="newExtension" placeholder=".io .fr net" style="width: 9rem; height: 2rem; font-size: 0.85rem" (keydown.enter)="addExtension()">
               <p-button icon="pi pi-plus" size="small" (onClick)="addExtension()" [loading]="recheckLoading()"></p-button>
             </div>
           </div>
@@ -220,17 +183,45 @@
           </div>
         </div>
 
-        <div *ngIf="domains().length > 0 && domains().length < 10" class="p-2 border-left-4 border-solid border-round text-sm font-italic" style="background: #fffbeb; border-color: #f59e0b; color: #92400e">
-          {{ 'WIZARD.STEP3.NOTE' | translate:{ total: totalChecked(), count: domains().length } }}
+        <!-- Boutons de navigation -->
+        <div class="flex" style="width: 100%; max-width: 36rem; justify-content: space-between">
+          <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
+          <div style="display: flex; gap: 0.5rem">
+            <p-button
+              *ngIf="domains().length > 0"
+              [label]="'WIZARD.STEP3.MORE_BTN' | translate"
+              icon="pi pi-plus-circle"
+              severity="info"
+              [loading]="loading()"
+              (onClick)="findDomains(true)">
+            </p-button>
+            <p-button
+              [label]="'WIZARD.STEP2.SEARCH_BTN' | translate"
+              icon="pi pi-search"
+              [disabled]="selectedExtensions().length === 0"
+              [loading]="loading()"
+              (onClick)="findDomains()">
+            </p-button>
+          </div>
         </div>
 
-        <div style="width: 100%; max-width: 36rem; margin: 0 auto; display: flex; justify-content: flex-end">
-          <button type="button" (click)="copyTable()" style="background: none; border: none; cursor: pointer; font-size: 0.8rem; color: var(--p-surface-400); display: flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0; transition: color 0.15s" class="copy-table-btn">
-            <i class="pi" [class.pi-check]="copiedDomain() === 'table'" [class.pi-copy]="copiedDomain() !== 'table'" [style.color]="copiedDomain() === 'table' ? '#16a34a' : null"></i>
-            <span>{{ (copiedDomain() === 'table' ? 'WIZARD.STEP3.COPIED' : 'WIZARD.STEP3.COPY_TABLE') | translate }}</span>
-          </button>
-        </div>
-        <div class="border-1 border-solid border-round-lg shadow-1 overflow-x-auto" style="width: 100%; max-width: 36rem; margin: 0 auto; background: white">
+        <!-- Résultats -->
+        <ng-container *ngIf="domains().length > 0">
+          <h2 class="font-bold" style="font-size: 1.5rem; margin: 0; color: #16a34a">{{ 'WIZARD.STEP3.TITLE' | translate:{ extensions: selectedExtensions().join(', ') } }}</h2>
+          <p class="text-500" style="margin: 0; font-size: 0.9rem">{{ 'WIZARD.STEP3.SUBTITLE' | translate }}</p>
+
+          <div *ngIf="domains().length < 10" class="p-2 border-left-4 border-solid border-round text-sm font-italic" style="width: 100%; max-width: 36rem; background: #fffbeb; border-color: #f59e0b; color: #92400e; text-align: left">
+            {{ 'WIZARD.STEP3.NOTE' | translate:{ total: totalChecked(), count: domains().length } }}
+          </div>
+
+          <div style="width: 100%; max-width: 36rem; display: flex; justify-content: flex-end">
+            <button type="button" (click)="copyTable()" style="background: none; border: none; cursor: pointer; font-size: 0.8rem; color: var(--p-surface-400); display: flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0; transition: color 0.15s" class="copy-table-btn">
+              <i class="pi" [class.pi-check]="copiedDomain() === 'table'" [class.pi-copy]="copiedDomain() !== 'table'" [style.color]="copiedDomain() === 'table' ? '#16a34a' : null"></i>
+              <span>{{ (copiedDomain() === 'table' ? 'WIZARD.STEP3.COPIED' : 'WIZARD.STEP3.COPY_TABLE') | translate }}</span>
+            </button>
+          </div>
+
+          <div class="border-1 border-solid border-round-lg shadow-1 overflow-x-auto" style="width: 100%; max-width: 36rem; background: white">
             <p-table [value]="filteredDomains()" styleClass="p-datatable-sm">
               <ng-template pTemplate="header">
                 <tr>
@@ -256,20 +247,7 @@
                 </tr>
               </ng-template>
             </p-table>
-        </div>
-
-        <div *ngIf="domains().length === 0 && !loading()" class="text-center" style="padding: 2.5rem 0">
-          <p class="text-500">{{ 'WIZARD.STEP3.NO_RESULTS' | translate }}</p>
-        </div>
-
-        <div class="flex flex-column md:flex-row gap-3 mt-5" style="justify-content: center">
-          <p-button
-            [label]="'WIZARD.STEP3.MORE_BTN' | translate"
-            icon="pi pi-plus-circle"
-            severity="info"
-            [loading]="loading()"
-            (onClick)="findDomains(true)">
-          </p-button>
+          </div>
 
           <p-button
             [label]="'WIZARD.STEP3.NEW_PROJECT_BTN' | translate"
@@ -277,6 +255,10 @@
             severity="secondary"
             (onClick)="resetProject()">
           </p-button>
+        </ng-container>
+
+        <div *ngIf="domains().length === 0 && totalChecked() > 0 && !loading()" class="text-center" style="padding: 2.5rem 0">
+          <p class="text-500">{{ 'WIZARD.STEP3.NO_RESULTS' | translate }}</p>
         </div>
       </div>
     </div>
