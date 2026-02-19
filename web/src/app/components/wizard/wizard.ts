@@ -78,6 +78,9 @@ export class WizardComponent implements OnInit {
   recheckLoading = signal(false);
   copiedDomain = signal<string | null>(null);
 
+  private readonly SEARCH_TIMEOUT_MS = 30_000;
+  private searchTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
   filteredDomains = computed(() => {
     const mode = this.matchMode();
     const exts = this.selectedExtensions();
@@ -404,6 +407,36 @@ export class WizardComponent implements OnInit {
     return this.selectedExtensions().every(ext => result.allExtensions[ext]);
   }
 
+  private startSearchTimeout() {
+    this.clearSearchTimeout();
+    this.searchTimeoutHandle = setTimeout(() => {
+      if (!this.loading()) return;
+      this.translate.get(['WIZARD.TIMEOUT.MESSAGE', 'WIZARD.TIMEOUT.KEEP_WAITING', 'WIZARD.TIMEOUT.CANCEL']).subscribe(res => {
+        this.confirmationService.confirm({
+          message: res['WIZARD.TIMEOUT.MESSAGE'],
+          acceptLabel: res['WIZARD.TIMEOUT.KEEP_WAITING'],
+          rejectLabel: res['WIZARD.TIMEOUT.CANCEL'],
+          acceptIcon: 'none',
+          rejectIcon: 'none',
+          rejectButtonStyleClass: 'p-button-text',
+          accept: () => { /* on continue d'attendre */ },
+          reject: () => {
+            this.loading.set(false);
+            this.activeIndex.set(1);
+            this.cdr.detectChanges();
+          }
+        });
+      });
+    }, this.SEARCH_TIMEOUT_MS);
+  }
+
+  private clearSearchTimeout() {
+    if (this.searchTimeoutHandle !== null) {
+      clearTimeout(this.searchTimeoutHandle);
+      this.searchTimeoutHandle = null;
+    }
+  }
+
   copyTable() {
     const exts = this.selectedExtensions();
     const header = ['Domain', ...exts].join('\t');
@@ -510,6 +543,7 @@ export class WizardComponent implements OnInit {
   
 
       this.loading.set(true);
+      this.startSearchTimeout();
 
       this.cdr.detectChanges();
 
@@ -589,6 +623,7 @@ export class WizardComponent implements OnInit {
 
           
 
+          this.clearSearchTimeout();
           this.loading.set(false);
 
           this.cdr.detectChanges();
@@ -597,6 +632,7 @@ export class WizardComponent implements OnInit {
 
         error: (err: any) => {
 
+          this.clearSearchTimeout();
           this.loading.set(false);
 
           if (err.status === 403) {

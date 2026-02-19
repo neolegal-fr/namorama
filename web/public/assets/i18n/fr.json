@@ -62,6 +62,11 @@
       "COPY_TABLE": "Copier le tableau",
       "COPIED": "Copié !"
     },
+    "TIMEOUT": {
+      "MESSAGE": "La recherche prend plus de temps que prévu. Voulez-vous continuer à attendre ?",
+      "KEEP_WAITING": "Continuer à attendre",
+      "CANCEL": "Annuler et réessayer"
+    },
     "LOADING": "L'IA travaille pour vous...",
     "RECHECKING": "Vérification des disponibilités en cours...",
     "RECHECK_ERROR": "Impossible de vérifier la disponibilité. Réessayez.",

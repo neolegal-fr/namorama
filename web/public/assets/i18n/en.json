@@ -62,6 +62,11 @@
       "COPY_TABLE": "Copy table",
       "COPIED": "Copied!"
     },
+    "TIMEOUT": {
+      "MESSAGE": "The search is taking longer than expected. Do you want to keep waiting?",
+      "KEEP_WAITING": "Keep waiting",
+      "CANCEL": "Cancel and retry"
+    },
     "LOADING": "AI is working for you...",
     "RECHECKING": "Checking availability...",
     "RECHECK_ERROR": "Could not check availability. Please try again.",
