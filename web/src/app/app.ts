@@ -149,6 +149,15 @@ export class AppComponent implements OnInit {
       const profile = await this.keycloak.loadUserProfile();
       this.userName.set(profile.firstName || profile.username || '');
       this.loadCredits();
+
+      // Locale depuis le token Keycloak (prioritaire sur le navigateur)
+      const token = this.keycloak.getKeycloakInstance().tokenParsed as any;
+      const keycloakLocale = token?.locale ?? token?.preferred_locale ?? (profile as any).attributes?.locale?.[0];
+      if (keycloakLocale) {
+        const lang = String(keycloakLocale).toLowerCase().slice(0, 2);
+        if (['fr', 'en'].includes(lang)) this.setLang(lang);
+      }
+
       setTimeout(() => { this.updateProfileMenu(); this.updateProjectMenu(); });
     }
 
