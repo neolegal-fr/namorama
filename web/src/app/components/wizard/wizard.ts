@@ -76,6 +76,7 @@ export class WizardComponent implements OnInit {
   domains = signal<any[]>([]);
   totalChecked = signal(0);
   recheckLoading = signal(false);
+  copiedDomain = signal<string | null>(null);
 
   filteredDomains = computed(() => {
     const mode = this.matchMode();
@@ -328,19 +329,24 @@ export class WizardComponent implements OnInit {
   }
 
   addExtension() {
-    let ext = this.newExtension().trim().toLowerCase();
-    if (ext) {
-      if (!ext.startsWith('.')) ext = '.' + ext;
-      if (!this.selectedExtensions().includes(ext)) {
-        if (this.selectedExtensions().length === 1) {
-          this.matchMode.set('all');
-        }
-        this.selectedExtensions.update(e => [...e, ext]);
-        this.recheckIfNeeded();
+    const raw = this.newExtension().trim().toLowerCase();
+    if (!raw) return;
+
+    // Séparer par espace, virgule ou point-virgule
+    const tokens = raw.split(/[\s,;]+/).filter(t => t.length > 0);
+    const toAdd = tokens
+      .map(t => t.startsWith('.') ? t : '.' + t)
+      .filter(ext => /^\.[a-z]{2,10}$/.test(ext) && !this.selectedExtensions().includes(ext));
+
+    if (toAdd.length > 0) {
+      if (this.selectedExtensions().length === 1 && toAdd.length >= 1) {
+        this.matchMode.set('all');
       }
-      this.newExtension.set('');
-      this.cdr.detectChanges();
+      this.selectedExtensions.update(e => [...e, ...toAdd]);
+      this.recheckIfNeeded();
     }
+    this.newExtension.set('');
+    this.cdr.detectChanges();
   }
 
   removeExtension(ext: string) {
@@ -396,6 +402,22 @@ export class WizardComponent implements OnInit {
 
   isFullyAvailable(result: any): boolean {
     return this.selectedExtensions().every(ext => result.allExtensions[ext]);
+  }
+
+  copyTable() {
+    const exts = this.selectedExtensions();
+    const header = ['Domain', ...exts].join('\t');
+    const rows = this.filteredDomains().map(d => {
+      const cols = exts.map(ext =>
+        d.allExtensions[ext] === true ? '✓' : d.allExtensions[ext] === false ? '✗' : '?'
+      );
+      return [d.name, ...cols].join('\t');
+    });
+    const text = [header, ...rows].join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      this.copiedDomain.set('table');
+      setTimeout(() => this.copiedDomain.set(null), 2000);
+    });
   }
 
   // Actions IA

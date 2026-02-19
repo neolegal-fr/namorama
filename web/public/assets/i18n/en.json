@@ -58,7 +58,9 @@
       "NOTE": "Note: We analyzed {{total}} name ideas, but only {{count}} were actually available in .com.",
       "NO_RESULTS": "No domains found. Try changing your keywords.",
       "MORE_BTN": "More suggestions",
-      "NEW_PROJECT_BTN": "New project"
+      "NEW_PROJECT_BTN": "New project",
+      "COPY_TABLE": "Copy table",
+      "COPIED": "Copied!"
     },
     "LOADING": "AI is working for you...",
     "RECHECKING": "Checking availability...",

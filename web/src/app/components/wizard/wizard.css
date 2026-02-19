@@ -24,6 +24,11 @@
     background: var(--p-surface-50, #f9fafb);
 }
 
+/* Hover sur le bouton copier tableau */
+.copy-table-btn:hover {
+    color: var(--p-primary-color) !important;
+}
+
 /* ─── Titres de section (étape 2) ───────────────── */
 .section-label {
     margin: 0;
