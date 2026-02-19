@@ -202,7 +202,7 @@
           <h2 class="font-bold" style="font-size: 1.5rem; margin: 0; color: #16a34a">{{ 'WIZARD.STEP3.TITLE' | translate:{ extensions: selectedExtensions().join(', ') } }}</h2>
           <p class="text-500" style="margin: 0; font-size: 0.9rem">{{ 'WIZARD.STEP3.SUBTITLE' | translate }}</p>
 
-          <div *ngIf="totalChecked() > 0 && domains().length < totalChecked()" class="p-2 border-left-4 border-solid border-round text-sm font-italic" style="width: 100%; max-width: 36rem; background: #fffbeb; border-color: #f59e0b; color: #92400e; text-align: left">
+          <div *ngIf="totalChecked() > 0 && domains().length < 10" class="p-2 border-left-4 border-solid border-round text-sm font-italic" style="width: 100%; max-width: 36rem; background: #fffbeb; border-color: #f59e0b; color: #92400e; text-align: left">
             {{ 'WIZARD.STEP3.NOTE' | translate:{ total: totalChecked(), count: domains().length } }}
           </div>
 
