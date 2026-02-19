@@ -77,7 +77,7 @@ export class WizardComponent implements OnInit {
   
   newExtension = signal('');
   selectedExtensions = signal<string[]>(['.com', '.net']);
-  matchMode = signal('any');
+  matchMode = signal('all');
   matchOptions = signal<any[]>([]);
 
   // Étape 3
@@ -146,7 +146,7 @@ export class WizardComponent implements OnInit {
       this.refinedDescription.set(state.refinedDescription);
       this.keywords.set(state.keywords);
       this.selectedExtensions.set(state.selectedExtensions || ['.com', '.net']);
-      this.matchMode.set(state.matchMode || 'any');
+      this.matchMode.set(state.matchMode || 'all');
       this.projectId.set(state.projectId || null);
       localStorage.removeItem('wizard_state');
       
@@ -303,7 +303,7 @@ export class WizardComponent implements OnInit {
     this.newKeyword.set('');
     this.newExtension.set('');
     this.selectedExtensions.set(['.com', '.net']);
-    this.matchMode.set('any');
+    this.matchMode.set('all');
     this.activeIndex.set(0);
     this.maxActiveIndex.set(0);
     if (!this.isLoggedIn()) this.showLanding.set(true);

@@ -61,8 +61,8 @@
       "EXTENSIONS_TITLE": "Domain extensions",
       "ADD_PLACEHOLDER": "Add a keyword...",
       "MATCH_MODE": "Availability criteria",
-      "MATCH_ANY": "At least one free",
-      "MATCH_ALL": "All extensions free",
+      "MATCH_ANY": "At least one available",
+      "MATCH_ALL": "All extensions available",
       "BACK_BTN": "Back",
       "SEARCH_BTN": "Search for domains"
     },
