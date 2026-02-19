@@ -6,20 +6,20 @@ body {
     font-family: var(--font-family, sans-serif);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: var(--p-surface-50, #f9fafb);
+    background-color: var(--p-surface-100, #f3f4f6);
 }
 
-/* Bouton langue (flag toggle) */
+/* ─── Bouton langue ──────────────────────────────── */
 .lang-toggle:hover {
-    background: var(--p-surface-100);
+    background: var(--p-surface-200) !important;
 }
 
-/* Items de la liste de projets dans le drawer */
+/* ─── Items de projets dans le drawer ───────────── */
 .project-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1rem;
+    padding: 0.625rem 0.875rem;
     border: 1px solid var(--p-surface-200, #e5e7eb);
     border-radius: 0.5rem;
     cursor: pointer;
@@ -32,6 +32,59 @@ body {
     color: white;
 }
 
-.project-item:hover .pi-chevron-right {
-    color: white !important;
+.project-item:hover .pi-chevron-right,
+.project-item:hover .project-item-date {
+    color: rgba(255,255,255,0.7) !important;
+}
+
+/* ─── Stepper ────────────────────────────────────── */
+
+/* Cercle de l'étape */
+.p-steps .p-steps-item .p-steps-number {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: 2px solid var(--p-surface-300);
+    background: white;
+    color: var(--p-surface-500);
+    transition: all 0.2s ease;
+}
+
+/* Étape active */
+.p-steps .p-steps-item.p-highlight .p-steps-number {
+    background: var(--p-primary-color);
+    border-color: var(--p-primary-color);
+    color: white;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--p-primary-color) 20%, transparent);
+}
+
+/* Label de l'étape active */
+.p-steps .p-steps-item.p-highlight .p-steps-title {
+    color: var(--p-primary-color);
+    font-weight: 600;
+}
+
+/* Labels des autres étapes */
+.p-steps .p-steps-title {
+    font-size: 0.8rem;
+    margin-top: 0.4rem;
+    color: var(--p-surface-500);
+}
+
+/* Ligne de connexion */
+.p-steps .p-steps-item:before {
+    border-top-color: var(--p-surface-200);
+}
+
+/* ─── Bouton IA (indigo) ─────────────────────────── */
+.btn-ai.p-button {
+    background: #6366f1;
+    border-color: #6366f1;
+    color: white;
+}
+
+.btn-ai.p-button:hover {
+    background: #4f46e5 !important;
+    border-color: #4f46e5 !important;
 }

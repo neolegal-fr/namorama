@@ -81,7 +81,7 @@ import { InputNumber } from 'primeng/inputnumber';
       </p-menubar>
 
       <div class="flex flex-column align-items-center w-full px-3 py-3 md:py-5">
-        <div class="w-full" style="max-width: 56rem">
+        <div class="w-full" style="max-width: 44rem">
           <router-outlet></router-outlet>
         </div>
       </div>
