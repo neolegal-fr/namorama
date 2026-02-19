@@ -183,28 +183,6 @@
           </div>
         </div>
 
-        <!-- Boutons de navigation -->
-        <div class="flex" style="width: 100%; max-width: 36rem; justify-content: space-between">
-          <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
-          <div style="display: flex; gap: 0.5rem">
-            <p-button
-              *ngIf="domains().length > 0"
-              [label]="'WIZARD.STEP3.MORE_BTN' | translate"
-              icon="pi pi-plus-circle"
-              severity="info"
-              [loading]="loading()"
-              (onClick)="findDomains(true)">
-            </p-button>
-            <p-button
-              [label]="'WIZARD.STEP2.SEARCH_BTN' | translate"
-              icon="pi pi-search"
-              [disabled]="selectedExtensions().length === 0"
-              [loading]="loading()"
-              (onClick)="findDomains()">
-            </p-button>
-          </div>
-        </div>
-
         <!-- Résultats -->
         <ng-container *ngIf="domains().length > 0">
           <h2 class="font-bold" style="font-size: 1.5rem; margin: 0; color: #16a34a">{{ 'WIZARD.STEP3.TITLE' | translate:{ extensions: selectedExtensions().join(', ') } }}</h2>
@@ -248,17 +226,39 @@
               </ng-template>
             </p-table>
           </div>
-
-          <p-button
-            [label]="'WIZARD.STEP3.NEW_PROJECT_BTN' | translate"
-            icon="pi pi-refresh"
-            severity="secondary"
-            (onClick)="resetProject()">
-          </p-button>
         </ng-container>
 
         <div *ngIf="domains().length === 0 && totalChecked() > 0 && !loading()" class="text-center" style="padding: 2.5rem 0">
           <p class="text-500">{{ 'WIZARD.STEP3.NO_RESULTS' | translate }}</p>
+        </div>
+
+        <!-- Boutons de navigation -->
+        <div class="flex" style="width: 100%; max-width: 36rem; justify-content: space-between">
+          <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
+          <div style="display: flex; gap: 0.5rem">
+            <p-button
+              *ngIf="domains().length > 0"
+              [label]="'WIZARD.STEP3.NEW_PROJECT_BTN' | translate"
+              icon="pi pi-refresh"
+              severity="secondary"
+              (onClick)="resetProject()">
+            </p-button>
+            <p-button
+              *ngIf="domains().length > 0"
+              [label]="'WIZARD.STEP3.MORE_BTN' | translate"
+              icon="pi pi-plus-circle"
+              severity="info"
+              [loading]="loading()"
+              (onClick)="findDomains(true)">
+            </p-button>
+            <p-button
+              [label]="'WIZARD.STEP2.SEARCH_BTN' | translate"
+              icon="pi pi-search"
+              [disabled]="selectedExtensions().length === 0"
+              [loading]="loading()"
+              (onClick)="findDomains()">
+            </p-button>
+          </div>
         </div>
       </div>
     </div>
