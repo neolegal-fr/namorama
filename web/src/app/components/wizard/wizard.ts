@@ -567,7 +567,7 @@ export class WizardComponent implements OnInit {
       });
     }
 
-    this.domainService.generateKeywords(descToUse, this.effectiveLocale()).subscribe({
+    this.domainService.generateKeywords(descToUse, this.effectiveLocale() ?? this.translate.currentLang).subscribe({
       next: (res: { keywords: string[] }) => {
         this.keywords.set(res.keywords);
         this.loading.set(false);
