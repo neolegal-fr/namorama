@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, signal, OnInit, ChangeDetectorRef, ApplicationRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomainService } from '../../services/domain';
@@ -86,7 +86,8 @@ export class WizardComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private confirmationService: ConfirmationService,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private appRef: ApplicationRef
   ) {}
 
   async ngOnInit() {
@@ -237,15 +238,16 @@ export class WizardComponent implements OnInit {
         rejectButtonStyleClass: "p-button-text",
         accept: () => {
           this.projectService.deleteProject(id).subscribe(() => {
-            this.projectService.refreshProjects().subscribe();
+            this.projectService.projects.update(list => list.filter(p => p.id !== id));
             if (this.projectId() === id) {
               this.resetProject();
             }
-            this.messageService.add({ 
-              severity: 'success', 
-              summary: res['PROJECTS.SUCCESS'], 
-              detail: res['PROJECTS.DELETE_SUCCESS'] 
+            this.messageService.add({
+              severity: 'success',
+              summary: res['PROJECTS.SUCCESS'],
+              detail: res['PROJECTS.DELETE_SUCCESS']
             });
+            this.appRef.tick();
           });
         }
       });

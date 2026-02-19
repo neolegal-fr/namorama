@@ -108,6 +108,9 @@ export class ProjectsService {
 
   async remove(id: string, user: User): Promise<void> {
     const project = await this.findOne(id, user);
+    if (project.suggestions?.length) {
+      await this.suggestionsRepository.remove(project.suggestions);
+    }
     await this.projectsRepository.remove(project);
   }
 }
