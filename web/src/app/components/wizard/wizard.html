@@ -81,37 +81,37 @@
         <div class="grid" style="width: 100%; max-width: 42rem; text-align: left">
           <!-- Colonne Mots-clés -->
           <div class="col-12 md:col-6 flex flex-column gap-3">
-            <h4 class="font-bold border-bottom-1 border-solid pb-2">{{ 'WIZARD.STEP2.KEYWORDS_TITLE' | translate }}</h4>
+            <h4 class="section-label">{{ 'WIZARD.STEP2.KEYWORDS_TITLE' | translate }}</h4>
             <div class="flex gap-2">
               <input pInputText type="text" [(ngModel)]="newKeyword" class="flex-1" [placeholder]="'WIZARD.STEP2.ADD_PLACEHOLDER' | translate" (keydown.enter)="addKeyword()">
               <p-button icon="pi pi-plus" (onClick)="addKeyword()"></p-button>
             </div>
-            <div class="flex flex-wrap gap-2 overflow-y-auto p-2 border-round border-1 border-solid" style="max-height: 12rem; background: var(--p-surface-50)">
+            <div class="chips-container">
               <p-chip *ngFor="let keyword of keywords()" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
             </div>
           </div>
 
           <!-- Colonne Extensions -->
           <div class="col-12 md:col-6 flex flex-column gap-3">
-            <h4 class="font-bold border-bottom-1 border-solid pb-2">{{ 'WIZARD.STEP2.EXTENSIONS_TITLE' | translate }}</h4>
+            <h4 class="section-label">{{ 'WIZARD.STEP2.EXTENSIONS_TITLE' | translate }}</h4>
             <div class="flex gap-2">
               <input pInputText type="text" [(ngModel)]="newExtension" class="flex-1" placeholder=".com, .fr, .io..." (keydown.enter)="addExtension()">
               <p-button icon="pi pi-plus" (onClick)="addExtension()"></p-button>
             </div>
-            <div class="flex flex-wrap gap-2 p-2 border-round border-1 border-solid" style="background: var(--p-surface-50)">
+            <div class="chips-container">
               <p-chip *ngFor="let ext of selectedExtensions()" [label]="ext" [removable]="true" (onRemove)="removeExtension(ext)"></p-chip>
             </div>
 
-            <h4 class="font-bold border-bottom-1 border-solid pb-2 mt-2">{{ 'WIZARD.STEP2.MATCH_MODE' | translate }}</h4>
+            <h4 class="section-label mt-2">{{ 'WIZARD.STEP2.MATCH_MODE' | translate }}</h4>
             <p-selectButton
               [options]="matchOptions()"
               [(ngModel)]="matchMode"
-              styleClass="w-full">
+              styleClass="select-btn-full">
             </p-selectButton>
           </div>
         </div>
 
-        <div class="flex mt-4 pt-4 border-top-1 border-solid" style="width: 100%; max-width: 42rem; justify-content: space-between">
+        <div class="flex mt-5" style="width: 100%; max-width: 42rem; justify-content: space-between">
           <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
           <p-button
             [label]="'WIZARD.STEP2.SEARCH_BTN' | translate"
