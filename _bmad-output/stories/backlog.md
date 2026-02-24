@@ -539,6 +539,62 @@
 
 ---
 
+## US-022 · "Buy on registrar" button for available domains
+
+**As a** user who has found an available domain name,
+**I want** a direct link to buy it on a registrar from within the results table,
+**So that** I can register the domain immediately without leaving the app and searching manually.
+
+### Context — Affiliate programmes
+
+| Registrar | Market | Commission (domains) | Cookie | Notes |
+|-----------|--------|----------------------|--------|-------|
+| **OVH** | France / EU | 3.2% | 45 days | Via third-party network (CJ / Impact). French market leader. |
+| **Namecheap** | International | 35% | 30 days | Via Impact Radius / ShareASale. High commission. |
+| **Gandi** | France / EU | TBC — no confirmed public programme | — | Respected by devs; worth a direct link even without commission. |
+| **GoDaddy** | International | Via CJ | 30 days | Optional, lower brand perception in FR market. |
+
+**Recommendation**: start with OVH + Namecheap (confirmed programmes). Add Gandi as a no-commission direct link. Skip GoDaddy for now.
+
+---
+
+### Acceptance Criteria
+
+#### Results table
+- [ ] For each cell where a domain+extension is **available** (✓), a small external-link icon or "Buy" micro-button appears on row hover
+- [ ] Clicking opens the registrar's domain search/purchase page in a new tab, pre-filled with the full domain (e.g. `florizon.com`)
+- [ ] If multiple registrars are configured, a small popover lets the user choose (e.g. OVH | Namecheap | Gandi)
+- [ ] The button/icon does **not** appear for unavailable (✗) or pending (spinner) cells
+- [ ] On mobile, the button is always visible (no hover state)
+
+#### Affiliate link configuration
+- [ ] Registrar URLs and affiliate tracking IDs are configured via environment variables:
+  - `REGISTRAR_OVH_AFFILIATE_ID` — appended to OVH deep-link if set
+  - `REGISTRAR_NAMECHEAP_AFFILIATE_ID` — appended to Namecheap deep-link if set
+- [ ] If no affiliate ID is configured for a registrar, a plain (non-tracked) deep-link is used as fallback
+- [ ] Deep-link URL patterns (configurable):
+  - OVH: `https://www.ovhcloud.com/fr/domains/domain-name-search/?q={domain}` (+ affiliate param if configured)
+  - Namecheap: `https://www.namecheap.com/domains/registration/results/?domain={domain}` (+ affiliate param)
+  - Gandi: `https://www.gandi.net/fr/domain/suggest?q={name}` (no affiliate)
+
+#### Frontend configuration
+- [ ] The list of active registrars is driven by a config array in the frontend (easy to add/remove registrars without code changes)
+- [ ] Each registrar entry includes: `name`, `label`, `icon` (or logo URL), `buildUrl(domain: string): string`
+- [ ] The default registrar (used for single-click, no popover) can be configured
+
+### Technical Notes
+- All affiliate URL-building logic stays on the **frontend** (pure URL construction, no backend needed)
+- Affiliate IDs can be injected via Angular environment files (`environment.ts` / `environment.prod.ts`) or fetched from a `GET /config` public endpoint
+- Track clicks via `window.open(url, '_blank', 'noopener')` — no additional analytics needed in scope
+- Registrar logos: use text labels initially; replace with SVG logos later if desired
+
+### Out of Scope
+- Automated affiliate programme registration
+- Price comparison between registrars
+- Cart/checkout integration
+
+---
+
 ## Priority / Effort Matrix (initial estimate)
 
 | Story | Value | Effort | Priority |
@@ -563,3 +619,4 @@
 | US-019 · Configurable batch size ("More") | Medium | Low | 🟠 Next |
 | US-020 · Feedback form + 1 000 credit reward | High | Medium | 🟠 Next |
 | US-021 · Explain credit cost in UI | High | Low | 🔴 Now |
+| US-022 · "Buy on registrar" button (OVH, Namecheap, Gandi) | High | Low | 🟠 Next |
