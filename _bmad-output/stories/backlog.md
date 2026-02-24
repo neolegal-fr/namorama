@@ -595,6 +595,59 @@
 
 ---
 
+## US-023 · Landing Page — Brand Name Angle & SEO Optimisation
+
+**As a** entrepreneur searching for a brand name online,
+**I want** to find Namespoter when I search for "find a brand name" or "brand name generator",
+**So that** I discover the tool through organic search rather than only word-of-mouth.
+
+### Context
+
+The current landing page positions Namespoter primarily as a **domain name finder**. But the core value proposition is stronger: *find a brand name that is also available as a domain*. This dual angle (brand + domain) targets a broader and higher-intent audience — founders, freelancers, and product teams who start from the question "what should I call my brand?" not "what domain should I buy?".
+
+SEO opportunity: queries like *"trouver un nom de marque"*, *"générateur nom de marque"*, *"brand name generator"*, *"find available brand name"* have significant search volume and are underserved by most domain-focused tools.
+
+---
+
+### Acceptance Criteria
+
+#### Messaging & copy
+- [ ] The main headline (`h1`) leads with the **brand name** angle, not the domain angle, e.g.:
+  - FR: *"Trouvez le nom de marque idéal — avec le domaine disponible."*
+  - EN: *"Find the perfect brand name — with the domain available."*
+- [ ] The sub-headline clarifies the dual benefit: brand name + domain availability, in one step
+- [ ] The benefit bullets are reordered / reworded to lead with brand naming:
+  - "AI-generated brand name ideas tailored to your product and audience"
+  - "Real-time domain availability check across all extensions"
+  - "Short, memorable, distinctive — quality criteria built in"
+  - "Save your favourites and share with your team"
+- [ ] The CTA button copy reflects the brand angle: *"Find my brand name"* / *"Trouver mon nom de marque"*
+- [ ] The free-credits note mentions brand names: *"100 free credits = up to 100 brand name ideas"*
+
+#### SEO (meta tags & structure)
+- [ ] `<title>` tag: *"Namespoter — Brand Name Generator with Domain Availability"* (FR + EN variants)
+- [ ] `<meta name="description">`: 150-160 chars covering brand name + domain + AI + free
+- [ ] `<h1>` contains the primary keyword ("brand name" / "nom de marque")
+- [ ] Semantic HTML: the landing section uses `<section>`, `<h1>`, `<h2>`, `<ul>` — not just `<div>` + `<p>`
+- [ ] `lang` attribute on `<html>` is set correctly per active locale (fr / en)
+- [ ] Open Graph tags added: `og:title`, `og:description`, `og:url`, `og:image` (placeholder image acceptable initially)
+
+#### Structured data (optional but recommended)
+- [ ] A `<script type="application/ld+json">` block declares the page as a `WebApplication` with `name`, `description`, `url`, `applicationCategory: "BusinessApplication"`
+
+### Technical Notes
+- Changes are mostly in `web/src/index.html` (meta tags, lang), `web/src/app/components/wizard/wizard.html` (landing section copy), and `web/public/assets/i18n/fr.json` + `en.json` (translation keys)
+- The `lang` attribute can be set dynamically from `TranslateService.onLangChange` via a small effect in `AppComponent`
+- Angular does not support SSR in the current setup — meta tags are only seen by JS-capable crawlers (Googlebot). Consider adding `@angular/ssr` in a future story if SEO becomes a priority
+- Canonical URL: add `<link rel="canonical" href="https://namespoter.com/">` in `index.html`
+
+### Out of Scope
+- Server-side rendering (SSR)
+- Sitemap generation
+- Multilingual hreflang tags
+
+---
+
 ## Priority / Effort Matrix (initial estimate)
 
 | Story | Value | Effort | Priority |
@@ -620,3 +673,4 @@
 | US-020 · Feedback form + 1 000 credit reward | High | Medium | 🟠 Next |
 | US-021 · Explain credit cost in UI | High | Low | 🔴 Now |
 | US-022 · "Buy on registrar" button (OVH, Namecheap, Gandi) | High | Low | 🟠 Next |
+| US-023 · Landing page — brand name angle & SEO | High | Low | 🟠 Next |
