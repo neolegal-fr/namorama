@@ -15,7 +15,6 @@ import { MenuItem } from 'primeng/api';
 import { FormsModule } from '@angular/forms';
 
 import { Dialog } from 'primeng/dialog';
-import { PaymentService } from './services/payment';
 
 @Component({
   selector: 'app-root',
@@ -112,7 +111,7 @@ import { PaymentService } from './services/payment';
               icon="pi pi-arrow-right"
               [loading]="billingLoading()"
               (onClick)="subscribeEssential()"
-              style="flex: 1">
+              styleClass="flex-1">
             </p-button>
             <p-button *ngIf="hasActiveSubscription()"
               [label]="'BILLING.MANAGE_BTN' | translate"
@@ -120,7 +119,7 @@ import { PaymentService } from './services/payment';
               severity="secondary"
               [loading]="billingLoading()"
               (onClick)="openPortal()"
-              style="flex: 1">
+              styleClass="flex-1">
             </p-button>
           </div>
           <div *ngIf="hasActiveSubscription()" style="margin-top: 0.5rem; font-size: 0.8rem; color: #16a34a; display: flex; align-items: center; gap: 0.375rem">
