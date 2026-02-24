@@ -347,8 +347,9 @@
 #### Invoicing
 - [ ] Stripe automatic invoices enabled for subscriptions and one-time payments
 - [ ] Invoices are sent by Stripe directly to the customer's email (PDF attached)
-- [ ] Stripe invoice settings configured: company name, address, VAT number (in Stripe Dashboard)
-- [ ] ⚠️ Stripe invoices are independent of any external billing app — to be reconciled manually or via export if needed
+- [ ] Stripe invoice settings configured in Dashboard: commercial name "Namespoter", legal footer with NeoLegal's SIRET, VAT number, and registered address (French legal requirement)
+- [ ] Stripe payouts configured to NeoLegal's Qonto IBAN — no API integration needed
+- [ ] Monthly Stripe CSV export for accounting / bookkeeping (no Qonto API integration in scope)
 
 #### Stripe Customer Portal
 - [ ] Portal enabled in Stripe Dashboard with permissions: cancel subscription, update payment method, view invoice history
