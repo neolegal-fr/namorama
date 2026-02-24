@@ -283,63 +283,100 @@
 
 ---
 
-## US-014 · Online Credit Purchase via Stripe
+## US-014 · Online Credit Purchase via Stripe (Packs + Subscription)
 
-**As a** registered user who has run out of credits,
-**I want** to purchase additional credits directly from the app via a secure online payment,
-**So that** I can continue searching for domain names without friction.
+**As a** registered user who needs credits,
+**I want** to subscribe to a monthly plan or purchase extra credit packs,
+**So that** I can continue searching for domain names without friction, choosing the model that suits my usage.
+
+---
+
+### Pricing Model
+
+#### Monthly Subscription
+- **Essential** — 2 000 credits/month · **€5/month**
+- Credits reset on each billing cycle (unused credits are **not** carried over)
+- Managed by the customer via the Stripe Customer Portal (upgrade, cancel, update payment method)
+
+#### Extra Credit Packs (one-time, stackable)
+- **Pack 1000** — 1 000 credits · **€10** (one-time)
+- Extra credits are **preserved** (no expiry)
+- Extra credits are consumed **after** subscription credits are exhausted
+
+#### Credit Consumption Order
+1. Subscription credits (reset monthly)
+2. Extra credits (permanent, consumed only when subscription credits reach 0)
+
+---
 
 ### Acceptance Criteria
 
-#### Credit Packs (Frontend)
-- [ ] The existing credit dialog displays 3 predefined packs instead of a free-form quantity input:
-  - **Starter** — 50 credits · €4.99
-  - **Growth** — 200 credits · €14.99
-  - **Pro** — 500 credits · €29.99
-- [ ] The user selects a pack and clicks **"Buy"** — this triggers a Stripe Checkout session
-- [ ] The user is redirected to the Stripe-hosted Checkout page (no card data handled by the app)
-- [ ] On successful payment, the user is redirected to `/payment/success?session_id={CHECKOUT_SESSION_ID}`
-- [ ] On cancellation, the user is redirected back to the app (`/payment/cancel`)
-- [ ] After a successful payment, the credit balance in the navbar updates automatically
+#### Frontend — Billing Dialog
+- [ ] The existing credit dialog is replaced by a billing page or modal with two sections:
+  - **Subscription**: current plan status (active / inactive), monthly credits remaining, next renewal date; CTA to subscribe or manage via Stripe Customer Portal
+  - **Extra credits**: "Buy 1 000 credits — €10" button triggers a Stripe Checkout one-time session
+- [ ] Credit balance in the navbar displays: `subscription credits + extra credits` (total)
+- [ ] After any payment, the credit balance refreshes automatically (polling or redirect)
+- [ ] On successful payment/subscription, the user is redirected to `/payment/success`
+- [ ] On cancellation, the user is redirected to `/payment/cancel` (or back to the dialog)
 
-#### Backend — Checkout Session
-- [ ] New endpoint: `POST /payments/checkout` (authenticated)
-  - Body: `{ pack: 'starter' | 'growth' | 'pro' }`
-  - Returns: `{ url: string }` — the Stripe Checkout session URL
-  - Creates a Stripe Checkout Session with the correct `line_items`, `success_url`, and `cancel_url`
-  - Stores `keycloakId` in the session `metadata` for webhook reconciliation
+#### Backend — Data Model
+- [ ] `User` entity gains two new fields:
+  - `subscriptionCredits: number` (reset monthly by webhook, default 0)
+  - `extraCredits: number` (accumulated, never reset, default 0)
+- [ ] `User.credits` (existing field) becomes a computed property: `subscriptionCredits + extraCredits`
+- [ ] New `stripeCustomerId: string` field on `User` (created on first checkout)
+- [ ] New `stripeSubscriptionId: string | null` field on `User`
 
-#### Backend — Webhook
-- [ ] New endpoint: `POST /payments/webhook` (public, Stripe signature verified)
-  - Handles `checkout.session.completed` event
-  - Reads `metadata.keycloakId` and the purchased pack from `metadata.pack`
-  - Increments the user's credits in DB by the corresponding amount
-  - Idempotent: uses `stripeSessionId` stored on the transaction to avoid double-crediting
-- [ ] Stripe webhook secret configured via `STRIPE_WEBHOOK_SECRET` env var
+#### Backend — Endpoints
+- [ ] `POST /payments/checkout/subscription` (authenticated)
+  - Creates a Stripe Checkout Session in `subscription` mode for the Essential plan
+  - Returns `{ url: string }`
+- [ ] `POST /payments/checkout/pack` (authenticated)
+  - Creates a Stripe Checkout Session in `payment` mode for the 1 000-credit pack
+  - Returns `{ url: string }`
+- [ ] `GET /payments/portal` (authenticated)
+  - Creates a Stripe Billing Portal session for the authenticated user
+  - Returns `{ url: string }` — frontend redirects the user to it
+- [ ] `POST /payments/webhook` (public, Stripe signature verified)
+  - `checkout.session.completed` (mode=`payment`) → add 1 000 to `extraCredits`
+  - `invoice.paid` (subscription) → reset `subscriptionCredits` to 2 000
+  - `customer.subscription.deleted` → set `subscriptionCredits` to 0, clear `stripeSubscriptionId`
+  - All handlers are idempotent (check event already processed via `stripeEventId`)
+
+#### Invoicing
+- [ ] Stripe automatic invoices enabled for subscriptions and one-time payments
+- [ ] Invoices are sent by Stripe directly to the customer's email (PDF attached)
+- [ ] Stripe invoice settings configured: company name, address, VAT number (in Stripe Dashboard)
+- [ ] ⚠️ Stripe invoices are independent of any external billing app — to be reconciled manually or via export if needed
+
+#### Stripe Customer Portal
+- [ ] Portal enabled in Stripe Dashboard with permissions: cancel subscription, update payment method, view invoice history
+- [ ] "Manage my subscription" button in the billing dialog opens the portal (via `GET /payments/portal`)
 
 #### Configuration
 - [ ] `STRIPE_SECRET_KEY` env var (backend)
 - [ ] `STRIPE_WEBHOOK_SECRET` env var (backend)
-- [ ] `STRIPE_PUBLISHABLE_KEY` env var (frontend, optional — not needed for redirect flow)
-- [ ] Pack prices and credit amounts defined as constants (easy to update)
+- [ ] `STRIPE_ESSENTIAL_PRICE_ID` env var — Stripe Price ID for the monthly subscription
+- [ ] `STRIPE_PACK_PRICE_ID` env var — Stripe Price ID for the 1 000-credit pack
+- [ ] `STRIPE_PORTAL_RETURN_URL` env var — URL to redirect after portal session
 
 #### Success / Cancel Pages
-- [ ] `/payment/success` route: displays a confirmation message and refreshes credit balance
-- [ ] `/payment/cancel` route (or query param): displays a cancellation message and reopens the credit dialog
+- [ ] `/payment/success`: confirmation message + refreshed credit balance
+- [ ] `/payment/cancel`: cancellation message + link back to billing dialog
 
 ### Technical Notes
 - Use `stripe` Node.js SDK on the backend (`npm install stripe`)
-- Stripe Checkout (hosted page) preferred over Stripe Elements — simpler, PCI-compliant out of the box
-- No subscription model for now — one-time purchases only
-- No invoice history page in this story (can be added later via Stripe Customer Portal)
-- Webhook must be registered in Stripe Dashboard pointing to `https://api.namespoter.com/payments/webhook`
-- For local development, use Stripe CLI: `stripe listen --forward-to localhost:3000/payments/webhook`
+- Stripe Checkout hosted page (no card data in the app — PCI-compliant)
+- Create Stripe Products & Prices in the Dashboard before development; store Price IDs in env vars
+- For local dev: `stripe listen --forward-to localhost:3000/payments/webhook`
+- Credit deduction logic stays in `UsersService.decrementCredits()` — update to consume `subscriptionCredits` first, then `extraCredits`
 
-### Out of Scope (for now)
-- VAT / tax handling (Stripe Tax)
-- Subscription / recurring billing
-- Invoice history UI
+### Out of Scope (for this story)
+- Multiple subscription tiers
+- VAT / Stripe Tax automation
 - Refunds
+- Promo codes / coupons
 
 ---
 
@@ -359,4 +396,4 @@
 | US-011 · Manual row entry | Medium | Low | 🟠 Next |
 | US-012 · MCP server | High | Medium | 🟡 Later |
 | US-013 · Teams / Claude skill / Marketplace | High | High | 🔵 Future |
-| US-014 · Stripe credit purchase | High | Medium | 🟠 Next |
+| US-014 · Stripe packs + subscription | High | High | 🟠 Next |
