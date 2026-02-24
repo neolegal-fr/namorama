@@ -43,4 +43,9 @@ export class SearchDomainsDto {
   @IsString()
   @IsOptional()
   locale?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  excludeNames?: string[];
 }

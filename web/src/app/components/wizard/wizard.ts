@@ -725,6 +725,8 @@ export class WizardComponent implements OnInit {
       projectId: this.projectId() || undefined,
       projectName: this.projectName() || undefined,
       locale: this.effectiveLocale(),
+      // US-015 — lors d'un append, exclure tous les noms déjà évalués
+      excludeNames: append ? this.domains().map(d => d.name) : [],
     }, token).subscribe({
       next: (event: any) => {
         this.clearSearchTimeout();

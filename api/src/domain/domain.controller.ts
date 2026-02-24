@@ -81,6 +81,7 @@ export class DomainController {
         dto.extensions,
         dto.matchMode,
         dto.locale,
+        dto.excludeNames ?? [],
         (event) => {
           emit(event);
           if (event.type === 'result') results.push(event.domain);
@@ -152,6 +153,7 @@ export class DomainController {
       dto.extensions,
       dto.matchMode,
       dto.locale,
+      dto.excludeNames ?? [],
     );
 
     const actualCost = results.length;

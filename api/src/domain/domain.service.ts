@@ -92,31 +92,40 @@ export class DomainService {
     }
   }
 
-  async generateDomainIdeas(description: string, keywords: string[], locale?: string): Promise<string[]> {
+  async generateDomainIdeas(description: string, keywords: string[], locale?: string, excludeNames: string[] = []): Promise<string[]> {
     const vocabStr = keywords.join(', ');
     const localeInstruction = locale
       ? `Names should resonate with a "${locale}"-language audience. Prefer names that are easy to pronounce in that language, and may incorporate roots, sounds, or cultural references familiar to its speakers. Local or regional words are encouraged alongside invented ones.`
       : 'Names should be internationally friendly — easy to pronounce for a global audience, preferring Anglo-Saxon or Latin roots.';
 
+    // US-015 — cap at 200 to avoid token bloat
+    const exclusionSection = excludeNames.length > 0
+      ? `\nAlready tested — do NOT reproduce any of these names: ${excludeNames.slice(0, 200).join(', ')}\n`
+      : '';
+
     const prompt = `
       You are a world-class branding and naming expert.
-      Your mission is to generate 30 powerful brand names for the following project:
+      Your mission is to generate 30 ORIGINAL brand names for the following project:
       Description: "${description}"
       Semantic keywords: ${vocabStr}
+      ${exclusionSection}
 
-      Quality criteria (MANDATORY):
-      1. Short (2-3 syllables max).
-      2. Easy to pronounce and spell (must pass the "radio test").
-      3. Avoid numbers and hyphens.
-      4. Modern and memorable sound.
+      Brand name quality criteria (ALL MANDATORY — US-016):
+      1. SHORT: ≤ 10 characters, ideally 2-3 syllables max.
+      2. EASY TO PRONOUNCE: must pass the "radio test" — a person hearing it once can spell it correctly. No ambiguous letter clusters.
+      3. EASY TO SPELL: no unexpected silent letters, no confusing double-letter patterns unless intentional.
+      4. DISTINCTIVE: avoid generic constructs (e.g. "easybooking", "quickservice"). Aim for invented or unexpected combinations.
+      5. NO HYPHENS OR NUMBERS in the name.
+      6. EVOCATIVE: the name should suggest the product's benefit, emotion, or sector without being too literal.
+      7. LEGALLY SAFER: avoid well-known brand names, proper nouns, or exact dictionary words from the sector.
 
       ${localeInstruction}
 
       Use a mix of these naming techniques:
       - Portmanteaus (merging 2 relevant words).
       - Short, elegant compound words.
-      - Evocative names (metaphors linked to the client benefit).
-      - Invented names with a strong Latin or language-appropriate root.
+      - Evocative metaphors linked to the client benefit.
+      - Invented names with a strong Latin, Greek, or language-appropriate root.
 
       Your response must be ONLY a JSON object with a "names" key containing a list of strings (name only, no extension).
       Example: {"names": ["Altro", "Velora", "Flowly"]}
@@ -203,16 +212,18 @@ export class DomainService {
     extensions = ['.com'],
     matchMode = MatchMode.ANY,
     locale?: string,
+    excludeNames: string[] = [],
     onEvent?: (event: Record<string, any>) => void,
   ): Promise<{ results: any[], totalChecked: number }> {
     const finalResults: any[] = [];
-    const checkedNames = new Set<string>();
+    // US-015 — pre-seed with already-evaluated names so the LLM never re-proposes them
+    const checkedNames = new Set<string>(excludeNames);
     let attempts = 0;
     const maxAttempts = 5;
 
     while (finalResults.length < targetCount && attempts < maxAttempts) {
       onEvent?.({ type: 'generating' });
-      const names = await this.generateDomainIdeas(description, keywords, locale);
+      const names = await this.generateDomainIdeas(description, keywords, locale, [...checkedNames]);
 
       const newNames = names.filter(name => !checkedNames.has(name));
       newNames.forEach(name => checkedNames.add(name));
