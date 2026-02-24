@@ -283,6 +283,66 @@
 
 ---
 
+## US-014 · Online Credit Purchase via Stripe
+
+**As a** registered user who has run out of credits,
+**I want** to purchase additional credits directly from the app via a secure online payment,
+**So that** I can continue searching for domain names without friction.
+
+### Acceptance Criteria
+
+#### Credit Packs (Frontend)
+- [ ] The existing credit dialog displays 3 predefined packs instead of a free-form quantity input:
+  - **Starter** — 50 credits · €4.99
+  - **Growth** — 200 credits · €14.99
+  - **Pro** — 500 credits · €29.99
+- [ ] The user selects a pack and clicks **"Buy"** — this triggers a Stripe Checkout session
+- [ ] The user is redirected to the Stripe-hosted Checkout page (no card data handled by the app)
+- [ ] On successful payment, the user is redirected to `/payment/success?session_id={CHECKOUT_SESSION_ID}`
+- [ ] On cancellation, the user is redirected back to the app (`/payment/cancel`)
+- [ ] After a successful payment, the credit balance in the navbar updates automatically
+
+#### Backend — Checkout Session
+- [ ] New endpoint: `POST /payments/checkout` (authenticated)
+  - Body: `{ pack: 'starter' | 'growth' | 'pro' }`
+  - Returns: `{ url: string }` — the Stripe Checkout session URL
+  - Creates a Stripe Checkout Session with the correct `line_items`, `success_url`, and `cancel_url`
+  - Stores `keycloakId` in the session `metadata` for webhook reconciliation
+
+#### Backend — Webhook
+- [ ] New endpoint: `POST /payments/webhook` (public, Stripe signature verified)
+  - Handles `checkout.session.completed` event
+  - Reads `metadata.keycloakId` and the purchased pack from `metadata.pack`
+  - Increments the user's credits in DB by the corresponding amount
+  - Idempotent: uses `stripeSessionId` stored on the transaction to avoid double-crediting
+- [ ] Stripe webhook secret configured via `STRIPE_WEBHOOK_SECRET` env var
+
+#### Configuration
+- [ ] `STRIPE_SECRET_KEY` env var (backend)
+- [ ] `STRIPE_WEBHOOK_SECRET` env var (backend)
+- [ ] `STRIPE_PUBLISHABLE_KEY` env var (frontend, optional — not needed for redirect flow)
+- [ ] Pack prices and credit amounts defined as constants (easy to update)
+
+#### Success / Cancel Pages
+- [ ] `/payment/success` route: displays a confirmation message and refreshes credit balance
+- [ ] `/payment/cancel` route (or query param): displays a cancellation message and reopens the credit dialog
+
+### Technical Notes
+- Use `stripe` Node.js SDK on the backend (`npm install stripe`)
+- Stripe Checkout (hosted page) preferred over Stripe Elements — simpler, PCI-compliant out of the box
+- No subscription model for now — one-time purchases only
+- No invoice history page in this story (can be added later via Stripe Customer Portal)
+- Webhook must be registered in Stripe Dashboard pointing to `https://api.namespoter.com/payments/webhook`
+- For local development, use Stripe CLI: `stripe listen --forward-to localhost:3000/payments/webhook`
+
+### Out of Scope (for now)
+- VAT / tax handling (Stripe Tax)
+- Subscription / recurring billing
+- Invoice history UI
+- Refunds
+
+---
+
 ## Priority / Effort Matrix (initial estimate)
 
 | Story | Value | Effort | Priority |
@@ -299,3 +359,4 @@
 | US-011 · Manual row entry | Medium | Low | 🟠 Next |
 | US-012 · MCP server | High | Medium | 🟡 Later |
 | US-013 · Teams / Claude skill / Marketplace | High | High | 🔵 Future |
+| US-014 · Stripe credit purchase | High | Medium | 🟠 Next |
