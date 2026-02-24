@@ -57,6 +57,7 @@
   "PAYMENT": {
     "SUCCESS_TITLE": "Paiement confirmé !",
     "SUCCESS_MESSAGE": "Vos crédits ont été ajoutés à votre compte. Vous pouvez reprendre vos recherches.",
+    "CREDITS_ADDED": "+{{count}} crédits ajoutés — total : {{total}} crédits",
     "CANCEL_TITLE": "Paiement annulé",
     "CANCEL_MESSAGE": "Votre paiement n'a pas été effectué. Aucun montant n'a été débité.",
     "BACK_HOME": "Retour à l'accueil"

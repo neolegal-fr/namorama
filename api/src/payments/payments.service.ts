@@ -1,8 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import Stripe from 'stripe';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
+import { StripeEvent } from './entities/stripe-event.entity';
 
 /** Crédits offerts par l'abonnement mensuel */
 const SUBSCRIPTION_QUOTA = 2000;
@@ -18,6 +21,8 @@ export class PaymentsService {
   constructor(
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
+    @InjectRepository(StripeEvent)
+    private readonly stripeEventRepo: Repository<StripeEvent>,
   ) {
     this.stripe = new Stripe(this.configService.get<string>('STRIPE_SECRET_KEY') ?? '', {
       apiVersion: '2026-01-28.clover',
@@ -97,6 +102,58 @@ export class PaymentsService {
     return session.url;
   }
 
+  /** Vérifie si une session a déjà été traitée (idempotence) */
+  private async isAlreadyProcessed(sessionId: string): Promise<boolean> {
+    const existing = await this.stripeEventRepo.findOne({ where: { sessionId } });
+    return !!existing;
+  }
+
+  /** Marque une session comme traitée */
+  private async markProcessed(sessionId: string, type: string): Promise<void> {
+    await this.stripeEventRepo.save({ sessionId, type });
+  }
+
+  /**
+   * Traite une session Stripe Checkout après redirection vers /payment/success.
+   * Fallback pour les environnements locaux où Stripe ne peut pas atteindre le webhook.
+   * Idempotent : sans effet si la session a déjà été traitée par le webhook.
+   */
+  async fulfillSession(sessionId: string, keycloakId: string): Promise<{ creditsAdded: number }> {
+    if (await this.isAlreadyProcessed(sessionId)) {
+      this.logger.log(`Session déjà traitée : ${sessionId}`);
+      return { creditsAdded: 0 };
+    }
+
+    const session = await this.stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== 'paid' && session.status !== 'complete') {
+      return { creditsAdded: 0 };
+    }
+
+    // Vérifier que la session appartient bien à cet utilisateur
+    if (session.metadata?.keycloakId !== keycloakId) {
+      this.logger.warn(`Session ${sessionId} n'appartient pas à ${keycloakId}`);
+      return { creditsAdded: 0 };
+    }
+
+    await this.markProcessed(sessionId, session.metadata?.type ?? 'unknown');
+
+    if (session.mode === 'payment' && session.metadata?.type === 'pack') {
+      await this.usersService.addExtraCredits(keycloakId, PACK_CREDITS);
+      this.logger.log(`fulfillSession: ${PACK_CREDITS} crédits extra ajoutés pour ${keycloakId}`);
+      return { creditsAdded: PACK_CREDITS };
+    }
+
+    if (session.mode === 'subscription' && session.subscription) {
+      await this.usersService.setStripeSubscriptionId(keycloakId, session.subscription as string);
+      await this.usersService.resetSubscriptionCredits(keycloakId, SUBSCRIPTION_QUOTA);
+      this.logger.log(`fulfillSession: abonnement activé pour ${keycloakId}`);
+      return { creditsAdded: SUBSCRIPTION_QUOTA };
+    }
+
+    return { creditsAdded: 0 };
+  }
+
   /** Traite un événement webhook Stripe (corps brut requis pour la vérification de signature) */
   async handleWebhook(rawBody: Buffer, signature: string): Promise<void> {
     const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET') ?? '';
@@ -114,22 +171,23 @@ export class PaymentsService {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.mode === 'payment' && session.metadata?.type === 'pack') {
-          // Achat ponctuel d'un pack → crédits extra permanents
-          const keycloakId = session.metadata?.keycloakId;
-          if (keycloakId) {
-            await this.usersService.addExtraCredits(keycloakId, PACK_CREDITS);
-            this.logger.log(`Pack ${PACK_CREDITS} crédits ajouté pour ${keycloakId}`);
-          }
+        const keycloakId = session.metadata?.keycloakId;
+        if (!keycloakId) break;
+
+        if (await this.isAlreadyProcessed(session.id)) {
+          this.logger.log(`Webhook: session déjà traitée via fulfillSession: ${session.id}`);
+          break;
         }
-        if (session.mode === 'subscription' && session.metadata?.type === 'subscription') {
-          // Abonnement activé → enregistrer l'ID d'abonnement
-          const keycloakId = session.metadata?.keycloakId;
-          if (keycloakId && session.subscription) {
-            await this.usersService.setStripeSubscriptionId(keycloakId, session.subscription as string);
-            await this.usersService.resetSubscriptionCredits(keycloakId, SUBSCRIPTION_QUOTA);
-            this.logger.log(`Abonnement activé pour ${keycloakId}`);
-          }
+        await this.markProcessed(session.id, session.metadata?.type ?? 'unknown');
+
+        if (session.mode === 'payment' && session.metadata?.type === 'pack') {
+          await this.usersService.addExtraCredits(keycloakId, PACK_CREDITS);
+          this.logger.log(`Webhook: Pack ${PACK_CREDITS} crédits ajouté pour ${keycloakId}`);
+        }
+        if (session.mode === 'subscription' && session.subscription) {
+          await this.usersService.setStripeSubscriptionId(keycloakId, session.subscription as string);
+          await this.usersService.resetSubscriptionCredits(keycloakId, SUBSCRIPTION_QUOTA);
+          this.logger.log(`Webhook: Abonnement activé pour ${keycloakId}`);
         }
         break;
       }

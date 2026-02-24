@@ -4,6 +4,7 @@ import {
   Get,
   Headers,
   Req,
+  Body,
   HttpCode,
   BadRequestException,
   Logger,
@@ -45,6 +46,26 @@ export class PaymentsController {
     const user = await this.usersService.findOrCreate(keycloakUser.sub, keycloakUser.email);
     const url = await this.paymentsService.createPortalSession(user);
     return { url };
+  }
+
+  /**
+   * Appelé par la page /payment/success après redirection Stripe.
+   * Traite la session si elle n'a pas encore été traitée par le webhook (dev local).
+   */
+  @Post('fulfill-session')
+  async fulfillSession(
+    @Body('sessionId') sessionId: string,
+    @AuthenticatedUser() keycloakUser: any,
+  ) {
+    const result = await this.paymentsService.fulfillSession(sessionId, keycloakUser.sub);
+    const user = await this.usersService.findOrCreate(keycloakUser.sub);
+    return {
+      creditsAdded: result.creditsAdded,
+      totalCredits: user.totalCredits,
+      subscriptionCredits: user.credits,
+      extraCredits: user.extraCredits,
+      hasActiveSubscription: !!user.stripeSubscriptionId,
+    };
   }
 
   /** Webhook Stripe — corps brut requis pour la vérification de signature */

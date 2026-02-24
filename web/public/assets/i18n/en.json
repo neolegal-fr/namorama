@@ -57,6 +57,7 @@
   "PAYMENT": {
     "SUCCESS_TITLE": "Payment confirmed!",
     "SUCCESS_MESSAGE": "Your credits have been added to your account. You can resume your searches.",
+    "CREDITS_ADDED": "+{{count}} credits added — balance: {{total}} credits",
     "CANCEL_TITLE": "Payment cancelled",
     "CANCEL_MESSAGE": "Your payment was not processed. No amount has been charged.",
     "BACK_HOME": "Back to home"

@@ -21,4 +21,8 @@ export class PaymentService {
   openPortal(): Observable<{ url: string }> {
     return this.http.get<{ url: string }>(`${this.apiUrl}/portal`);
   }
+
+  fulfillSession(sessionId: string): Observable<{ creditsAdded: number; totalCredits: number; subscriptionCredits: number; extraCredits: number; hasActiveSubscription: boolean }> {
+    return this.http.post<any>(`${this.apiUrl}/fulfill-session`, { sessionId });
+  }
 }
