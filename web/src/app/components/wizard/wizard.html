@@ -144,7 +144,8 @@
               optionLabel="label"
               optionValue="value"
               [placeholder]="detectedLocale() ? (LOCALE_LABELS[detectedLocale()!] + ' (détecté)') : ('WIZARD.STEP2.LANGUAGE_PLACEHOLDER' | translate)"
-              style="min-width: 10rem">
+              style="min-width: 10rem"
+              appendTo="body">
             </p-select>
           </div>
         </div>
