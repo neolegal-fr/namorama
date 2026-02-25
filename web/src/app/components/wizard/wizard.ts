@@ -689,15 +689,20 @@ export class WizardComponent implements OnInit {
       return;
     }
 
-    // Lignes temporaires avec spinners
+    // Lignes temporaires avec spinners — auto-favourite immédiat (US-025)
     const tempRows = newNames.map(name => ({
       id: null as string | null,
       name,
       allExtensions: Object.fromEntries(this.selectedExtensions().map(ext => [ext, null])),
-      isFavorite: false,
+      isFavorite: true,
       isManual: true,
+      analysisPending: false,
+      analysis: null as string | null,
     }));
-    this.domains.update(d => [...d, ...tempRows]);
+    this.domains.update(d => [...d, ...tempRows].sort((a, b) => {
+      if (a.isFavorite === b.isFavorite) return 0;
+      return a.isFavorite ? -1 : 1;
+    }));
     this.newDomainName.set('');
     this.addingDomain.set(true);
     this.cdr.detectChanges();
@@ -730,7 +735,7 @@ export class WizardComponent implements OnInit {
           });
         }
 
-        // Sauvegarder dans le projet
+        // Sauvegarder dans le projet + auto-favourite + analyse IA (US-025)
         if (this.projectId()) {
           res.domains.forEach((r: any) => {
             if (!newNames.includes(r.name)) return;
@@ -739,6 +744,24 @@ export class WizardComponent implements OnInit {
                 this.domains.update(list =>
                   list.map(d => d.name === r.name && d.isManual ? { ...d, id: saved.id } : d)
                 );
+                // Persister le favori côté serveur puis déclencher l'analyse IA
+                this.projectService.toggleFavorite(saved.id).subscribe({
+                  next: () => {
+                    const domain = this.domains().find(d => d.id === saved.id);
+                    if (domain && !domain.analysis && !domain.analysisPending) {
+                      domain.analysisPending = true;
+                      this.cdr.detectChanges();
+                      this.domainService.analyzeName(saved.id).subscribe({
+                        next: (a) => {
+                          domain.analysis = a.analysis;
+                          domain.analysisPending = false;
+                          this.cdr.detectChanges();
+                        },
+                        error: () => { domain.analysisPending = false; },
+                      });
+                    }
+                  },
+                });
               },
             });
           });
