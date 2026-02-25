@@ -9,6 +9,11 @@ body {
     background-color: var(--p-surface-100, #f3f4f6);
 }
 
+/* ─── Bouton "Aide moi à choisir" — icône ambre ─── */
+.pick-btn .pi-lightbulb {
+    color: #f59e0b !important;
+}
+
 /* ─── Bouton langue ──────────────────────────────── */
 .lang-toggle:hover {
     background: var(--p-surface-200) !important;

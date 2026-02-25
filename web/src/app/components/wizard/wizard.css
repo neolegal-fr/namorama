@@ -63,11 +63,6 @@
     text-align: left;
 }
 
-/* ─── Bouton "Aide moi à choisir" — icône jaune ── */
-.pick-btn .p-button-icon {
-    color: #f59e0b;
-}
-
 /* ─── SelectButton pleine largeur et équilibré ──── */
 .select-btn-full.p-selectbutton {
     display: flex;
