@@ -12,6 +12,7 @@ import { importProvidersFrom } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { routes } from './app.routes';
+import { ConfigService } from './services/config';
 
 export class CustomTranslateLoader implements TranslateLoader {
   constructor(private http: HttpClient) {}
@@ -24,12 +25,15 @@ export function HttpLoaderFactory(http: HttpClient) {
   return new CustomTranslateLoader(http);
 }
 
-function initializeApp(keycloak: KeycloakService, translate: TranslateService) {
+function initializeApp(keycloak: KeycloakService, translate: TranslateService, config: ConfigService) {
   return async () => {
-    // 1. Initialiser Keycloak
+    // 1. Charger la config runtime (URLs d'env)
+    await config.load();
+
+    // 2. Initialiser Keycloak
     await keycloak.init({
       config: {
-        url: 'http://localhost:8080',
+        url: config.keycloakUrl,
         realm: 'namespoter',
         clientId: 'namespoter-web'
       },
@@ -78,7 +82,7 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER,
       useFactory: initializeApp,
       multi: true,
-      deps: [KeycloakService, TranslateService]
+      deps: [KeycloakService, TranslateService, ConfigService]
     },
     KeycloakService,
     {

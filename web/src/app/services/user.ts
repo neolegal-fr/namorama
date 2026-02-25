@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
+import { ConfigService } from './config';
 
 export interface BillingInfo {
   subscriptionCredits: number;
@@ -13,7 +14,7 @@ export interface BillingInfo {
   providedIn: 'root'
 })
 export class UserService {
-  private apiUrl = 'http://localhost:3000/users';
+  private get apiUrl() { return `${this.config.apiUrl}/users`; }
   private creditsSubject = new BehaviorSubject<number>(0);
   credits$ = this.creditsSubject.asObservable();
 
@@ -25,7 +26,7 @@ export class UserService {
   });
   billing$ = this.billingSubject.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private config: ConfigService) {}
 
   getCredits(): Observable<{ credits: number; subscriptionCredits: number; extraCredits: number; hasActiveSubscription: boolean }> {
     return this.http.get<any>(`${this.apiUrl}/credits`).pipe(

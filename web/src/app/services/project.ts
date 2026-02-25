@@ -1,13 +1,14 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap, Subject } from 'rxjs';
+import { ConfigService } from './config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProjectService {
-  private apiUrl = 'http://localhost:3000/projects';
-  
+  private get apiUrl() { return `${this.config.apiUrl}/projects`; }
+
   // État partagé
   showDrawer = signal(false);
   showCreditDialog = signal(false);
@@ -17,7 +18,7 @@ export class ProjectService {
   private resetWizardSource = new Subject<void>();
   resetWizard$ = this.resetWizardSource.asObservable();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private config: ConfigService) {}
 
   resetWizard() {
     this.resetWizardSource.next();

@@ -1,14 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { ConfigService } from './config';
 
 @Injectable({
   providedIn: 'root'
 })
 export class DomainService {
-  private apiUrl = 'http://localhost:3000/domain';
+  private get apiUrl() { return `${this.config.apiUrl}/domain`; }
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private config: ConfigService) {}
 
   refineDescription(description: string): Observable<{ refined: string }> {
     return this.http.post<{ refined: string }>(`${this.apiUrl}/refine`, { description });
