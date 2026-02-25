@@ -112,7 +112,14 @@
       "ADD_MANUAL_BTN": "Check",
       "MANUAL_TOOLTIP": "Manually added",
       "MANUAL_NOT_AVAILABLE_SUMMARY": "Active filter",
-      "MANUAL_NOT_AVAILABLE": "{{names}} does not meet the current availability criteria and is hidden by the active filter."
+      "MANUAL_NOT_AVAILABLE": "{{names}} does not meet the current availability criteria and is hidden by the active filter.",
+      "COMPARE_BTN": "Compare {{count}} favourites",
+      "COMPARE_TITLE": "Compare favourites",
+      "COMPARE_REMOVE": "Remove from comparison",
+      "COMPARE_LENGTH": "Length:",
+      "COMPARE_CHARS": "chars",
+      "COMPARE_NO_ANALYSIS": "No analysis yet",
+      "COMPARE_EMPTY": "All domains have been removed."
     },
     "TIMEOUT": {
       "MESSAGE": "The search is taking longer than expected. Do you want to keep waiting?",

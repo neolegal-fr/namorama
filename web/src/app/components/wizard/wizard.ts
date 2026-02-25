@@ -17,6 +17,7 @@ import { Select } from 'primeng/select';
 import { Drawer } from 'primeng/drawer';
 import { Tooltip } from 'primeng/tooltip';
 import { ConfirmDialog } from 'primeng/confirmdialog';
+import { Dialog } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { MenuItem, ConfirmationService, MessageService } from 'primeng/api';
 import { UserService } from '../../services/user';
@@ -42,6 +43,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     Drawer,
     Tooltip,
     ConfirmDialog,
+    Dialog,
     Toast,
     TranslateModule
   ],
@@ -130,6 +132,12 @@ export class WizardComponent implements OnInit {
   newDomainName = signal('');
   addingDomain = signal(false);
   expandedAnalysisId = signal<string | null>(null);
+  showCompareDialog = signal(false);
+  compareExcludedIds = signal<string[]>([]);
+  favourites = computed(() => this.domains().filter(d => d.isFavorite));
+  compareList = computed(() =>
+    this.favourites().filter(d => !this.compareExcludedIds().includes(d.id)).slice(0, 5)
+  );
   streamProgress = signal<{ phase: 'generating' | 'checking'; name?: string; checked: number; found: number } | null>(null);
 
   private readonly SEARCH_TIMEOUT_MS = 30_000;
@@ -404,6 +412,42 @@ export class WizardComponent implements OnInit {
         this.cdr.detectChanges();
       }
     });
+  }
+
+  openCompare() {
+    this.compareExcludedIds.set([]);
+    this.showCompareDialog.set(true);
+  }
+
+  removeFromCompare(id: string) {
+    this.compareExcludedIds.update(ids => [...ids, id]);
+  }
+
+  copyDomainName(name: string) {
+    navigator.clipboard.writeText(name).then(() => {
+      this.copiedDomain.set(name);
+      setTimeout(() => this.copiedDomain.set(null), 1500);
+    });
+  }
+
+  parseAnalysisScore(analysis: string | null): number {
+    if (!analysis) return 0;
+    try {
+      const parsed = JSON.parse(analysis);
+      if (parsed.scores) {
+        const vals = Object.values(parsed.scores) as number[];
+        return vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
+      }
+    } catch {}
+    // Fallback : compter les ★ dans le texte libre
+    const stars = (analysis.match(/★/g) || []).length;
+    const total = (analysis.match(/[★☆]/g) || []).length;
+    return total > 0 ? (stars / total) * 5 : 0;
+  }
+
+  renderStars(score: number): string {
+    const full = Math.round(score);
+    return '★'.repeat(full) + '☆'.repeat(5 - full);
   }
 
   toggleAnalysis(id: string) {
