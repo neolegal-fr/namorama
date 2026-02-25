@@ -648,6 +648,61 @@ SEO opportunity: queries like *"trouver un nom de marque"*, *"générateur nom d
 
 ---
 
+## US-024 · Keycloak Theme — Align Login/Register Pages with App Design
+
+**As a** user registering or logging in to Namespoter,
+**I want** the Keycloak login and registration pages to look like the rest of the application,
+**So that** the experience feels seamless and professional rather than generic.
+
+### Context
+
+Keycloak serves its own login/register/forgot-password pages. By default these use the Keycloak "Keycloak" theme (grey, generic). Namespoter uses a clean, minimal design (PrimeNG Aura, dark primary colour, sans-serif). The disconnect is jarring when users are redirected to login.
+
+Keycloak supports custom themes via a `themes/` folder mounted into the container. A custom theme can extend `keycloak` (base) or `keycloak.v2` and override only the CSS/templates needed.
+
+---
+
+### Acceptance Criteria
+
+#### Visual alignment
+- [ ] Background colour matches the app: white or very light grey (`#f8f9fa`)
+- [ ] Primary action button (Login, Register, Submit) matches the app's primary colour (`var(--p-primary-color)` ≈ `#6366f1` indigo or the configured Aura primary)
+- [ ] Font family matches the app: system-ui / Inter (or whatever is used globally)
+- [ ] The Keycloak logo/name is replaced by the **Namespoter wordmark** (text or SVG logo)
+- [ ] Form inputs have the same border-radius and focus style as PrimeNG inputs
+- [ ] Error messages are styled consistently (red, not default Keycloak styling)
+- [ ] Footer text ("Powered by Keycloak") is removed or replaced with "© Namespoter"
+
+#### Pages covered
+- [ ] Login (`login.ftl`)
+- [ ] Registration (`register.ftl`)
+- [ ] Forgot password (`login-reset-password.ftl`)
+- [ ] Email sent confirmation (`login-page-expired.ftl` / info page)
+
+#### Infrastructure
+- [ ] The custom theme lives in `infra/keycloak/themes/namespoter/` and is mounted into the container via `docker-compose.yml`
+- [ ] `docker-compose.yml` passes `--spi-theme-default=namespoter` (or sets `KC_SPI_THEME_DEFAULT`) so the realm uses it automatically
+- [ ] The realm-export.json is updated to reference `loginTheme: "namespoter"` so it applies on fresh import
+- [ ] Hot-reload works in dev: theme changes are reflected without rebuilding the container (Keycloak dev mode caches themes per request when `KC_CACHE=local`)
+
+#### Localisation
+- [ ] FR and EN translations are provided for all overridden strings (via `messages/messages_fr.properties` and `messages_en.properties`)
+
+### Technical Notes
+- Keycloak theme structure: `themes/namespoter/login/` with `theme.properties`, `resources/css/styles.css`, and optionally overridden `.ftl` templates
+- `theme.properties` must declare `parent=keycloak.v2` to inherit all default templates and only override what's needed
+- CSS-only approach preferred (override `styles.css` only, no `.ftl` changes) unless logo replacement requires template edit
+- The Namespoter logo can be injected via `theme.properties` → `styles=css/styles.css` and a CSS `content:url(...)` or an `<img>` in an overridden `login.ftl` header
+- Docker volume mount: `- ./keycloak/themes:/opt/keycloak/themes` in `infra/docker-compose.yml`
+- Test all pages in FR and EN before closing the story
+
+### Out of Scope
+- Custom email templates (separate story)
+- Dark mode for Keycloak pages
+- Advanced animations or illustrations
+
+---
+
 ## Priority / Effort Matrix (initial estimate)
 
 | Story | Value | Effort | Priority |
@@ -674,3 +729,4 @@ SEO opportunity: queries like *"trouver un nom de marque"*, *"générateur nom d
 | US-021 · Explain credit cost in UI | High | Low | 🔴 Now |
 | US-022 · "Buy on registrar" button (OVH, Namecheap, Gandi) | High | Low | 🟠 Next |
 | US-023 · Landing page — brand name angle & SEO | High | Low | 🟠 Next |
+| US-024 · Keycloak theme — align with app design | Medium | Medium | 🟡 Later |
