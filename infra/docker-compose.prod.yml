@@ -33,7 +33,7 @@ services:
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,7 +54,7 @@ services:
       STRIPE_PACK_PRICE_ID: ${STRIPE_PACK_PRICE_ID}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,7 +66,7 @@ services:
       API_URL: ${API_URL}
       KEYCLOAK_URL: ${KEYCLOAK_URL}
     ports:
-      - "80:80"
+      - "127.0.0.1:8088:80"
     depends_on:
       - api
 
