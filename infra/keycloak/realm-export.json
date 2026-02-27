@@ -18,18 +18,22 @@
       "enabled": true,
       "publicClient": true,
       "directAccessGrantsEnabled": true,
-      "rootUrl": "https://namorama.neolegal.fr",
-      "baseUrl": "https://namorama.neolegal.fr",
+      "rootUrl": "https://namorama.com",
+      "baseUrl": "https://namorama.com",
       "redirectUris": [
         "http://localhost:4200/*",
+        "https://namorama.com/*",
+        "https://www.namorama.com/*",
         "https://namorama.neolegal.fr/*"
       ],
       "webOrigins": [
         "http://localhost:4200",
+        "https://namorama.com",
+        "https://www.namorama.com",
         "https://namorama.neolegal.fr"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost:4200##https://namorama.neolegal.fr"
+        "post.logout.redirect.uris": "http://localhost:4200##https://namorama.com##https://namorama.neolegal.fr"
       }
     },
     {
