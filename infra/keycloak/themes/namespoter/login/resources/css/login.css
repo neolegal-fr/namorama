@@ -4,17 +4,25 @@
    Design: aligned with PrimeNG Aura / app identity
    ================================================ */
 
-/* === Supprimer le fond image du thème parent ====
-   Le thème keycloak base utilise `.login-pf body`
-   pour son background-image — on doit matcher
-   la même spécificité pour l'écraser.           */
+/* === Reset navigateur + fond ====================
+   Le navigateur applique margin: 8px sur body par
+   défaut → crée la bande grise au-dessus du header.
+   Le thème parent utilise `.login-pf body` pour
+   son background-image → même spécificité requise. */
+html,
+body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
 html,
 body,
 .login-pf,
 .login-pf body,
 .login-pf-page,
 .login-pf-body,
-.login-pf-page-header {
+.login-pf-page-header,
+div[class*="login-pf"] {
     background-image: none !important;
     background: #f3f4f6 !important;
 }
@@ -140,11 +148,29 @@ body {
     background-color: #ffffff !important;
 }
 
-/* Supprimer le fond bleu du remplissage automatique navigateur */
+/* Supprimer le fond bleu/gris du remplissage automatique navigateur */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
 .form-control:-webkit-autofill,
-.form-control:-webkit-autofill:focus {
+.form-control:-webkit-autofill:hover,
+.form-control:-webkit-autofill:focus,
+.form-control:-webkit-autofill:active {
     -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+    box-shadow: 0 0 0 1000px #ffffff inset !important;
     -webkit-text-fill-color: #111827 !important;
+    background-color: #ffffff !important;
+}
+
+/* Forcer le fond blanc sur tous les inputs, même non-autofill */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+    background-color: #ffffff !important;
 }
 
 /* === Primary button ============================ */
