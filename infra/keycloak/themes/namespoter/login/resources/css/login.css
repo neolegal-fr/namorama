@@ -5,9 +5,9 @@
 
 /* === Variables PatternFly 4 ==================== */
 :root {
-    --pf-global--primary-color--100: #3b82f6;
-    --pf-global--primary-color--200: #2563eb;
-    --pf-global--primary-color--300: #1d4ed8;
+    --pf-global--primary-color--100: #10b981;
+    --pf-global--primary-color--200: #059669;
+    --pf-global--primary-color--300: #047857;
     --pf-global--BackgroundColor--100: #f3f4f6;
     --pf-global--BackgroundColor--200: #ffffff;
     --pf-global--Color--100: #111827;
@@ -68,7 +68,7 @@ body,
     width: 1.5rem;
     height: 1.5rem;
     flex-shrink: 0;
-    background-color: #3b82f6;
+    background-color: #10b981;
     border-radius: 50%;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13l-3 7 7-3 3-7-7 3z'/%3E%3C/svg%3E");
     background-size: 1rem;
@@ -137,8 +137,8 @@ input.pf-c-form-control {
 
 .pf-c-form-control:focus,
 input.pf-c-form-control:focus {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
     outline: none !important;
     background-color: #ffffff !important;
 }
@@ -169,8 +169,8 @@ input:-webkit-autofill:active {
    Classe réelle : pf-c-button pf-m-primary        */
 .pf-c-button.pf-m-primary,
 #kc-login {
-    background-color: #3b82f6 !important;
-    border-color: #3b82f6 !important;
+    background-color: #10b981 !important;
+    border-color: #10b981 !important;
     border-radius: 0.5rem !important;
     font-weight: 500 !important;
     font-size: 0.875rem !important;
@@ -183,13 +183,13 @@ input:-webkit-autofill:active {
 
 .pf-c-button.pf-m-primary:hover,
 #kc-login:hover {
-    background-color: #2563eb !important;
-    border-color: #2563eb !important;
+    background-color: #059669 !important;
+    border-color: #059669 !important;
 }
 
 .pf-c-button.pf-m-primary:focus,
 #kc-login:focus {
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
     outline: none !important;
 }
 
@@ -218,18 +218,18 @@ input:-webkit-autofill:active {
 
 /* === Liens =================================== */
 a {
-    color: #3b82f6 !important;
+    color: #10b981 !important;
     text-decoration: none !important;
 }
 
 a:hover {
-    color: #2563eb !important;
+    color: #059669 !important;
     text-decoration: underline !important;
 }
 
 /* === Checkbox ================================ */
 #rememberMe {
-    accent-color: #3b82f6;
+    accent-color: #10b981;
 }
 
 /* === Espacement form groups ================== */
