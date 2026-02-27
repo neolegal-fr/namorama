@@ -1,6 +1,10 @@
 {
   "realm": "namespoter",
   "enabled": true,
+  "loginTheme": "namespoter",
+  "accountTheme": "keycloak",
+  "adminTheme": "keycloak",
+  "emailTheme": "keycloak",
   "registrationAllowed": true,
   "registrationEmailAsUsername": true,
   "rememberMe": true,

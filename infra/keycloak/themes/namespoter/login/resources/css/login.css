@@ -1,0 +1,272 @@
+/* ================================================
+   NameSpotter — Keycloak Login Theme
+   Extends: keycloak (base)
+   Design: aligned with PrimeNG Aura / app identity
+   ================================================ */
+
+/* === Body & background ========================= */
+body {
+    background-color: #f3f4f6 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* === Header / logo bar ========================= */
+#kc-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+    padding: 0 1.5rem !important;
+    margin-bottom: 0 !important;
+    min-height: 4rem !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+#kc-header-wrapper {
+    padding: 0 !important;
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+    text-shadow: none !important;
+    letter-spacing: -0.01em !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+/* Compass icon simulé via SVG inline en background */
+#kc-header-wrapper::before {
+    content: '';
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #3b82f6;
+    border-radius: 50%;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13l-3 7 7-3 3-7-7 3z'/%3E%3C/svg%3E");
+    background-size: 1rem;
+    background-repeat: no-repeat;
+    background-position: center;
+    flex-shrink: 0;
+}
+
+/* === Main body container ======================= */
+.login-pf-body,
+.login-pf-page {
+    background-color: transparent !important;
+}
+
+#kc-content {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* === Login card ================================ */
+.card-pf {
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.75rem !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07),
+                0 2px 4px -1px rgba(0, 0, 0, 0.04) !important;
+    padding: 2rem !important;
+    max-width: 26rem !important;
+    margin: 0 auto !important;
+}
+
+.login-pf-header {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 1.25rem !important;
+}
+
+/* === Page title ================================ */
+#kc-page-title {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: #111827 !important;
+    margin: 0 0 0.25rem 0 !important;
+}
+
+/* === Form labels ================================ */
+.control-label {
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    color: #374151 !important;
+    margin-bottom: 0.375rem !important;
+}
+
+/* === Inputs ==================================== */
+.form-control {
+    border: 1px solid #d1d5db !important;
+    border-radius: 0.5rem !important;
+    padding: 0.625rem 0.875rem !important;
+    font-size: 0.875rem !important;
+    color: #111827 !important;
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    height: auto !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.form-control:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+    outline: none !important;
+}
+
+/* === Primary button ============================ */
+.btn-primary,
+#kc-login {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    border-radius: 0.5rem !important;
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+    padding: 0.625rem 1rem !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    letter-spacing: 0.01em !important;
+}
+
+.btn-primary:hover,
+#kc-login:hover {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+.btn-primary:active,
+#kc-login:active {
+    background-color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+}
+
+.btn-primary:focus,
+#kc-login:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+    outline: none !important;
+}
+
+/* === Secondary / outline buttons =============== */
+.btn-default {
+    border-radius: 0.5rem !important;
+    border-color: #d1d5db !important;
+    color: #374151 !important;
+    font-weight: 500 !important;
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease !important;
+}
+
+.btn-default:hover {
+    background-color: #f9fafb !important;
+    border-color: #9ca3af !important;
+    color: #111827 !important;
+}
+
+/* === Links ===================================== */
+a {
+    color: #3b82f6 !important;
+    text-decoration: none !important;
+}
+
+a:hover {
+    color: #2563eb !important;
+    text-decoration: underline !important;
+}
+
+/* === Remember me =============================== */
+#rememberMe {
+    accent-color: #3b82f6;
+}
+
+/* === Form groups spacing ======================= */
+.form-group {
+    margin-bottom: 1rem !important;
+}
+
+#kc-form-buttons {
+    margin-top: 1.25rem !important;
+}
+
+/* === Alerts / error messages =================== */
+.alert {
+    border-radius: 0.5rem !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+    margin-bottom: 1rem !important;
+}
+
+.alert-error {
+    background-color: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #dc2626 !important;
+}
+
+.alert-warning {
+    background-color: #fffbeb !important;
+    border-color: #fde68a !important;
+    color: #d97706 !important;
+}
+
+.alert-success {
+    background-color: #f0fdf4 !important;
+    border-color: #bbf7d0 !important;
+    color: #16a34a !important;
+}
+
+.alert-info {
+    background-color: #eff6ff !important;
+    border-color: #bfdbfe !important;
+    color: #2563eb !important;
+}
+
+/* === Register / forgot-password links ========== */
+#kc-registration,
+#kc-registration-container {
+    text-align: center !important;
+    border-top: 1px solid #e5e7eb !important;
+    margin-top: 1.25rem !important;
+    padding-top: 1.25rem !important;
+    font-size: 0.875rem !important;
+    color: #6b7280 !important;
+}
+
+#kc-form-options {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 0.75rem !important;
+    font-size: 0.875rem !important;
+}
+
+/* === Social login buttons ====================== */
+.kc-social-links {
+    margin-top: 1rem !important;
+}
+
+.kc-social-provider-logo {
+    vertical-align: middle !important;
+    margin-right: 0.5rem !important;
+}
+
+/* === Password visibility toggle ================ */
+.kc-password .kc-eyeicon {
+    cursor: pointer !important;
+    color: #6b7280 !important;
+}
+
+/* === OTP / 2FA page ============================ */
+#kc-otp-login-select {
+    border-radius: 0.5rem !important;
+}
+
+/* === Back link ================================= */
+#kc-info-message {
+    text-align: center !important;
+    font-size: 0.875rem !important;
+}

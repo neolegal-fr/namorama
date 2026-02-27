@@ -30,6 +30,7 @@ services:
       - "8080:8080"
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
+      - ./keycloak/themes/namespoter:/opt/keycloak/themes/namespoter
     depends_on:
       - mariadb
 

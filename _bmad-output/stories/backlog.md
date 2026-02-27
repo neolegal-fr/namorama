@@ -696,7 +696,7 @@ SEO opportunity: queries like *"trouver un nom de marque"*, *"générateur nom d
 
 ## US-024 · Keycloak Theme — Align Login/Register Pages with App Design
 
-**Status**: ❌ To do
+**Status**: ✅ Implemented
 
 **As a** user registering or logging in to Namespoter,
 **I want** the Keycloak login and registration pages to look like the rest of the application,
@@ -1075,6 +1075,79 @@ When targeting a local market (US-001), short invented names may feel foreign or
 
 ---
 
+## US-033 · Tinder Mode — Swipe to Like / Dislike Domain Names
+
+**Status**: ❌ To do
+
+**As a** user who has received domain name suggestions,
+**I want** to review them one by one in a swipe-style card interface,
+**So that** I can quickly sort through many options without the cognitive load of a full table, and end up with a clear shortlist.
+
+### Context
+The current table view works well on desktop but is overwhelming on mobile and cognitively demanding when there are many results. A card-by-card "Tinder mode" reduces each decision to a binary yes/no, naturally building a shortlist. It complements — not replaces — the table: a toggle lets the user switch between both views at any time.
+
+### UX Flow
+1. User arrives at Step 3 (results). A toggle in the header switches between **Table view** and **Tinder mode**.
+2. In Tinder mode, one card is shown at a time. The card displays:
+   - The domain name (large, centred)
+   - Availability badge per selected extension (✅ / ❌)
+   - If analysis exists: star score inline
+3. The user acts:
+   - **👎 Dislike** (swipe left / left button) — skips the name; it is added to the dislike list
+   - **👍 Like** (swipe right / right button) — adds the name to the shortlist panel
+   - **❤️ Coup de cœur** (center button or double-tap) — marks as favourite (calls `toggleFavorite()`, triggers AI analysis) and adds to shortlist
+4. When all current cards have been reviewed, the app shows:
+   - "All names reviewed — load more?" → calls `findDomains(append=true)` with disliked names added to `excludeNames`
+5. At any point the user can open the **shortlist panel** (slide-in or bottom sheet) to review their liked / coup-de-cœur names.
+6. A **"Done"** button on the shortlist exits Tinder mode and switches back to Table view, filtered to the liked names only.
+
+### Acceptance Criteria
+
+#### Frontend — View Toggle
+- [ ] A segmented control (`p-selectButton`) in the Step 3 header lets the user switch between **📋 Table** and **🃏 Tinder**
+- [ ] The selected view mode is persisted in the wizard state (survives navigation within the wizard session)
+- [ ] Switching to Tinder mode starts from the first unreviewed card (not from the beginning if the user has already swiped some)
+
+#### Frontend — Card UI
+- [ ] One card is visible at a time, centred on screen, with subtle drop-shadow and rounded corners
+- [ ] Card content:
+  - Domain name in large bold text
+  - A row of extension availability chips: `.com ✅ · .fr ❌ · .net ✅`
+  - Star score (if analysis available), greyed-out placeholder if not
+- [ ] Three action buttons below the card: **✕ Dislike** · **❤️ Coup de cœur** · **✓ Like**
+- [ ] On desktop: click buttons. On mobile: swipe left (dislike) / swipe right (like) gestures are supported in addition to buttons
+- [ ] A swipe animation plays on action (card slides out left or right with a colour tint: red for dislike, green for like, pink for coup de cœur)
+- [ ] A progress indicator shows "X / N reviewed" and the number of names liked so far
+- [ ] When there are no more cards: a "Load more suggestions" prompt appears automatically
+
+#### Frontend — Shortlist Panel
+- [ ] A floating badge (bottom-right) shows the count of liked names; clicking it opens the shortlist panel
+- [ ] The shortlist panel lists liked and coup-de-cœur names with their availability and analysis score
+- [ ] The user can un-like a name from the shortlist panel (removes from shortlist, does not add to dislike)
+- [ ] A "Done – keep shortlist" button exits Tinder mode and filters the Table view to shortlisted names only
+
+#### Frontend — State Signals
+- [ ] New signals in `WizardComponent`:
+  - `tinderMode = signal<boolean>(false)`
+  - `tinderIndex = signal<number>(0)` — index of the current card in `domains()`
+  - `likedNames = signal<string[]>([])` — names liked or coup-de-cœur
+  - `dislikedNames = signal<string[]>([])` — names to exclude from next batch
+- [ ] `dislikedNames()` is merged into `excludeNames` on the next `findDomains(append=true)` call (alongside already-displayed names, per US-015)
+
+#### Backend
+- [ ] No backend changes required. All actions (like, coup de cœur, load more) use existing endpoints:
+  - Coup de cœur → `toggleFavorite()` (existing)
+  - Load more → `findDomains(append=true)` with extended `excludeNames` (existing)
+
+### Technical Notes
+- Swipe gesture: use the `(touchstart)` / `(touchend)` Angular host listeners on the card element, compute `deltaX`; threshold: 80px
+- Card animation: CSS `transition: transform 0.3s, opacity 0.3s` + Angular `[style.transform]` binding; add a `leaving-left` / `leaving-right` class on action then reset after transition
+- The Tinder view iterates `domains()` by index (`tinderIndex`); since `domains()` is a live signal that grows as streaming adds results, new cards appear automatically at the end of the deck
+- Do NOT remove disliked domains from `domains()` — they remain in the Table view (the user may want to reconsider); only hide them in Tinder mode via the index pointer
+- No PrimeNG card component needed — a plain `<div>` with inline styles avoids theme overrides (per project CSS conventions)
+
+---
+
 ## Priority / Effort Matrix (initial estimate)
 
 | Story | Value | Effort | Priority | Status |
@@ -1104,9 +1177,10 @@ When targeting a local market (US-001), short invented names may feel foreign or
 | US-030 · Import description from a web page URL | High | Medium | 🟠 Next | ❌ To do |
 | US-031 · LLM model selection — Standard vs. Premium | High | Medium | 🟠 Next | ❌ To do |
 | US-032 · Long-form "phrase" domain names for local targeting | Medium | Low | 🟠 Next | ❌ To do |
+| US-033 · Tinder mode — swipe to like / dislike domain names | High | Medium | 🟠 Next | ❌ To do |
 | US-005 · Pros & cons analysis | High | High | 🟡 Later | ✅ Done |
 | US-010 · Streaming results (SSE) | High | High | 🟡 Later | ✅ Done |
 | US-012 · MCP server | High | Medium | 🟡 Later | ❌ To do |
 | US-018 · Favourite comparison tool | Medium | Medium | 🟡 Later | ❌ To do |
-| US-024 · Keycloak theme — align with app design | Medium | Medium | 🟡 Later | ❌ To do |
+| US-024 · Keycloak theme — align with app design | Medium | Medium | 🟡 Later | ✅ Done |
 | US-013 · Teams / Claude skill / Marketplace | High | High | 🔵 Future | ❌ To do |
