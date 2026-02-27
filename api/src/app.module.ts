@@ -26,7 +26,7 @@ import { PaymentsModule } from './payments/payments.module';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        type: 'postgres',
+        type: 'mariadb',
         url: config.get('DATABASE_URL'),
         autoLoadEntities: true,
         synchronize: true, // Désactiver en production

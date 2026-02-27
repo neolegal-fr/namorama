@@ -1,48 +1,11 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: namespoter
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d namespoter"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:22.0.1
-    restart: unless-stopped
-    environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/namespoter
-      KC_DB_USERNAME: ${POSTGRES_USER}
-      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
-      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME}
-      KC_HTTP_ENABLED: "true"
-      KC_PROXY: edge
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-    command: start --import-realm
-    volumes:
-      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
-    ports:
-      - "127.0.0.1:8080:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   api:
     image: git.neolegal.fr/neolegal/namespoter-api:latest
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/namespoter
+      DATABASE_URL: mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@192.168.1.95:3306/namespoter
       KEYCLOAK_AUTH_SERVER_URL: ${KEYCLOAK_URL}
       KEYCLOAK_REALM: namespoter
       KEYCLOAK_CLIENT_ID: namespoter-api
@@ -55,9 +18,6 @@ services:
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
     ports:
       - "127.0.0.1:3000:3000"
-    depends_on:
-      postgres:
-        condition: service_healthy
 
   web:
     image: git.neolegal.fr/neolegal/namespoter-web:latest
@@ -69,6 +29,3 @@ services:
       - "127.0.0.1:8088:80"
     depends_on:
       - api
-
-volumes:
-  postgres_data:

@@ -1,24 +1,25 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: postgres:15
+  mariadb:
+    image: mariadb:10.6
     container_name: namespoter-db
     environment:
-      POSTGRES_DB: namespoter
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: admin_password
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: admin_password
     ports:
-      - "5432:5432"
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - mariadb_data:/var/lib/mysql
+      - ./mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   keycloak:
     image: quay.io/keycloak/keycloak:22.0.1
     container_name: namespoter-auth
     environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/namespoter
+      KC_DB: mariadb
+      KC_DB_URL: jdbc:mariadb://mariadb:3306/keycloak
       KC_DB_USERNAME: admin
       KC_DB_PASSWORD: admin_password
       KC_HOSTNAME: localhost
@@ -30,7 +31,7 @@ services:
     volumes:
       - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm.json
     depends_on:
-      - postgres
+      - mariadb
 
 volumes:
-  postgres_data:
+  mariadb_data:
