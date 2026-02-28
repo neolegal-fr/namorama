@@ -1,93 +1,150 @@
 /* ================================================
    NameSpotter — Keycloak Account Console Theme
-   PatternFly v5 (keycloak.v3 — React SPA)
+   Keycloak 26 / keycloak.v3 / PatternFly v5
    ================================================ */
 
-/* === Variables PatternFly v5 =================== */
+/* === Variables globales ======================== */
 :root {
-    /* Primary color — emerald */
+    --ns-primary:        #10b981;
+    --ns-primary-dark:   #059669;
+    --ns-primary-darker: #047857;
+    --ns-primary-light:  rgba(16, 185, 129, 0.15);
+
+    /* Remplace les tokens PatternFly v5 */
     --pf-v5-global--primary-color--100: #10b981;
     --pf-v5-global--primary-color--200: #059669;
     --pf-v5-global--primary-color--300: #047857;
-
-    /* Links */
-    --pf-v5-global--link--Color: #10b981;
+    --pf-v5-global--link--Color:        #10b981;
     --pf-v5-global--link--Color--hover: #059669;
-
-    /* Active/focus */
-    --pf-v5-global--active-color--100: #10b981;
-    --pf-v5-global--Color--400: #10b981;
-
-    /* Background */
-    --pf-v5-global--BackgroundColor--100: #f3f4f6;
-
-    /* Border radius */
-    --pf-v5-global--BorderRadius--sm: 0.5rem;
-    --pf-v5-global--BorderRadius--lg: 0.75rem;
+    --pf-v5-global--active-color--100:  #10b981;
 }
 
-/* === Boutons primaires ========================= */
-.pf-v5-c-button.pf-m-primary {
-    background-color: #10b981 !important;
-    border-color: #10b981 !important;
+/* === Masthead (barre du haut) ================== */
+.pf-v5-c-masthead {
+    background-color: #ffffff !important;
+    border-bottom: 2px solid #e5e7eb !important;
+    --pf-v5-c-masthead--BackgroundColor: #ffffff;
 }
 
-.pf-v5-c-button.pf-m-primary:hover {
-    background-color: #059669 !important;
-    border-color: #059669 !important;
+.pf-v5-c-masthead__brand {
+    color: #111827 !important;
+    font-weight: 700 !important;
+    font-size: 1.125rem !important;
 }
 
-.pf-v5-c-button.pf-m-primary:focus {
-    --pf-v5-c-button--focus--after--border-color: #10b981;
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+.pf-v5-c-masthead__brand a,
+.pf-v5-c-masthead__brand a:hover {
+    color: #111827 !important;
+    text-decoration: none !important;
 }
 
-/* === Liens ===================================== */
-a {
-    color: #10b981 !important;
+/* === Sidebar (navigation gauche) ============== */
+.pf-v5-c-page__sidebar {
+    background-color: #f9fafb !important;
+    border-right: 1px solid #e5e7eb !important;
+    --pf-v5-c-page__sidebar--BackgroundColor: #f9fafb;
 }
 
-a:hover {
-    color: #059669 !important;
+/* === Navigation ================================ */
+.pf-v5-c-nav {
+    --pf-v5-c-nav__link--Color: #374151;
+    --pf-v5-c-nav__link--hover--Color: var(--ns-primary);
+    --pf-v5-c-nav__link--m-current--Color: var(--ns-primary);
 }
 
-/* === Navigation latérale (items actifs) ======= */
-.pf-v5-c-nav__link.pf-m-current,
+.pf-v5-c-nav__link {
+    color: #374151 !important;
+}
+
 .pf-v5-c-nav__link:hover {
-    color: #10b981 !important;
+    color: var(--ns-primary) !important;
+    background-color: var(--ns-primary-light) !important;
+}
+
+.pf-v5-c-nav__link.pf-m-current {
+    color: var(--ns-primary) !important;
+    background-color: var(--ns-primary-light) !important;
+    font-weight: 600 !important;
 }
 
 .pf-v5-c-nav__link.pf-m-current::before,
 .pf-v5-c-nav__link:hover::before {
-    background-color: #10b981 !important;
+    background-color: var(--ns-primary) !important;
+}
+
+/* === Boutons primaires ========================= */
+.pf-v5-c-button.pf-m-primary {
+    --pf-v5-c-button--m-primary--BackgroundColor: var(--ns-primary);
+    --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--ns-primary-dark);
+    --pf-v5-c-button--m-primary--active--BackgroundColor: var(--ns-primary-darker);
+    --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--ns-primary-dark);
+    background-color: var(--ns-primary) !important;
+    border-color: var(--ns-primary) !important;
+    color: #ffffff !important;
+}
+
+.pf-v5-c-button.pf-m-primary:hover,
+.pf-v5-c-button.pf-m-primary:focus {
+    background-color: var(--ns-primary-dark) !important;
+    border-color: var(--ns-primary-dark) !important;
+}
+
+/* === Boutons link/plain ======================== */
+.pf-v5-c-button.pf-m-link,
+.pf-v5-c-button.pf-m-plain {
+    color: var(--ns-primary) !important;
+}
+
+.pf-v5-c-button.pf-m-link:hover {
+    color: var(--ns-primary-dark) !important;
+}
+
+/* === Liens ===================================== */
+a:not(.pf-v5-c-button):not(.pf-v5-c-nav__link):not(.pf-v5-c-masthead__brand) {
+    color: var(--ns-primary) !important;
+}
+
+a:not(.pf-v5-c-button):not(.pf-v5-c-nav__link):not(.pf-v5-c-masthead__brand):hover {
+    color: var(--ns-primary-dark) !important;
 }
 
 /* === Inputs focus ============================== */
+.pf-v5-c-form-control:focus,
 .pf-v5-c-form-control:focus-within {
-    --pf-v5-c-form-control--after--BorderBottomColor: #10b981;
-    box-shadow: inset 0 -2px 0 0 #10b981 !important;
+    --pf-v5-c-form-control--after--BorderBottomColor: var(--ns-primary);
+    box-shadow: inset 0 -2px 0 0 var(--ns-primary) !important;
+    outline: none !important;
 }
 
-/* === Tabs actifs =============================== */
-.pf-v5-c-tabs__link.pf-m-current {
-    --pf-v5-c-tabs__link--after--BorderColor: #10b981;
-    color: #10b981 !important;
+/* === Tabs ====================================== */
+.pf-v5-c-tabs__link.pf-m-current,
+.pf-v5-c-tabs__link[aria-selected="true"] {
+    color: var(--ns-primary) !important;
+    --pf-v5-c-tabs__link--after--BorderColor: var(--ns-primary);
+    border-bottom-color: var(--ns-primary) !important;
 }
 
-/* === Spinner de chargement initial ============= */
+/* === Alerts / Badges =========================== */
+.pf-v5-c-badge.pf-m-read {
+    --pf-v5-c-badge--m-read--BackgroundColor: var(--ns-primary);
+}
+
+/* === Spinner =================================== */
 .pf-v5-c-spinner {
-    --pf-v5-c-spinner--Color: #10b981;
+    --pf-v5-c-spinner--Color: var(--ns-primary);
 }
 
-/* === Page header =============================== */
-.pf-v5-c-page__header {
-    background-color: #ffffff !important;
-    border-bottom: 1px solid #e5e7eb !important;
+/* === Switch (toggle) =========================== */
+.pf-v5-c-switch__input:checked ~ .pf-v5-c-switch__toggle {
+    --pf-v5-c-switch__input--checked__toggle--BackgroundColor: var(--ns-primary);
+    background-color: var(--ns-primary) !important;
 }
 
-/* === Masque le titre Keycloak par défaut ======= */
-.pf-v5-c-brand {
-    font-size: 1.125rem !important;
-    font-weight: 700 !important;
-    color: #111827 !important;
+/* === Page background =========================== */
+.pf-v5-c-page {
+    background-color: #f3f4f6 !important;
+}
+
+.pf-v5-c-page__main-section {
+    background-color: #f3f4f6 !important;
 }
