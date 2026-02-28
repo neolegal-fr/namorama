@@ -93,6 +93,66 @@ export class UsersService {
     await this.usersRepository.update({ keycloakId }, { stripeSubscriptionId });
   }
 
+  /** Retourne les informations d'abonnement de l'utilisateur */
+  async getSubscription(keycloakId: string): Promise<{
+    plan: 'essential' | null;
+    status: 'active' | 'cancelled' | 'expired' | 'none';
+    subscriptionCredits: number;
+    subscriptionCreditsTotal: number;
+    extraCredits: number;
+    currentPeriodEnd: string | null;
+    nextBillingAmount: number | null;
+  }> {
+    const user = await this.findOrCreate(keycloakId);
+    const now = new Date();
+
+    let status: 'active' | 'cancelled' | 'expired' | 'none' = 'none';
+    let plan: 'essential' | null = null;
+
+    if (user.stripeSubscriptionId) {
+      plan = 'essential';
+      if (user.subscriptionCancelledAt) {
+        status = user.subscriptionCancelledAt > now ? 'cancelled' : 'active';
+      } else {
+        status = 'active';
+      }
+    } else if (user.subscriptionCancelledAt) {
+      plan = 'essential';
+      status = 'expired';
+    }
+
+    return {
+      plan,
+      status,
+      subscriptionCredits: user.credits,
+      subscriptionCreditsTotal: plan ? 2000 : 0,
+      extraCredits: user.extraCredits,
+      currentPeriodEnd: user.subscriptionCurrentPeriodEnd?.toISOString() ?? null,
+      nextBillingAmount: status === 'active' ? 500 : null,
+    };
+  }
+
+  /** Enregistre la date de fin de période d'abonnement (appelé depuis webhook invoice.paid) */
+  async setSubscriptionPeriodEndByCustomerId(stripeCustomerId: string, periodEnd: Date): Promise<void> {
+    const user = await this.findByStripeCustomerId(stripeCustomerId);
+    if (!user) return;
+    user.subscriptionCurrentPeriodEnd = periodEnd;
+    await this.usersRepository.save(user);
+  }
+
+  /** Enregistre la date de fin de période d'abonnement par keycloakId (checkout) */
+  async setSubscriptionPeriodEnd(keycloakId: string, periodEnd: Date): Promise<void> {
+    await this.usersRepository.update({ keycloakId }, { subscriptionCurrentPeriodEnd: periodEnd });
+  }
+
+  /** Enregistre la date d'annulation à fin de période (cancel_at_period_end) */
+  async setSubscriptionCancelledAt(stripeCustomerId: string, cancelledAt: Date | null): Promise<void> {
+    const user = await this.findByStripeCustomerId(stripeCustomerId);
+    if (!user) return;
+    user.subscriptionCancelledAt = cancelledAt;
+    await this.usersRepository.save(user);
+  }
+
   /** @deprecated Utiliser addExtraCredits ou resetSubscriptionCredits */
   async addCredits(keycloakId: string, amount: number): Promise<void> {
     const user = await this.findOrCreate(keycloakId);

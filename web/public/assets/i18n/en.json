@@ -52,7 +52,16 @@
     "PACK_DESC": "Permanent credits, used after your subscription credits",
     "BUY_BTN": "Buy",
     "EXTRA_BALANCE": "Extra credits available",
-    "CREDITS": "credits"
+    "CREDITS": "credits",
+    "STATUS_ACTIVE": "Active",
+    "STATUS_CANCELLED": "Cancellation scheduled",
+    "STATUS_EXPIRED": "Expired",
+    "RESET_DATE": "Resets on",
+    "ACTIVE_UNTIL": "Active until",
+    "CANCEL_BTN": "Cancel subscription",
+    "CANCEL_CONFIRM": "Your subscription will remain active until {{date}}. After that, your monthly credits will not renew.",
+    "CANCEL_CONFIRM_BTN": "Confirm cancellation",
+    "CANCEL_KEEP_BTN": "Keep my subscription"
   },
   "PAYMENT": {
     "SUCCESS_TITLE": "Payment confirmed!",

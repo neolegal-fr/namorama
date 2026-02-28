@@ -1,10 +1,10 @@
 import { Component, signal, OnInit, ChangeDetectorRef } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
-import { UserService } from './services/user';
+import { UserService, SubscriptionInfo } from './services/user';
 import { ProjectService } from './services/project';
 import { PaymentService } from './services/payment';
 import { KeycloakService } from 'keycloak-angular';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { MenuModule } from 'primeng/menu';
 import { ButtonModule } from 'primeng/button';
@@ -20,15 +20,16 @@ import { Dialog } from 'primeng/dialog';
   selector: 'app-root',
   standalone: true,
   imports: [
-    CommonModule, 
-    RouterOutlet, 
-    TranslateModule, 
-    MenuModule, 
-    ButtonModule, 
-    MenubarModule, 
+    CommonModule,
+    RouterOutlet,
+    TranslateModule,
+    MenuModule,
+    ButtonModule,
+    MenubarModule,
     AvatarModule,
     FormsModule,
     Dialog,
+    DatePipe,
   ],
   template: `
     <main class="min-h-screen">
@@ -88,7 +89,7 @@ import { Dialog } from 'primeng/dialog';
       <!-- Dialogue de facturation (abonnement + packs) -->
       <p-dialog [header]="'BILLING.TITLE' | translate"
                 [visible]="projectService.showCreditDialog()"
-                (visibleChange)="projectService.showCreditDialog.set($event)"
+                (visibleChange)="onBillingDialogVisibilityChange($event)"
                 [modal]="true"
                 [style]="{ width: 'min(28rem, 90vw)' }"
                 [draggable]="false"
@@ -100,32 +101,103 @@ import { Dialog } from 'primeng/dialog';
             <i class="pi pi-star-fill" style="color: var(--p-primary-color)"></i>
             <span class="font-bold text-900">{{ 'BILLING.SUBSCRIPTION_TITLE' | translate }}</span>
           </div>
-          <div style="background: var(--p-surface-50); border-radius: 0.5rem; padding: 0.875rem 1rem; margin-bottom: 0.75rem">
-            <div class="font-semibold text-900">{{ 'BILLING.ESSENTIAL_NAME' | translate }}</div>
-            <div class="text-500" style="font-size: 0.85rem; margin-top: 0.2rem">{{ 'BILLING.ESSENTIAL_DESC' | translate }}</div>
-            <div style="margin-top: 0.5rem; font-size: 1.1rem; font-weight: 700; color: var(--p-primary-color)">5 € / mois</div>
-          </div>
-          <div style="display: flex; gap: 0.5rem">
-            <p-button *ngIf="!hasActiveSubscription()"
+
+          <!-- Pas d'abonnement -->
+          <ng-container *ngIf="subscription().status === 'none' || subscription().status === 'expired'">
+            <div style="background: var(--p-surface-50); border-radius: 0.5rem; padding: 0.875rem 1rem; margin-bottom: 0.75rem">
+              <div class="font-semibold text-900">{{ 'BILLING.ESSENTIAL_NAME' | translate }}</div>
+              <div class="text-500" style="font-size: 0.85rem; margin-top: 0.2rem">{{ 'BILLING.ESSENTIAL_DESC' | translate }}</div>
+              <div style="margin-top: 0.5rem; font-size: 1.1rem; font-weight: 700; color: var(--p-primary-color)">5 € / mois</div>
+            </div>
+            <p-button
               [label]="'BILLING.SUBSCRIBE_BTN' | translate"
               icon="pi pi-arrow-right"
               [loading]="billingLoading()"
               (onClick)="subscribeEssential()"
-              styleClass="flex-1">
+              styleClass="w-full">
             </p-button>
-            <p-button *ngIf="hasActiveSubscription()"
-              [label]="'BILLING.MANAGE_BTN' | translate"
-              icon="pi pi-cog"
-              severity="secondary"
-              [loading]="billingLoading()"
-              (onClick)="openPortal()"
-              styleClass="flex-1">
-            </p-button>
-          </div>
-          <div *ngIf="hasActiveSubscription()" style="margin-top: 0.5rem; font-size: 0.8rem; color: #16a34a; display: flex; align-items: center; gap: 0.375rem">
-            <i class="pi pi-check-circle"></i>
-            <span>{{ 'BILLING.ACTIVE_SUBSCRIPTION' | translate }} — {{ subscriptionCredits() }} {{ 'BILLING.CREDITS_REMAINING' | translate }}</span>
-          </div>
+          </ng-container>
+
+          <!-- Abonnement actif ou en cours d'annulation -->
+          <ng-container *ngIf="subscription().status === 'active' || subscription().status === 'cancelled'">
+            <div style="background: var(--p-surface-50); border-radius: 0.5rem; padding: 0.875rem 1rem; margin-bottom: 0.75rem">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start">
+                <div>
+                  <div class="font-semibold text-900">{{ 'BILLING.ESSENTIAL_NAME' | translate }}</div>
+                  <div class="text-500" style="font-size: 0.85rem; margin-top: 0.2rem">{{ 'BILLING.ESSENTIAL_DESC' | translate }}</div>
+                </div>
+                <!-- Badge statut -->
+                <span *ngIf="subscription().status === 'active'"
+                  style="font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 999px; background: #dcfce7; color: #16a34a; white-space: nowrap">
+                  {{ 'BILLING.STATUS_ACTIVE' | translate }}
+                </span>
+                <span *ngIf="subscription().status === 'cancelled'"
+                  style="font-size: 0.75rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 999px; background: #fef9c3; color: #a16207; white-space: nowrap">
+                  {{ 'BILLING.STATUS_CANCELLED' | translate }}
+                </span>
+              </div>
+
+              <!-- Crédits restants + date renouvellement -->
+              <div style="margin-top: 0.75rem; font-size: 0.8rem; color: var(--p-surface-600)">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem">
+                  <span>{{ subscription().subscriptionCredits }} / {{ subscription().subscriptionCreditsTotal }} {{ 'BILLING.CREDITS' | translate }}</span>
+                  <span *ngIf="subscription().currentPeriodEnd">
+                    {{ (subscription().status === 'cancelled' ? 'BILLING.ACTIVE_UNTIL' : 'BILLING.RESET_DATE') | translate }}
+                    {{ subscription().currentPeriodEnd | date:'d MMM yyyy' }}
+                  </span>
+                </div>
+                <!-- Barre de progression crédits -->
+                <div style="height: 4px; border-radius: 2px; background: var(--p-surface-200); overflow: hidden">
+                  <div style="height: 100%; background: var(--p-primary-color); border-radius: 2px; transition: width 0.3s"
+                    [style.width.%]="subscription().subscriptionCreditsTotal > 0 ? (subscription().subscriptionCredits / subscription().subscriptionCreditsTotal * 100) : 0">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Boutons gestion -->
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem">
+              <p-button
+                [label]="'BILLING.MANAGE_BTN' | translate"
+                icon="pi pi-cog"
+                severity="secondary"
+                [loading]="billingLoading()"
+                (onClick)="openPortal()"
+                styleClass="flex-1">
+              </p-button>
+              <p-button *ngIf="subscription().status === 'active' && !showCancelConfirm()"
+                [label]="'BILLING.CANCEL_BTN' | translate"
+                icon="pi pi-times"
+                severity="danger"
+                [text]="true"
+                (onClick)="showCancelConfirm.set(true)">
+              </p-button>
+            </div>
+
+            <!-- Confirmation annulation inline -->
+            <div *ngIf="showCancelConfirm()"
+              style="border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.875rem; background: #fff7f7; font-size: 0.85rem">
+              <p style="margin: 0 0 0.75rem; color: #374151">
+                {{ 'BILLING.CANCEL_CONFIRM' | translate : { date: subscription().currentPeriodEnd ? (subscription().currentPeriodEnd | date:'d MMM yyyy') : '—' } }}
+              </p>
+              <div style="display: flex; gap: 0.5rem">
+                <p-button
+                  [label]="'BILLING.CANCEL_CONFIRM_BTN' | translate"
+                  severity="danger"
+                  size="small"
+                  [loading]="billingLoading()"
+                  (onClick)="openPortal()">
+                </p-button>
+                <p-button
+                  [label]="'BILLING.CANCEL_KEEP_BTN' | translate"
+                  severity="secondary"
+                  [text]="true"
+                  size="small"
+                  (onClick)="showCancelConfirm.set(false)">
+                </p-button>
+              </div>
+            </div>
+          </ng-container>
         </div>
 
         <!-- Section pack extra -->
@@ -169,6 +241,8 @@ export class AppComponent implements OnInit {
   hasActiveSubscription = signal(false);
   billingLoading = signal(false);
   isLoggedIn = signal(false);
+  subscription = signal<SubscriptionInfo>({ plan: null, status: 'none', subscriptionCredits: 0, subscriptionCreditsTotal: 0, extraCredits: 0, currentPeriodEnd: null, nextBillingAmount: null });
+  showCancelConfirm = signal(false);
   currentLang = signal('fr');
   selectedLang = 'fr';
   userName = signal('');
@@ -227,6 +301,10 @@ export class AppComponent implements OnInit {
       this.extraCredits.set(info.extraCredits);
       this.hasActiveSubscription.set(info.hasActiveSubscription);
     });
+
+    this.userService.subscription$.subscribe(sub => {
+      this.subscription.set(sub);
+    });
   }
 
   updateProjectMenu() {
@@ -270,8 +348,15 @@ export class AppComponent implements OnInit {
 
   triggerCreditDialog() {
     this.userService.getCredits().subscribe();
+    this.userService.getSubscription().subscribe();
+    this.showCancelConfirm.set(false);
     this.projectService.showCreditDialog.set(true);
     this.cdr.detectChanges();
+  }
+
+  onBillingDialogVisibilityChange(visible: boolean) {
+    if (!visible) this.showCancelConfirm.set(false);
+    this.projectService.showCreditDialog.set(visible);
   }
 
   subscribeEssential() {

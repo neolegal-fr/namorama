@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject, tap } from 'rxjs';
+import { Observable, BehaviorSubject, tap, of } from 'rxjs';
 import { ConfigService } from './config';
 
 export interface BillingInfo {
@@ -8,6 +8,16 @@ export interface BillingInfo {
   extraCredits: number;
   totalCredits: number;
   hasActiveSubscription: boolean;
+}
+
+export interface SubscriptionInfo {
+  plan: 'essential' | null;
+  status: 'active' | 'cancelled' | 'expired' | 'none';
+  subscriptionCredits: number;
+  subscriptionCreditsTotal: number;
+  extraCredits: number;
+  currentPeriodEnd: string | null;
+  nextBillingAmount: number | null;
 }
 
 @Injectable({
@@ -26,6 +36,17 @@ export class UserService {
   });
   billing$ = this.billingSubject.asObservable();
 
+  private subscriptionSubject = new BehaviorSubject<SubscriptionInfo>({
+    plan: null,
+    status: 'none',
+    subscriptionCredits: 0,
+    subscriptionCreditsTotal: 0,
+    extraCredits: 0,
+    currentPeriodEnd: null,
+    nextBillingAmount: null,
+  });
+  subscription$ = this.subscriptionSubject.asObservable();
+
   constructor(private http: HttpClient, private config: ConfigService) {}
 
   getCredits(): Observable<{ credits: number; subscriptionCredits: number; extraCredits: number; hasActiveSubscription: boolean }> {
@@ -39,6 +60,12 @@ export class UserService {
           hasActiveSubscription: res.hasActiveSubscription ?? false,
         });
       })
+    );
+  }
+
+  getSubscription(): Observable<SubscriptionInfo> {
+    return this.http.get<SubscriptionInfo>(`${this.apiUrl}/me/subscription`).pipe(
+      tap(res => this.subscriptionSubject.next(res))
     );
   }
 

@@ -27,6 +27,14 @@ export class User {
   @Column({ nullable: true })
   stripeSubscriptionId: string;
 
+  /** Date de fin de la période d'abonnement en cours (mise à jour par webhook invoice.paid) */
+  @Column({ nullable: true, type: 'datetime' })
+  subscriptionCurrentPeriodEnd: Date | null;
+
+  /** Date à laquelle l'abonnement sera annulé (cancel_at_period_end) ; null si actif normalement */
+  @Column({ nullable: true, type: 'datetime' })
+  subscriptionCancelledAt: Date | null;
+
   get totalCredits(): number {
     return this.credits + this.extraCredits;
   }

@@ -270,3 +270,62 @@ a:hover {
     border-color: #bbf7d0 !important;
     color: #16a34a !important;
 }
+
+/* === Page d'erreur ============================= */
+#kc-error-message {
+    text-align: center !important;
+    padding: 0.5rem 0 !important;
+}
+
+.instruction {
+    font-size: 0.9375rem !important;
+    color: #374151 !important;
+    line-height: 1.6 !important;
+    margin-bottom: 1.25rem !important;
+}
+
+#backToApplication {
+    display: inline-block !important;
+    margin-top: 0.5rem !important;
+    padding: 0.625rem 1.25rem !important;
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+    border-radius: 0.5rem !important;
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+    text-decoration: none !important;
+    transition: background-color 0.15s ease !important;
+}
+
+#backToApplication:hover {
+    background-color: #059669 !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+}
+
+/* === Page reset password ======================== */
+#kc-reset-password-form .pf-c-form__group:last-child {
+    margin-top: 0.25rem !important;
+}
+
+/* === Page vérification email =================== */
+#kc-info-message {
+    text-align: center !important;
+}
+
+#kc-info-message .instruction {
+    margin-bottom: 1.5rem !important;
+}
+
+/* === Responsive mobile (< 480px) =============== */
+@media (max-width: 480px) {
+    .card-pf {
+        margin: 1rem !important;
+        padding: 1.5rem !important;
+        border-radius: 0.5rem !important;
+    }
+
+    #kc-header {
+        padding: 0 1rem !important;
+    }
+}

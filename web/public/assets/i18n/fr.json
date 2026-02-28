@@ -52,7 +52,16 @@
     "PACK_DESC": "Crédits permanents, consommés après votre abonnement",
     "BUY_BTN": "Acheter",
     "EXTRA_BALANCE": "Crédits extra disponibles",
-    "CREDITS": "crédits"
+    "CREDITS": "crédits",
+    "STATUS_ACTIVE": "Actif",
+    "STATUS_CANCELLED": "Annulation programmée",
+    "STATUS_EXPIRED": "Expiré",
+    "RESET_DATE": "Renouvellement le",
+    "ACTIVE_UNTIL": "Actif jusqu'au",
+    "CANCEL_BTN": "Annuler l'abonnement",
+    "CANCEL_CONFIRM": "Votre abonnement restera actif jusqu'au {{date}}. Après cette date, vos crédits mensuels ne seront plus renouvelés.",
+    "CANCEL_CONFIRM_BTN": "Confirmer l'annulation",
+    "CANCEL_KEEP_BTN": "Conserver mon abonnement"
   },
   "PAYMENT": {
     "SUCCESS_TITLE": "Paiement confirmé !",

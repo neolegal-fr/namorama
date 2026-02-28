@@ -19,6 +19,11 @@ export class UsersController {
     };
   }
 
+  @Get('me/subscription')
+  async getSubscription(@AuthenticatedUser() keycloakUser: any) {
+    return this.usersService.getSubscription(keycloakUser.sub);
+  }
+
   @Get('credits')
   async getCredits(@AuthenticatedUser() keycloakUser: any) {
     const user = await this.usersService.findOrCreate(keycloakUser.sub);

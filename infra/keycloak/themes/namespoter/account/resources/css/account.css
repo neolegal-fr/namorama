@@ -1,0 +1,93 @@
+/* ================================================
+   NameSpotter — Keycloak Account Console Theme
+   PatternFly v5 (keycloak.v3 — React SPA)
+   ================================================ */
+
+/* === Variables PatternFly v5 =================== */
+:root {
+    /* Primary color — emerald */
+    --pf-v5-global--primary-color--100: #10b981;
+    --pf-v5-global--primary-color--200: #059669;
+    --pf-v5-global--primary-color--300: #047857;
+
+    /* Links */
+    --pf-v5-global--link--Color: #10b981;
+    --pf-v5-global--link--Color--hover: #059669;
+
+    /* Active/focus */
+    --pf-v5-global--active-color--100: #10b981;
+    --pf-v5-global--Color--400: #10b981;
+
+    /* Background */
+    --pf-v5-global--BackgroundColor--100: #f3f4f6;
+
+    /* Border radius */
+    --pf-v5-global--BorderRadius--sm: 0.5rem;
+    --pf-v5-global--BorderRadius--lg: 0.75rem;
+}
+
+/* === Boutons primaires ========================= */
+.pf-v5-c-button.pf-m-primary {
+    background-color: #10b981 !important;
+    border-color: #10b981 !important;
+}
+
+.pf-v5-c-button.pf-m-primary:hover {
+    background-color: #059669 !important;
+    border-color: #059669 !important;
+}
+
+.pf-v5-c-button.pf-m-primary:focus {
+    --pf-v5-c-button--focus--after--border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* === Liens ===================================== */
+a {
+    color: #10b981 !important;
+}
+
+a:hover {
+    color: #059669 !important;
+}
+
+/* === Navigation latérale (items actifs) ======= */
+.pf-v5-c-nav__link.pf-m-current,
+.pf-v5-c-nav__link:hover {
+    color: #10b981 !important;
+}
+
+.pf-v5-c-nav__link.pf-m-current::before,
+.pf-v5-c-nav__link:hover::before {
+    background-color: #10b981 !important;
+}
+
+/* === Inputs focus ============================== */
+.pf-v5-c-form-control:focus-within {
+    --pf-v5-c-form-control--after--BorderBottomColor: #10b981;
+    box-shadow: inset 0 -2px 0 0 #10b981 !important;
+}
+
+/* === Tabs actifs =============================== */
+.pf-v5-c-tabs__link.pf-m-current {
+    --pf-v5-c-tabs__link--after--BorderColor: #10b981;
+    color: #10b981 !important;
+}
+
+/* === Spinner de chargement initial ============= */
+.pf-v5-c-spinner {
+    --pf-v5-c-spinner--Color: #10b981;
+}
+
+/* === Page header =============================== */
+.pf-v5-c-page__header {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+/* === Masque le titre Keycloak par défaut ======= */
+.pf-v5-c-brand {
+    font-size: 1.125rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+}

@@ -147,6 +147,11 @@ export class PaymentsService {
     if (session.mode === 'subscription' && session.subscription) {
       await this.usersService.setStripeSubscriptionId(keycloakId, session.subscription as string);
       await this.usersService.resetSubscriptionCredits(keycloakId, SUBSCRIPTION_QUOTA);
+      // Stocker la date de fin de période depuis Stripe
+      try {
+        const sub = await this.stripe.subscriptions.retrieve(session.subscription as string) as any;
+        await this.usersService.setSubscriptionPeriodEnd(keycloakId, new Date(sub.current_period_end * 1000));
+      } catch { /* non bloquant */ }
       this.logger.log(`fulfillSession: abonnement activé pour ${keycloakId}`);
       return { creditsAdded: SUBSCRIPTION_QUOTA };
     }
@@ -199,7 +204,33 @@ export class PaymentsService {
           const user = await this.usersService.findByStripeCustomerId(invoice.customer as string);
           if (user) {
             await this.usersService.resetSubscriptionCredits(user.keycloakId, SUBSCRIPTION_QUOTA);
+            // Mettre à jour la date de fin de période
+            if ((invoice as any).period_end) {
+              await this.usersService.setSubscriptionPeriodEndByCustomerId(
+                invoice.customer as string,
+                new Date((invoice as any).period_end * 1000),
+              );
+            }
             this.logger.log(`Renouvellement abonnement : ${SUBSCRIPTION_QUOTA} crédits pour ${user.keycloakId}`);
+          }
+        }
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        // Annulation programmée (cancel_at_period_end) ou réactivation
+        const subscription = event.data.object as Stripe.Subscription;
+        if (subscription.customer) {
+          if (subscription.cancel_at_period_end && subscription.cancel_at) {
+            await this.usersService.setSubscriptionCancelledAt(
+              subscription.customer as string,
+              new Date(subscription.cancel_at * 1000),
+            );
+            this.logger.log(`Annulation programmée pour customer ${subscription.customer}`);
+          } else if (!subscription.cancel_at_period_end) {
+            // Réactivation → effacer la date d'annulation
+            await this.usersService.setSubscriptionCancelledAt(subscription.customer as string, null);
+            this.logger.log(`Annulation annulée pour customer ${subscription.customer}`);
           }
         }
         break;

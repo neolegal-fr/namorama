@@ -482,7 +482,7 @@
 
 ## US-018 · Favourite Comparison Tool
 
-**Status**: ❌ To do
+**Status**: ✅ Implemented
 
 **As a** user who has shortlisted several favourite domain names,
 **I want** to compare them side by side in a structured view,
@@ -876,7 +876,7 @@ PrimeNG overlays default to `appendTo="body"` which positions the panel relative
 
 ## US-029 · Subscription Management & Self-Service Cancellation
 
-**Status**: ❌ To do
+**Status**: ✅ Implemented
 
 **As a** subscribed user,
 **I want** to view my current subscription details and cancel it on my own,
@@ -1148,6 +1148,121 @@ The current table view works well on desktop but is overwhelming on mobile and c
 
 ---
 
+## US-034 · Google Analytics Integration
+
+**Status**: ❌ To do
+
+**As a** product owner,
+**I want** Google Analytics 4 to track user behaviour on Namorama,
+**So that** I can measure acquisition, conversion, and feature usage without writing custom analytics infrastructure.
+
+### Acceptance Criteria
+
+#### Frontend — Tag injection
+- [ ] The GA4 measurement script (`gtag.js`) is injected in `index.html` via the standard Google tag snippet, using the Measurement ID from a runtime environment variable (not hardcoded)
+- [ ] The Measurement ID is exposed to the Angular app via the existing `ConfigService` runtime config mechanism (same pattern as `apiUrl` / `keycloakUrl`)
+- [ ] If no Measurement ID is configured (local dev), the script is not injected and no console errors appear
+
+#### Frontend — Key events tracked
+- [ ] **`page_view`** — sent automatically by GA4 on each Angular route change (`/`, `/projects/:id`, `/payment/success`, `/payment/cancel`)
+- [ ] **`search_started`** — fired when the user clicks "Rechercher" in the wizard (step 1 → step 3)
+- [ ] **`domain_favorited`** — fired when the user marks a domain as coup de cœur (includes `domain_name` as parameter)
+- [ ] **`project_saved`** — fired when a project is saved for the first time
+- [ ] **`signup_completed`** — fired on `/payment/success` after a subscription checkout
+- [ ] **`credits_purchased`** — fired on `/payment/success` after a pack checkout (includes `pack_size: 1000`)
+
+#### Frontend — RGPD / consent
+- [ ] Analytics are only activated **after** the user has given consent via a cookie banner
+- [ ] The cookie banner appears on first visit (bottom of screen, non-intrusive) with two options: **Accept** / **Decline**
+- [ ] Consent choice is stored in `localStorage` (`analytics_consent: 'granted' | 'denied'`)
+- [ ] If consent is denied, `gtag('consent', 'update', { analytics_storage: 'denied' })` is called and no data is sent
+- [ ] The banner does not appear again once a choice has been made
+- [ ] A "Cookie preferences" link in the footer lets the user change their choice at any time
+
+#### Backend — No changes required
+- [ ] All tracking is client-side only via GA4; no server-side events needed at this stage
+
+### Technical Notes
+- Add `GA_MEASUREMENT_ID` to `web/src/assets/config.json` (runtime config) and to `docker-compose.prod.yml` env vars
+- Inject the script conditionally in `ConfigService.load()`: if `gaMeasurementId` is set, create and append the `<script>` tag to `document.head`
+- For SPA route tracking, subscribe to Angular `Router.events` and call `gtag('event', 'page_view', { page_path })` on each `NavigationEnd`
+- Custom events: create a lightweight `AnalyticsService` with a single `track(eventName, params?)` method that calls `gtag('event', ...)` only if consent is granted
+- Cookie banner: a standalone Angular component added to `app.ts` template, shown via a signal `showConsentBanner = signal(!localStorage.getItem('analytics_consent'))`
+- Do NOT use a heavy third-party analytics wrapper library — the native `gtag` API is sufficient
+
+---
+
+## US-035 · Keycloak Email Theme — Branded Transactional Emails
+
+**Status**: ✅ Implemented
+
+**As a** user receiving emails from Namorama (password reset, email verification),
+**I want** those emails to look consistent with the app's visual identity,
+**So that** I trust the communication and recognise the brand.
+
+### Acceptance Criteria
+- [ ] An `email` theme named `namespoter` is created under `infra/keycloak/themes/namespoter/email/`
+- [ ] `theme.properties` sets `parent=base`
+- [ ] HTML templates are overridden for at minimum: `email-verification.ftl`, `password-reset.ftl`
+- [ ] All emails share a common layout (`html/base.ftl` or inline CSS wrapper): white card on light background, emerald header bar (`#10b981`), app logo or wordmark "Namorama", clean sans-serif font
+- [ ] Footer includes: app name, "You received this email because…" disclaimer, unsubscribe/contact link
+- [ ] Subject lines use the app name (e.g. "Namorama – Verify your email")
+- [ ] Plain-text versions (`text/` templates) are also provided
+- [ ] `emailTheme: "namespoter"` is set in `realm-export.json`
+- [ ] Theme deployed to production via the same `docker cp` + `docker restart` procedure
+
+### Technical Notes
+- Keycloak email templates use FreeMarker (`.ftl`), with variables like `${user.firstName}`, `${link}`, `${realmName}`
+- HTML emails must use inline CSS (no external stylesheets — email clients strip `<style>` blocks)
+- Test by triggering a password reset on staging/prod and checking the rendered email
+
+---
+
+## US-036 · Keycloak Account Console Theme — User Profile Portal
+
+**Status**: ✅ Implemented
+
+**As a** logged-in user wanting to manage my account (profile, password, active sessions),
+**I want** the Keycloak account portal to match Namorama's design,
+**So that** the experience feels seamless when I'm redirected there from the app.
+
+### Acceptance Criteria
+- [ ] An `account` theme named `namespoter` is created under `infra/keycloak/themes/namespoter/account/`
+- [ ] `theme.properties` sets `parent=keycloak.v2` (Keycloak 22 uses React-based Account Console v2)
+- [ ] Primary colour overridden to emerald (`#10b981`) via CSS variable injection or theme property
+- [ ] Page title / header displays "Namorama" instead of default Keycloak branding
+- [ ] Favicon matches the app favicon
+- [ ] `accountTheme: "namespoter"` is set in `realm-export.json`
+- [ ] Theme deployed to production
+
+### Technical Notes
+- Keycloak 22 Account Console v2 is a React SPA; full template override is complex. Acceptable MVP: override only `theme.properties` + inject a CSS file that overrides primary colour variables (`--pf-global--primary-color--100` etc.)
+- If PatternFly CSS variables are insufficient, consider `parent=keycloak` (v1 classic) as a fallback for easier customisation
+
+---
+
+## US-037 · Keycloak Registration & Password-Reset Page Polish
+
+**Status**: ✅ Implemented
+
+**As a** new user registering or resetting my password,
+**I want** those Keycloak pages to look as polished as the login page,
+**So that** the onboarding experience is coherent end-to-end.
+
+### Acceptance Criteria
+- [ ] Registration page (`register.ftl`): same background, card, and typography as the login page; no layout regressions
+- [ ] "Forgot password" page (`login-reset-password.ftl`): consistent styling
+- [ ] "Check your email" confirmation page (`login-verify-email.ftl`): consistent styling
+- [ ] Error page (`error.ftl`): branded with app name and a "Back to app" link pointing to `https://namorama.com`
+- [ ] All pages tested on mobile (375 px) — card does not overflow, inputs are usable
+- [ ] No grey zones or unstyled PatternFly sections remain (same fixes as applied to login page)
+
+### Technical Notes
+- All these pages are part of the existing `login` theme — they inherit `login.css` already. This story is about verifying and fixing any remaining inconsistencies, not a full rework.
+- Test each page manually by navigating to the Keycloak registration URL and triggering each flow
+
+---
+
 ## Priority / Effort Matrix (initial estimate)
 
 | Story | Value | Effort | Priority | Status |
@@ -1173,14 +1288,18 @@ The current table view works well on desktop but is overwhelming on mobile and c
 | US-022 · "Buy on registrar" button (OVH, Namecheap, Gandi) | High | Low | 🟠 Next | ❌ To do |
 | US-023 · Landing page — brand name angle & SEO | High | Low | 🟠 Next | ⚠️ Partial |
 | US-026 · Refined analysis display — star gauge + detail card | High | Medium | 🟠 Next | ✅ Done |
-| US-029 · Subscription management & self-service cancellation | High | Medium | 🟠 Next | ❌ To do |
+| US-029 · Subscription management & self-service cancellation | High | Medium | 🟠 Next | ✅ Done |
 | US-030 · Import description from a web page URL | High | Medium | 🟠 Next | ❌ To do |
 | US-031 · LLM model selection — Standard vs. Premium | High | Medium | 🟠 Next | ❌ To do |
 | US-032 · Long-form "phrase" domain names for local targeting | Medium | Low | 🟠 Next | ❌ To do |
 | US-033 · Tinder mode — swipe to like / dislike domain names | High | Medium | 🟠 Next | ❌ To do |
+| US-034 · Google Analytics integration | High | Low | 🟠 Next | ❌ To do |
 | US-005 · Pros & cons analysis | High | High | 🟡 Later | ✅ Done |
 | US-010 · Streaming results (SSE) | High | High | 🟡 Later | ✅ Done |
 | US-012 · MCP server | High | Medium | 🟡 Later | ❌ To do |
-| US-018 · Favourite comparison tool | Medium | Medium | 🟡 Later | ❌ To do |
+| US-018 · Favourite comparison tool | Medium | Medium | 🟡 Later | ✅ Done |
 | US-024 · Keycloak theme — align with app design | Medium | Medium | 🟡 Later | ✅ Done |
+| US-035 · Keycloak email theme — branded emails | Medium | Low | 🟡 Later | ✅ Done |
+| US-036 · Keycloak account console theme | Low | Medium | 🟡 Later | ✅ Done |
+| US-037 · Keycloak registration & password-reset polish | Medium | Low | 🟡 Later | ✅ Done |
 | US-013 · Teams / Claude skill / Marketplace | High | High | 🔵 Future | ❌ To do |
