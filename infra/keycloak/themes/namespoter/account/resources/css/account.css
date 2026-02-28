@@ -3,17 +3,25 @@
    Keycloak 26 / keycloak.v3 / PatternFly v5
    ================================================ */
 
-/* === Variables globales ======================== */
+/* === Écrase les tokens globaux sombres ========= */
 :root {
-    --ns-primary:        #10b981;
-    --ns-primary-dark:   #059669;
-    --ns-primary-darker: #047857;
-    --ns-primary-light:  rgba(16, 185, 129, 0.15);
+    --ns-primary:      #10b981;
+    --ns-primary-dark: #059669;
+    --ns-primary-light: rgba(16, 185, 129, 0.12);
 
-    /* Remplace les tokens PatternFly v5 */
+    /* Remplace le fond sombre utilisé par masthead et sidebar */
+    --pf-v5-global--BackgroundColor--dark-100: #ffffff;
+    --pf-v5-global--BackgroundColor--dark-200: #f3f4f6;
+    --pf-v5-global--BackgroundColor--dark-300: #e5e7eb;
+    --pf-v5-global--BackgroundColor--dark-400: #d1d5db;
+
+    /* Couleur du texte dans les zones sombres → on les rend claires */
+    --pf-v5-global--Color--light-100: #111827;
+    --pf-v5-global--Color--light-200: #374151;
+
+    /* Couleurs primaires */
     --pf-v5-global--primary-color--100: #10b981;
     --pf-v5-global--primary-color--200: #059669;
-    --pf-v5-global--primary-color--300: #047857;
     --pf-v5-global--link--Color:        #10b981;
     --pf-v5-global--link--Color--hover: #059669;
     --pf-v5-global--active-color--100:  #10b981;
@@ -22,18 +30,12 @@
 /* === Masthead (barre du haut) ================== */
 .pf-v5-c-masthead {
     background-color: #ffffff !important;
-    border-bottom: 2px solid #e5e7eb !important;
+    border-bottom: 1px solid #e5e7eb !important;
     --pf-v5-c-masthead--BackgroundColor: #ffffff;
 }
 
-.pf-v5-c-masthead__brand {
-    color: #111827 !important;
-    font-weight: 700 !important;
-    font-size: 1.125rem !important;
-}
-
 .pf-v5-c-masthead__brand a,
-.pf-v5-c-masthead__brand a:hover {
+.pf-v5-c-masthead__brand {
     color: #111827 !important;
     text-decoration: none !important;
 }
@@ -46,12 +48,6 @@
 }
 
 /* === Navigation ================================ */
-.pf-v5-c-nav {
-    --pf-v5-c-nav__link--Color: #374151;
-    --pf-v5-c-nav__link--hover--Color: var(--ns-primary);
-    --pf-v5-c-nav__link--m-current--Color: var(--ns-primary);
-}
-
 .pf-v5-c-nav__link {
     color: #374151 !important;
 }
@@ -74,13 +70,10 @@
 
 /* === Boutons primaires ========================= */
 .pf-v5-c-button.pf-m-primary {
-    --pf-v5-c-button--m-primary--BackgroundColor: var(--ns-primary);
-    --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--ns-primary-dark);
-    --pf-v5-c-button--m-primary--active--BackgroundColor: var(--ns-primary-darker);
-    --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--ns-primary-dark);
     background-color: var(--ns-primary) !important;
     border-color: var(--ns-primary) !important;
     color: #ffffff !important;
+    --pf-v5-c-button--m-primary--BackgroundColor: var(--ns-primary);
 }
 
 .pf-v5-c-button.pf-m-primary:hover,
@@ -89,44 +82,46 @@
     border-color: var(--ns-primary-dark) !important;
 }
 
-/* === Boutons link/plain ======================== */
-.pf-v5-c-button.pf-m-link,
-.pf-v5-c-button.pf-m-plain {
-    color: var(--ns-primary) !important;
+/* Boutons dans le masthead (qui avaient leur propre override sombre) */
+.pf-v5-c-masthead .pf-v5-c-button.pf-m-primary {
+    background-color: var(--ns-primary) !important;
+    border-color: var(--ns-primary) !important;
 }
 
-.pf-v5-c-button.pf-m-link:hover {
-    color: var(--ns-primary-dark) !important;
+/* === Boutons link ============================== */
+.pf-v5-c-button.pf-m-link {
+    color: var(--ns-primary) !important;
 }
 
 /* === Liens ===================================== */
-a:not(.pf-v5-c-button):not(.pf-v5-c-nav__link):not(.pf-v5-c-masthead__brand) {
+a {
     color: var(--ns-primary) !important;
 }
-
-a:not(.pf-v5-c-button):not(.pf-v5-c-nav__link):not(.pf-v5-c-masthead__brand):hover {
+a:hover {
     color: var(--ns-primary-dark) !important;
+}
+/* Pas de couleur verte sur les liens de nav (déjà gérés) */
+.pf-v5-c-nav__link,
+.pf-v5-c-masthead__brand a {
+    color: inherit !important;
 }
 
 /* === Inputs focus ============================== */
 .pf-v5-c-form-control:focus,
 .pf-v5-c-form-control:focus-within {
-    --pf-v5-c-form-control--after--BorderBottomColor: var(--ns-primary);
     box-shadow: inset 0 -2px 0 0 var(--ns-primary) !important;
-    outline: none !important;
 }
 
 /* === Tabs ====================================== */
 .pf-v5-c-tabs__link.pf-m-current,
 .pf-v5-c-tabs__link[aria-selected="true"] {
     color: var(--ns-primary) !important;
-    --pf-v5-c-tabs__link--after--BorderColor: var(--ns-primary);
     border-bottom-color: var(--ns-primary) !important;
 }
 
-/* === Alerts / Badges =========================== */
-.pf-v5-c-badge.pf-m-read {
-    --pf-v5-c-badge--m-read--BackgroundColor: var(--ns-primary);
+/* === Switch =================================== */
+.pf-v5-c-switch__input:checked ~ .pf-v5-c-switch__toggle {
+    background-color: var(--ns-primary) !important;
 }
 
 /* === Spinner =================================== */
@@ -134,17 +129,8 @@ a:not(.pf-v5-c-button):not(.pf-v5-c-nav__link):not(.pf-v5-c-masthead__brand):hov
     --pf-v5-c-spinner--Color: var(--ns-primary);
 }
 
-/* === Switch (toggle) =========================== */
-.pf-v5-c-switch__input:checked ~ .pf-v5-c-switch__toggle {
-    --pf-v5-c-switch__input--checked__toggle--BackgroundColor: var(--ns-primary);
-    background-color: var(--ns-primary) !important;
-}
-
-/* === Page background =========================== */
-.pf-v5-c-page {
-    background-color: #f3f4f6 !important;
-}
-
+/* === Fond de page ============================== */
+.pf-v5-c-page,
 .pf-v5-c-page__main-section {
     background-color: #f3f4f6 !important;
 }

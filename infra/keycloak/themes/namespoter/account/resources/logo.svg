@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 36">
+  <text x="0" y="28" font-family="system-ui, sans-serif" font-size="28" font-weight="700"
+        fill="#10b981">Name</text>
+  <text x="92" y="28" font-family="system-ui, sans-serif" font-size="28" font-weight="400"
+        fill="#111827">Spotter</text>
+</svg>
