@@ -12,7 +12,8 @@ import {
 import type { Request } from 'express';
 import type { RawBodyRequest as RawBodyReq } from '@nestjs/common';
 import { AuthenticatedUser, Public } from 'nest-keycloak-connect';
-import { PaymentsService, PackType } from './payments.service';
+import { PaymentsService } from './payments.service';
+import type { PackType } from './payments.service';
 import { UsersService } from '../users/users.service';
 
 @Controller('payments')
