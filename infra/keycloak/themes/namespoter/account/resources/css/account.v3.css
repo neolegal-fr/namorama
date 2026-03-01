@@ -1,5 +1,5 @@
 /* ================================================
-   NameSpotter — Keycloak Account Console Theme
+   Namorama — Keycloak Account Console Theme
    Keycloak 26 / keycloak.v3 / PatternFly v5
    ================================================ */
 
@@ -133,4 +133,29 @@ a:hover {
 .pf-v5-c-page,
 .pf-v5-c-page__main-section {
     background-color: #f3f4f6 !important;
+}
+
+/* === Logo : remplace le logo Keycloak par Namorama ===
+   Le bundle React charge son propre logo quand env.logo est vide.
+   On cache ce logo et on affiche "Namorama" via pseudo-élément. */
+.pf-v5-c-masthead__brand .pf-v5-c-brand {
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+}
+
+.pf-v5-c-masthead__brand {
+    position: relative !important;
+}
+
+.pf-v5-c-masthead__brand::after {
+    content: "Namorama";
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #10b981;
+    letter-spacing: -0.02em;
+    display: block;
 }

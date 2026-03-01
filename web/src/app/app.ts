@@ -37,7 +37,7 @@ import { Dialog } from 'primeng/dialog';
         <ng-template pTemplate="start">
           <div class="flex align-items-center gap-2 cursor-pointer" (click)="goToHome()">
             <i class="pi pi-compass text-2xl text-primary"></i>
-            <span class="text-xl font-bold text-900">NameSpotter</span>
+            <span class="text-xl font-bold text-900">Namorama</span>
           </div>
         </ng-template>
 
@@ -226,7 +226,7 @@ import { Dialog } from 'primeng/dialog';
       </p-dialog>
 
       <footer class="mt-8 py-6 border-top-1 border-solid text-center text-400 text-sm" style="background: white">
-        <div class="mb-2 font-bold text-500">NameSpotter &copy; 2026</div>
+        <div class="mb-2 font-bold text-500">Namorama &copy; 2026</div>
         {{ 'APP.FOOTER' | translate }}
       </footer>
     </main>
