@@ -199,6 +199,7 @@ import { Dialog } from 'primeng/dialog';
       <footer class="mt-8 py-6 border-top-1 border-solid text-center text-400 text-sm" style="background: white">
         <div class="mb-2 font-bold text-500">Namorama &copy; 2026</div>
         {{ 'APP.FOOTER' | translate }}
+        <a href="https://neolegal.fr" target="_blank" rel="noopener" style="color: inherit; font-weight: 600; text-decoration: none; border-bottom: 1px solid currentColor">NeoLegal</a>
       </footer>
     </main>
   `,
