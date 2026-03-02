@@ -209,7 +209,7 @@
             </button>
           </div>
 
-          <div class="border-1 border-solid border-round-lg shadow-1 overflow-x-auto" style="width: 100%; max-width: 36rem; background: white">
+          <div class="domain-table border-1 border-solid border-round-lg shadow-1 overflow-x-auto" style="width: 100%; max-width: 36rem; background: white">
             <p-table [value]="filteredDomains()" styleClass="p-datatable-sm">
               <ng-template pTemplate="header">
                 <tr>
@@ -267,6 +267,60 @@
               </ng-template>
             </p-table>
           </div>
+
+          <!-- ── Mobile card list (< 768px) ───────────────────────── -->
+          <div class="domain-cards" style="width: 100%; max-width: 36rem">
+            <div *ngFor="let result of filteredDomains()" class="domain-card">
+              <!-- Nom + cœur + icônes -->
+              <div class="domain-card__header">
+                <button type="button" (click)="toggleFavorite(result); $event.stopPropagation()" class="domain-card__heart">
+                  <i class="pi" [class.pi-heart-fill]="result.isFavorite" [class.pi-heart]="!result.isFavorite" [style.color]="result.isFavorite ? '#ef4444' : '#9ca3af'"></i>
+                </button>
+                <span class="domain-card__name" [style.color]="isFullyAvailable(result) ? '#16a34a' : '#111827'">{{ result.name }}</span>
+                <i *ngIf="result.isManual" class="pi pi-pencil" style="font-size: 0.7rem; color: #9ca3af"></i>
+                <i *ngIf="result.analysisPending" class="pi pi-spin pi-spinner" style="font-size: 0.75rem; color: #a78bfa"></i>
+                <button *ngIf="result.analysis && !result.analysisPending" type="button"
+                        (click)="toggleAnalysis(result.id); $event.stopPropagation()"
+                        style="background: none; border: none; cursor: pointer; padding: 0; margin-left: auto">
+                  <i class="pi" [class.pi-chevron-down]="expandedAnalysisId() !== result.id" [class.pi-chevron-up]="expandedAnalysisId() === result.id" style="font-size: 0.75rem; color: #a78bfa"></i>
+                </button>
+              </div>
+              <!-- Badges extensions -->
+              <div class="domain-card__exts">
+                <span *ngFor="let ext of selectedExtensions()" class="domain-card__ext"
+                      [class.domain-card__ext--ok]="result.allExtensions[ext] === true"
+                      [class.domain-card__ext--ko]="result.allExtensions[ext] === false"
+                      [class.domain-card__ext--pending]="result.allExtensions[ext] === null">
+                  <i class="pi"
+                     [class.pi-check]="result.allExtensions[ext] === true"
+                     [class.pi-times]="result.allExtensions[ext] === false"
+                     [class.pi-spin]="result.allExtensions[ext] === null"
+                     [class.pi-spinner]="result.allExtensions[ext] === null"></i>
+                  {{ ext }}
+                </span>
+              </div>
+              <!-- Panneau analyse -->
+              <div *ngIf="result.analysis && expandedAnalysisId() === result.id"
+                   style="padding: 0.625rem 0.75rem; background: #f5f3ff; border-radius: 0.375rem; border-left: 3px solid #a78bfa; font-size: 0.78rem; color: #374151; white-space: pre-wrap; line-height: 1.5">{{ result.analysis }}</div>
+              <!-- Bouton achat -->
+              <div class="domain-card__footer">
+                <div class="reg-split" (click)="$event.stopPropagation()">
+                  <a [href]="REGISTRARS[0].url(result.name, selectedExtensions())" target="_blank" rel="noopener noreferrer" class="reg-split__main">
+                    <i class="pi pi-shopping-cart"></i> OVH
+                  </a>
+                  <button type="button" class="reg-split__toggle" (click)="toggleReg(result.name, $event)">
+                    <i class="pi pi-chevron-down"></i>
+                  </button>
+                  <div *ngIf="openReg() === result.name" class="reg-split__menu">
+                    <a *ngFor="let r of REGISTRARS.slice(1)" [href]="r.url(result.name, selectedExtensions())" target="_blank" rel="noopener noreferrer" class="reg-split__item">
+                      {{ r.label }}
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </ng-container>
 
         <!-- Progression du streaming -->
