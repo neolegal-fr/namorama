@@ -42,7 +42,9 @@
     "NO_USERS": "Aucun utilisateur trouvé",
     "USERS_TOTAL": "utilisateurs",
     "FROM": "Du",
-    "TO": "Au"
+    "TO": "Au",
+    "APPLY": "Appliquer",
+    "EXTRA_CREDITS": "Crédits pack"
   },
   "PROJECTS": {
     "TITLE": "Mes Projets",

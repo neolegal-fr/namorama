@@ -43,13 +43,16 @@ interface PeriodOption { label: string; days: number | null; }
           <ng-container *ngIf="selectedPeriod.days === null">
             <p-datepicker [(ngModel)]="customFrom" [showIcon]="false" dateFormat="dd/mm/yy"
                           [placeholder]="'ADMIN.FROM' | translate" inputStyleClass="text-sm"
-                          style="width: 8rem" (ngModelChange)="loadStats()">
+                          style="width: 8rem">
             </p-datepicker>
             <span class="text-500 text-sm">→</span>
             <p-datepicker [(ngModel)]="customTo" [showIcon]="false" dateFormat="dd/mm/yy"
                           [placeholder]="'ADMIN.TO' | translate" inputStyleClass="text-sm"
-                          style="width: 8rem" (ngModelChange)="loadStats()">
+                          style="width: 8rem">
             </p-datepicker>
+            <p-button [label]="'ADMIN.APPLY' | translate" size="small" icon="pi pi-search"
+                      (onClick)="loadStats()">
+            </p-button>
           </ng-container>
         </div>
       </div>
@@ -104,13 +107,13 @@ interface PeriodOption { label: string; days: number | null; }
               <td class="text-center text-xs text-500">{{ user.lastLogin ? (user.lastLogin | date:'dd/MM/yy') : '—' }}</td>
               <td style="white-space: nowrap; padding: 0.25rem 0.5rem">
                 <ng-container *ngIf="editingUserId() === user.id; else showEditBtn">
-                  <div style="display: flex; gap: 0.375rem; align-items: center">
-                    <!-- Valeur absolue de crédits extra, pré-remplie -->
-                    <p-inputNumber [(ngModel)]="adjustNewValue" [showButtons]="true" [min]="0"
-                                   [style]="{'width': '6.5rem'}" inputStyleClass="text-center p-1 text-sm">
-                    </p-inputNumber>
-                    <input pInputText [(ngModel)]="adjustReason" [placeholder]="'ADMIN.REASON_PLACEHOLDER' | translate"
-                           style="width: 8rem; font-size: 0.78rem; height: 2rem">
+                  <div style="display: flex; gap: 0.375rem; align-items: center; flex-wrap: wrap">
+                    <div style="display: flex; flex-direction: column; gap: 0.15rem">
+                      <span style="font-size: 0.68rem; color: var(--p-surface-400); text-transform: uppercase; letter-spacing: 0.04em">{{ 'ADMIN.EXTRA_CREDITS' | translate }}</span>
+                      <p-inputNumber [(ngModel)]="adjustNewValue" [showButtons]="false" [min]="0"
+                                     [style]="{'width': '6rem'}" inputStyleClass="text-center p-1 text-sm">
+                      </p-inputNumber>
+                    </div>
                     <p-button icon="pi pi-check" size="small" severity="success"
                               [loading]="savingUserId() === user.id"
                               (onClick)="saveAdjustment(user)">

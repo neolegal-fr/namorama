@@ -42,7 +42,9 @@
     "NO_USERS": "No users found",
     "USERS_TOTAL": "users",
     "FROM": "From",
-    "TO": "To"
+    "TO": "To",
+    "APPLY": "Apply",
+    "EXTRA_CREDITS": "Pack credits"
   },
   "PROJECTS": {
     "TITLE": "My Projects",
