@@ -28,6 +28,15 @@
     }
 }
 
+/* Split button dans la barre de nav : s'étire à la hauteur du bouton voisin */
+.nav-btn-row .p-splitbutton {
+    height: 100%;
+    display: inline-flex;
+}
+.nav-btn-row .p-splitbutton .p-button {
+    height: 100%;
+}
+
 /* Stepper doit rester sous la navbar sticky */
 .p-steps {
     position: relative;

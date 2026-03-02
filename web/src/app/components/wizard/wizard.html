@@ -309,31 +309,31 @@
         <!-- Boutons de navigation -->
         <div class="flex" style="width: 100%; max-width: 36rem; justify-content: space-between; flex-wrap: wrap; row-gap: 0.5rem">
           <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
-          <div style="display: flex; gap: 0.5rem; align-items: stretch">
-            <p-splitButton *ngIf="filteredDomains().length >= 2"
-              [label]="'WIZARD.STEP3.PICK_BEST_BTN' | translate"
-              icon="pi pi-lightbulb"
-              [model]="pickMenuItems()"
-              severity="secondary"
-              styleClass="pick-btn"
-              (onClick)="helpMePick('all')"
-              appendTo="body">
-            </p-splitButton>
-            <!-- Initial search (no domains yet) -->
-            <p-button
-              *ngIf="domains().length === 0"
-              [label]="'WIZARD.STEP2.SEARCH_BTN' | translate"
-              icon="pi pi-search"
-              severity="primary"
-              [disabled]="selectedExtensions().length === 0"
-              [loading]="loading()"
-              (onClick)="findDomains(false)">
-            </p-button>
-
-            <!-- More suggestions (domains already shown) -->
-            <ng-container *ngIf="domains().length > 0">
-              <ng-container *ngIf="(userService.credits$ | async) as totalCredits; else zeroCreditsBlock">
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 0.25rem">
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem">
+            <!-- Boutons sur la même ligne -->
+            <div class="nav-btn-row" style="display: flex; gap: 0.5rem; align-items: stretch">
+              <p-splitButton *ngIf="filteredDomains().length >= 2"
+                [label]="'WIZARD.STEP3.PICK_BEST_BTN' | translate"
+                icon="pi pi-lightbulb"
+                [model]="pickMenuItems()"
+                severity="secondary"
+                styleClass="pick-btn"
+                (onClick)="helpMePick('all')"
+                appendTo="body">
+              </p-splitButton>
+              <!-- Initial search (no domains yet) -->
+              <p-button
+                *ngIf="domains().length === 0"
+                [label]="'WIZARD.STEP2.SEARCH_BTN' | translate"
+                icon="pi pi-search"
+                severity="primary"
+                [disabled]="selectedExtensions().length === 0"
+                [loading]="loading()"
+                (onClick)="findDomains(false)">
+              </p-button>
+              <!-- More suggestions (domains already shown) -->
+              <ng-container *ngIf="domains().length > 0">
+                <ng-container *ngIf="(userService.credits$ | async) as totalCredits; else zeroCreditsBlock">
                   <p-button
                     [label]="'WIZARD.STEP3.MORE_BTN' | translate"
                     icon="pi pi-plus-circle"
@@ -341,19 +341,24 @@
                     [loading]="loading()"
                     (onClick)="findDomains(true)">
                   </p-button>
-                  <span style="font-size: 0.75rem; color: var(--p-surface-400)">
-                    {{ 'WIZARD.STEP3.CREDITS_LEFT' | translate : { n: totalCredits } }}
-                  </span>
-                </div>
+                </ng-container>
+                <ng-template #zeroCreditsBlock>
+                  <p-button
+                    [label]="'WIZARD.STEP3.BUY_CREDITS_BTN' | translate"
+                    icon="pi pi-wallet"
+                    severity="secondary"
+                    (onClick)="projectService.showCreditDialog.set(true)">
+                  </p-button>
+                </ng-template>
               </ng-container>
-              <ng-template #zeroCreditsBlock>
-                <p-button
-                  [label]="'WIZARD.STEP3.BUY_CREDITS_BTN' | translate"
-                  icon="pi pi-wallet"
-                  severity="secondary"
-                  (onClick)="projectService.showCreditDialog.set(true)">
-                </p-button>
-              </ng-template>
+            </div>
+            <!-- Label crédits sous les boutons -->
+            <ng-container *ngIf="domains().length > 0">
+              <ng-container *ngIf="(userService.credits$ | async) as totalCredits">
+                <span style="font-size: 0.75rem; color: var(--p-surface-400)">
+                  {{ 'WIZARD.STEP3.CREDITS_LEFT' | translate : { n: totalCredits } }}
+                </span>
+              </ng-container>
             </ng-container>
           </div>
         </div>
