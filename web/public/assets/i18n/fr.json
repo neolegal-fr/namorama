@@ -106,7 +106,7 @@
       "MORE_BTN": "10 suggestions de plus",
       "CREDITS_LEFT": "{{n}} crédits restants",
       "BUY_CREDITS_BTN": "Acheter des crédits",
-      "BUY_TOOLTIP": "Acheter ce domaine",
+      "BUY_COL_HEADER": "Acheter chez un registrar",
       "NEW_PROJECT_BTN": "Nouveau projet",
       "COPY_TABLE": "Copier le tableau",
       "COPIED": "Copié !",
@@ -124,7 +124,7 @@
       "PICK_OTHER": "Autres candidats :",
       "PICK_ALL": "Parmi tous les résultats",
       "PICK_FAVOURITES": "Parmi les favoris uniquement",
-      "PICK_URGENCY_TITLE": "Les bons noms s'envolent.",
+      "PICK_URGENCY_TITLE": "Les bons noms partent vite.",
       "PICK_URGENCY_SUB": "Celui-ci est libre en ce moment — peut-être plus demain. Ne laissez pas quelqu'un d'autre l'enregistrer avant vous.",
       "PICK_BUY_BTN": "Acheter ce domaine"
     },

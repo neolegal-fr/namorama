@@ -1,4 +1,4 @@
-import { Component, signal, computed, OnInit, ChangeDetectorRef, ApplicationRef, ViewChild } from '@angular/core';
+import { Component, signal, computed, OnInit, ChangeDetectorRef, ApplicationRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomainService } from '../../services/domain';
@@ -20,7 +20,6 @@ import { ConfirmDialog } from 'primeng/confirmdialog';
 import { Dialog } from 'primeng/dialog';
 import { SplitButton } from 'primeng/splitbutton';
 import { Toast } from 'primeng/toast';
-import { Menu } from 'primeng/menu';
 import { MenuItem, ConfirmationService, MessageService } from 'primeng/api';
 import { UserService } from '../../services/user';
 import { ProjectService } from '../../services/project';
@@ -48,7 +47,6 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
     Dialog,
     SplitButton,
     Toast,
-    Menu,
     TranslateModule
   ],
   templateUrl: './wizard.html',
@@ -159,25 +157,10 @@ export class WizardComponent implements OnInit {
   streamProgress = signal<{ phase: 'generating' | 'checking'; name?: string; checked: number; found: number } | null>(null);
 
   // ─── US-022 : Buy on registrar ────────────────────
-  @ViewChild('buyMenu') buyMenuRef!: Menu;
-  registrarMenuItems = signal<MenuItem[]>([]);
-
   private readonly REGISTRARS = [
-    {
-      label: 'OVH',
-      icon: 'pi pi-shopping-cart',
-      buildUrl: (domain: string) => `https://www.ovhcloud.com/fr/domains/domain-name-search/?q=${domain}`,
-    },
-    {
-      label: 'Namecheap',
-      icon: 'pi pi-shopping-cart',
-      buildUrl: (domain: string) => `https://www.namecheap.com/domains/registration/results/?domain=${domain}`,
-    },
-    {
-      label: 'Gandi',
-      icon: 'pi pi-shopping-cart',
-      buildUrl: (domain: string, name: string) => `https://www.gandi.net/fr/domain/suggest?q=${name}`,
-    },
+    { label: 'OVH',       buildUrl: (n: string) => `https://www.ovhcloud.com/fr/domains/domain-name-search/?q=${n}` },
+    { label: 'Namecheap', buildUrl: (n: string) => `https://www.namecheap.com/domains/registration/results/?domain=${n}` },
+    { label: 'Gandi',     buildUrl: (n: string) => `https://www.gandi.net/fr/domain/suggest?q=${n}` },
   ];
 
   private readonly SEARCH_TIMEOUT_MS = 30_000;
@@ -503,15 +486,15 @@ export class WizardComponent implements OnInit {
     return this.domains().find(d => d.name === name) ?? null;
   }
 
-  openBuyMenuByName(name: string, event: Event) {
-    this.registrarMenuItems.set(
-      this.REGISTRARS.map(r => ({
-        label: r.label,
-        icon: r.icon,
-        command: () => window.open(r.buildUrl(name, name), '_blank', 'noopener'),
-      }))
-    );
-    this.buyMenuRef.toggle(event);
+  buyAtDefault(name: string) {
+    window.open(this.REGISTRARS[0].buildUrl(name), '_blank', 'noopener');
+  }
+
+  getRegistrarItems(name: string): MenuItem[] {
+    return this.REGISTRARS.slice(1).map(r => ({
+      label: r.label,
+      command: () => window.open(r.buildUrl(name), '_blank', 'noopener'),
+    }));
   }
 
   parseAnalysisScore(analysis: string | null): number {

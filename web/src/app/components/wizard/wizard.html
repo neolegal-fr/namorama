@@ -210,14 +210,14 @@
           </div>
 
           <div class="border-1 border-solid border-round-lg shadow-1 overflow-x-auto" style="width: 100%; max-width: 36rem; background: white">
-            <!-- US-022 : menu achat registrar (instance unique partagée) -->
-            <p-menu #buyMenu [model]="registrarMenuItems()" [popup]="true" appendTo="body"></p-menu>
-
             <p-table [value]="filteredDomains()" styleClass="p-datatable-sm">
               <ng-template pTemplate="header">
                 <tr>
                   <th style="background: var(--p-surface-50); min-width: 100px">Nom de domaine</th>
                   <th *ngFor="let ext of selectedExtensions()" class="text-center px-1" style="background: var(--p-surface-50)">{{ ext }}</th>
+                  <th class="text-center" style="background: var(--p-surface-50); width: 1px; white-space: nowrap; padding: 0.5rem 0.75rem">
+                    <i class="pi pi-shopping-cart" style="font-size: 0.8rem; color: var(--p-surface-400)" [pTooltip]="'WIZARD.STEP3.BUY_COL_HEADER' | translate" tooltipPosition="top"></i>
+                  </th>
                 </tr>
               </ng-template>
               <ng-template pTemplate="body" let-result>
@@ -228,12 +228,6 @@
                         <i class="pi" [class.pi-heart-fill]="result.isFavorite" [class.pi-heart]="!result.isFavorite" [style.color]="result.isFavorite ? '#ef4444' : '#9ca3af'"></i>
                       </button>
                       <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap" [style.color]="isFullyAvailable(result) ? '#16a34a' : null">{{ result.name }}</span>
-                      <button type="button" class="buy-btn"
-                              (click)="openBuyMenuByName(result.name, $event); $event.stopPropagation()"
-                              [pTooltip]="'WIZARD.STEP3.BUY_TOOLTIP' | translate" tooltipPosition="top"
-                              style="background: none; border: none; cursor: pointer; padding: 0; line-height: 1; flex-shrink: 0">
-                        <i class="pi pi-shopping-cart" style="font-size: 0.75rem; color: #9ca3af"></i>
-                      </button>
                       <i *ngIf="result.isManual" class="pi pi-pencil" style="font-size: 0.7rem; color: #9ca3af; flex-shrink: 0" [pTooltip]="'WIZARD.STEP3.MANUAL_TOOLTIP' | translate" tooltipPosition="top"></i>
                       <!-- US-005 — bouton analyse -->
                       <i *ngIf="result.analysisPending" class="pi pi-spin pi-spinner" style="font-size: 0.75rem; color: #a78bfa; flex-shrink: 0" [pTooltip]="'WIZARD.STEP3.ANALYSIS_PENDING' | translate" tooltipPosition="top"></i>
@@ -252,6 +246,19 @@
                     <i *ngIf="result.allExtensions[ext] === true" class="pi pi-check text-lg font-bold" [style.color]="isFullyAvailable(result) ? '#16a34a' : '#22c55e'" title="Disponible"></i>
                     <i *ngIf="result.allExtensions[ext] === null" class="pi pi-spin pi-spinner text-base" style="color: #9ca3af" title="Vérification..."></i>
                     <i *ngIf="result.allExtensions[ext] === false" class="pi pi-times text-red-400 text-base" title="Indisponible"></i>
+                  </td>
+                  <!-- US-022 : colonne achat registrar -->
+                  <td style="width: 1px; white-space: nowrap; padding: 0.25rem 0.5rem">
+                    <p-splitButton
+                      label="OVH"
+                      icon="pi pi-shopping-cart"
+                      size="small"
+                      severity="secondary"
+                      [model]="getRegistrarItems(result.name)"
+                      (onClick)="buyAtDefault(result.name)"
+                      appendTo="body"
+                      styleClass="registrar-btn">
+                    </p-splitButton>
                   </td>
                 </tr>
               </ng-template>
@@ -435,12 +442,14 @@
           <div style="font-size: 0.8rem; color: #b45309; margin-bottom: 0.75rem; line-height: 1.45">
             {{ 'WIZARD.STEP3.PICK_URGENCY_SUB' | translate }}
           </div>
-          <p-button
-            [label]="'WIZARD.STEP3.PICK_BUY_BTN' | translate"
+          <p-splitButton
+            label="OVH"
             icon="pi pi-shopping-cart"
             size="small"
-            (onClick)="openBuyMenuByName(result.recommended, $event)">
-          </p-button>
+            [model]="getRegistrarItems(result.recommended)"
+            (onClick)="buyAtDefault(result.recommended)"
+            appendTo="body">
+          </p-splitButton>
         </div>
       </div>
 
