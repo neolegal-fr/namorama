@@ -16,6 +16,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { UsersModule } from './users/users.module';
 import { ProjectsModule } from './projects/projects.module';
 import { PaymentsModule } from './payments/payments.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { PaymentsModule } from './payments/payments.module';
     UsersModule,
     ProjectsModule,
     PaymentsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

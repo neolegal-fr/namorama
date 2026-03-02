@@ -45,6 +45,10 @@ export class UsersService {
       user = await this.usersRepository.findOne({ where: { keycloakId } }) ?? user;
     }
 
+    // Mettre à jour la dernière connexion
+    user.lastLogin = new Date();
+    await this.usersRepository.save(user);
+
     return user;
   }
 

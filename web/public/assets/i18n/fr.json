@@ -25,7 +25,21 @@
     "BILLING": "Facturation",
     "FOOTER": "Conçu par",
     "SECURE_ACCESS": "Accès Sécurisé",
-    "LOGIN_REQUIRED": "Veuillez vous connecter pour commencer à chercher vos noms de domaine."
+    "LOGIN_REQUIRED": "Veuillez vous connecter pour commencer à chercher vos noms de domaine.",
+    "ADMIN": "Administration"
+  },
+  "ADMIN": {
+    "TITLE": "Administration",
+    "SEARCH_PLACEHOLDER": "Rechercher par email…",
+    "COL_EMAIL": "Email",
+    "COL_CREDITS": "Crédits",
+    "COL_PROJECTS": "Projets",
+    "COL_CREATED": "Créé le",
+    "COL_LAST_LOGIN": "Dernière connexion",
+    "ADJUST_CREDITS": "Ajuster les crédits",
+    "REASON_PLACEHOLDER": "Raison…",
+    "NO_USERS": "Aucun utilisateur trouvé",
+    "USERS_TOTAL": "utilisateurs"
   },
   "PROJECTS": {
     "TITLE": "Mes Projets",

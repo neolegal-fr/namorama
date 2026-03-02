@@ -1,5 +1,5 @@
-import { Component, signal, OnInit, ChangeDetectorRef } from '@angular/core';
-import { RouterOutlet, Router } from '@angular/router';
+import { Component, signal, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { RouterOutlet, Router, RouterModule } from '@angular/router';
 import { UserService, CreditInfo } from './services/user';
 import { ProjectService } from './services/project';
 import { PaymentService, PackType } from './services/payment';
@@ -23,6 +23,7 @@ import { Dialog } from 'primeng/dialog';
   imports: [
     CommonModule,
     RouterOutlet,
+    RouterModule,
     TranslateModule,
     MenuModule,
     ButtonModule,
@@ -82,7 +83,7 @@ import { Dialog } from 'primeng/dialog';
       </p-menubar>
 
       <div class="flex flex-column align-items-center w-full px-3 py-3 md:py-5">
-        <div class="w-full" style="max-width: 44rem">
+        <div class="w-full" [style.max-width]="router.url.startsWith('/admin') ? '72rem' : '44rem'">
           <router-outlet></router-outlet>
         </div>
       </div>
@@ -212,6 +213,7 @@ export class AppComponent implements OnInit {
   creditInfo = signal<CreditInfo>({ freeCredits: 0, packCredits: 0, freeResetDate: '' });
   billingLoading = signal<PackType | false>(false);
   isLoggedIn = signal(false);
+  isAdmin = signal(false);
   currentLang = signal('fr');
   selectedLang = 'fr';
   userName = signal('');
@@ -238,6 +240,7 @@ export class AppComponent implements OnInit {
   async ngOnInit() {
     this.cookieConsent.init();
     this.isLoggedIn.set(await this.keycloak.isLoggedIn());
+    this.isAdmin.set(this.keycloak.isUserInRole('admin'));
     const lang = this.translate.currentLang || 'fr';
     this.currentLang.set(lang);
     this.selectedLang = lang;
@@ -283,7 +286,7 @@ export class AppComponent implements OnInit {
   }
 
   updateProfileMenu() {
-    this.translate.get(['APP.CREDITS', 'APP.LOGOUT', 'APP.MANAGE_ACCOUNT']).subscribe(res => {
+    this.translate.get(['APP.CREDITS', 'APP.LOGOUT', 'APP.MANAGE_ACCOUNT', 'APP.ADMIN']).subscribe(res => {
       this.profileMenuItems = [
         {
           label: this.userName(),
@@ -298,6 +301,11 @@ export class AppComponent implements OnInit {
               icon: 'pi pi-cog',
               command: () => this.keycloak.getKeycloakInstance().accountManagement()
             },
+            ...(this.isAdmin() ? [{
+              label: res['APP.ADMIN'],
+              icon: 'pi pi-shield',
+              command: () => this.router.navigate(['/admin'])
+            }] : []),
             { separator: true },
             {
               label: res['APP.LOGOUT'],

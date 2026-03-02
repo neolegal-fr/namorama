@@ -51,6 +51,10 @@
       {
         "name": "user",
         "description": "Standard User"
+      },
+      {
+        "name": "admin",
+        "description": "Platform Administrator"
       }
     ]
   },

@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany } from 'typeorm';
+import { Project } from '../../projects/entities/project.entity';
 
 @Entity()
 export class User {
@@ -26,6 +27,15 @@ export class User {
   /** Dernière date de reset des crédits gratuits (lazy reset mensuel) */
   @Column({ nullable: true, type: 'datetime' })
   lastFreeReset: Date | null;
+
+  @CreateDateColumn({ type: 'datetime' })
+  createdAt: Date;
+
+  @Column({ nullable: true, type: 'datetime' })
+  lastLogin: Date | null;
+
+  @OneToMany('Project', 'user')
+  projects: Project[];
 
   get totalCredits(): number {
     return this.credits + this.extraCredits;

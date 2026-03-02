@@ -25,7 +25,21 @@
     "BILLING": "Billing",
     "FOOTER": "Designed by",
     "SECURE_ACCESS": "Secure Access",
-    "LOGIN_REQUIRED": "Please log in to start searching for your domain names."
+    "LOGIN_REQUIRED": "Please log in to start searching for your domain names.",
+    "ADMIN": "Administration"
+  },
+  "ADMIN": {
+    "TITLE": "Administration",
+    "SEARCH_PLACEHOLDER": "Search by email…",
+    "COL_EMAIL": "Email",
+    "COL_CREDITS": "Credits",
+    "COL_PROJECTS": "Projects",
+    "COL_CREATED": "Created",
+    "COL_LAST_LOGIN": "Last login",
+    "ADJUST_CREDITS": "Adjust credits",
+    "REASON_PLACEHOLDER": "Reason…",
+    "NO_USERS": "No users found",
+    "USERS_TOTAL": "users"
   },
   "PROJECTS": {
     "TITLE": "My Projects",

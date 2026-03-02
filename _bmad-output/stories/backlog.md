@@ -1427,7 +1427,7 @@ The addition of the registrar "Buy" column (US-022) made the table wider. On scr
 
 ## US-040 · RGPD / Cookie Consent Banner
 
-**Status**: ❌ To do
+**Status**: ✅ Implemented
 
 **As a** visitor or user of Namorama,
 **I want** to be informed about data collection and give or refuse my consent before any tracking occurs,
