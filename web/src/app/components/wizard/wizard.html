@@ -255,7 +255,7 @@
                       size="small"
                       severity="secondary"
                       [model]="getRegistrarItems(result.name)"
-                      (onClick)="buyAtDefault(result.name)"
+                      (onClick)="buyAtOvh(result.name)"
                       appendTo="body"
                       styleClass="registrar-btn">
                     </p-splitButton>
@@ -447,7 +447,7 @@
             icon="pi pi-shopping-cart"
             size="small"
             [model]="getRegistrarItems(result.recommended)"
-            (onClick)="buyAtDefault(result.recommended)"
+            (onClick)="buyAtOvh(result.recommended)"
             appendTo="body">
           </p-splitButton>
         </div>

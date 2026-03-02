@@ -10,8 +10,7 @@ start:
 # Arrêter tous les services (Docker et processus Node)
 stop:
     docker-compose -f infra/docker-compose.yml stop
-    -@pkill -f "nest" || true
-    -@pkill -f "ng serve" || true
+    @bash -c 'trap "" TERM; pkill -f "nest" 2>/dev/null; pkill -f "ng serve" 2>/dev/null; exit 0'
 
 # Redémarrer l'écosystème
 restart: stop start

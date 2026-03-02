@@ -157,18 +157,22 @@ export class WizardComponent implements OnInit {
   streamProgress = signal<{ phase: 'generating' | 'checking'; name?: string; checked: number; found: number } | null>(null);
 
   // ─── US-022 : Buy on registrar ────────────────────
-  private readonly REGISTRARS = [
-    { label: 'OVH',       buildUrl: (n: string) => `https://www.ovhcloud.com/fr/domains/domain-name-checker/?q=${n}` },
-    { label: 'Namecheap', buildUrl: (n: string) => `https://www.namecheap.com/domains/registration/results.aspx?domain=${n}` },
-    { label: 'Gandi',     buildUrl: (n: string) => `https://whois.gandi.net/en?query=${n}` },
+  readonly REGISTRARS = [
+    { label: 'OVH',       url: (n: string) => `https://www.ovhcloud.com/fr/domains/domain-name-checker/?q=${n}` },
+    { label: 'Namecheap', url: (n: string) => `https://www.namecheap.com/domains/registration/results.aspx?domain=${n}` },
+    { label: 'Gandi',     url: (n: string) => `https://www.gandi.net/en/domain/suggest?q=${n}` },
   ];
 
-  private openExternalUrl(url: string) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    a.click();
+  buyAtOvh(name: string) {
+    window.open(this.REGISTRARS[0].url(name), '_blank', 'noopener,noreferrer');
+  }
+
+  getRegistrarItems(name: string): MenuItem[] {
+    return this.REGISTRARS.slice(1).map(r => ({
+      label: r.label,
+      url: r.url(name),
+      target: '_blank',
+    }));
   }
 
   private readonly SEARCH_TIMEOUT_MS = 30_000;
@@ -492,18 +496,6 @@ export class WizardComponent implements OnInit {
 
   getDomainByName(name: string): any {
     return this.domains().find(d => d.name === name) ?? null;
-  }
-
-  buyAtDefault(name: string) {
-    this.openExternalUrl(this.REGISTRARS[0].buildUrl(name));
-  }
-
-  getRegistrarItems(name: string): MenuItem[] {
-    return this.REGISTRARS.slice(1).map(r => ({
-      label: r.label,
-      url: r.buildUrl(name),
-      target: '_blank',
-    }));
   }
 
   parseAnalysisScore(analysis: string | null): number {
