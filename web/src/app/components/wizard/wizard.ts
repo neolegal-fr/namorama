@@ -158,10 +158,18 @@ export class WizardComponent implements OnInit {
 
   // ─── US-022 : Buy on registrar ────────────────────
   private readonly REGISTRARS = [
-    { label: 'OVH',       buildUrl: (n: string) => `https://www.ovhcloud.com/fr/domains/?q=${n}` },
+    { label: 'OVH',       buildUrl: (n: string) => `https://www.ovhcloud.com/fr/domains/domain-name-checker/?q=${n}` },
     { label: 'Namecheap', buildUrl: (n: string) => `https://www.namecheap.com/domains/registration/results.aspx?domain=${n}` },
     { label: 'Gandi',     buildUrl: (n: string) => `https://whois.gandi.net/en?query=${n}` },
   ];
+
+  private openExternalUrl(url: string) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.click();
+  }
 
   private readonly SEARCH_TIMEOUT_MS = 30_000;
   private searchTimeoutHandle: ReturnType<typeof setTimeout> | null = null;
@@ -487,13 +495,13 @@ export class WizardComponent implements OnInit {
   }
 
   buyAtDefault(name: string) {
-    window.open(this.REGISTRARS[0].buildUrl(name), '_blank', 'noopener');
+    this.openExternalUrl(this.REGISTRARS[0].buildUrl(name));
   }
 
   getRegistrarItems(name: string): MenuItem[] {
     return this.REGISTRARS.slice(1).map(r => ({
       label: r.label,
-      command: () => window.open(r.buildUrl(name), '_blank', 'noopener'),
+      command: () => this.openExternalUrl(r.buildUrl(name)),
     }));
   }
 
