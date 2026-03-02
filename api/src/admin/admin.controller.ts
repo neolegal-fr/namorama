@@ -1,10 +1,14 @@
-import { Controller, Get, Patch, Param, Body, Query, ParseIntPipe, DefaultValuePipe, Optional } from '@nestjs/common';
-import { Roles } from 'nest-keycloak-connect';
-import { AuthenticatedUser } from 'nest-keycloak-connect';
+import { Controller, Get, Patch, Param, Body, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { Roles, AuthenticatedUser } from 'nest-keycloak-connect';
 import { AdminService } from './admin.service';
 
 class AdjustCreditsDto {
+  @IsNumber()
   delta: number;
+
+  @IsOptional()
+  @IsString()
   reason?: string;
 }
 
