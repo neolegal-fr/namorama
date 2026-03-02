@@ -2,24 +2,27 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { DatePickerModule } from 'primeng/datepicker';
 import { MessageService } from 'primeng/api';
 import { AdminService, AdminUser, AdminStats } from '../../services/admin.service';
+
+interface PeriodOption { label: string; days: number | null; }
 
 @Component({
   selector: 'app-admin',
   standalone: true,
   imports: [
     CommonModule, FormsModule, TranslateModule,
-    CardModule, TableModule, ButtonModule, InputTextModule,
-    InputNumberModule, TagModule, ToastModule, TooltipModule,
+    TableModule, ButtonModule, InputTextModule,
+    InputNumberModule, ToastModule, TooltipModule,
+    SelectButtonModule, DatePickerModule,
   ],
   providers: [MessageService],
   template: `
@@ -27,10 +30,29 @@ import { AdminService, AdminUser, AdminStats } from '../../services/admin.servic
 
     <div style="display: flex; flex-direction: column; gap: 1.5rem">
 
-      <!-- Titre -->
-      <h1 class="font-bold text-900" style="margin: 0; font-size: 1.5rem">
-        {{ 'ADMIN.TITLE' | translate }}
-      </h1>
+      <!-- Titre + sélecteur de période -->
+      <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; justify-content: space-between">
+        <h1 class="font-bold text-900" style="margin: 0; font-size: 1.5rem">
+          {{ 'ADMIN.TITLE' | translate }}
+        </h1>
+        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap">
+          <p-selectButton [options]="periodOptions" [(ngModel)]="selectedPeriod"
+                          optionLabel="label" (ngModelChange)="onPeriodChange()"
+                          styleClass="text-sm">
+          </p-selectButton>
+          <ng-container *ngIf="selectedPeriod.days === null">
+            <p-datepicker [(ngModel)]="customFrom" [showIcon]="false" dateFormat="dd/mm/yy"
+                          [placeholder]="'ADMIN.FROM' | translate" inputStyleClass="text-sm"
+                          style="width: 8rem" (ngModelChange)="loadStats()">
+            </p-datepicker>
+            <span class="text-500 text-sm">→</span>
+            <p-datepicker [(ngModel)]="customTo" [showIcon]="false" dateFormat="dd/mm/yy"
+                          [placeholder]="'ADMIN.TO' | translate" inputStyleClass="text-sm"
+                          style="width: 8rem" (ngModelChange)="loadStats()">
+            </p-datepicker>
+          </ng-container>
+        </div>
+      </div>
 
       <!-- KPI cards -->
       <ng-container *ngIf="stats() as s">
@@ -55,7 +77,7 @@ import { AdminService, AdminUser, AdminStats } from '../../services/admin.servic
                  styleClass="p-datatable-sm">
           <ng-template pTemplate="header">
             <tr>
-              <th style="background: var(--p-surface-50)">{{ 'ADMIN.COL_EMAIL' | translate }}</th>
+              <th style="background: var(--p-surface-50)">{{ 'ADMIN.COL_USER' | translate }}</th>
               <th class="text-center" style="background: var(--p-surface-50); white-space: nowrap">{{ 'ADMIN.COL_CREDITS' | translate }}</th>
               <th class="text-center" style="background: var(--p-surface-50); white-space: nowrap">{{ 'ADMIN.COL_PROJECTS' | translate }}</th>
               <th class="text-center" style="background: var(--p-surface-50); white-space: nowrap">{{ 'ADMIN.COL_CREATED' | translate }}</th>
@@ -65,7 +87,14 @@ import { AdminService, AdminUser, AdminStats } from '../../services/admin.servic
           </ng-template>
           <ng-template pTemplate="body" let-user>
             <tr>
-              <td class="font-mono text-sm">{{ user.email || user.keycloakId }}</td>
+              <td>
+                <div *ngIf="user.firstName || user.lastName" class="font-semibold text-sm text-900">
+                  {{ user.firstName }} {{ user.lastName }}
+                </div>
+                <div class="text-xs text-500" style="font-family: monospace">
+                  {{ user.email || user.keycloakId }}
+                </div>
+              </td>
               <td class="text-center">
                 <span class="font-bold" [style.color]="user.totalCredits > 0 ? '#16a34a' : '#ef4444'">{{ user.totalCredits }}</span>
                 <span class="text-400 text-xs" style="margin-left: 0.25rem">({{ user.credits }}+{{ user.extraCredits }})</span>
@@ -74,12 +103,11 @@ import { AdminService, AdminUser, AdminStats } from '../../services/admin.servic
               <td class="text-center text-xs text-500">{{ user.createdAt | date:'dd/MM/yy' }}</td>
               <td class="text-center text-xs text-500">{{ user.lastLogin ? (user.lastLogin | date:'dd/MM/yy') : '—' }}</td>
               <td style="white-space: nowrap; padding: 0.25rem 0.5rem">
-                <!-- Panel d'ajustement inline -->
                 <ng-container *ngIf="editingUserId() === user.id; else showEditBtn">
                   <div style="display: flex; gap: 0.375rem; align-items: center">
-                    <p-inputNumber [(ngModel)]="adjustDelta" [showButtons]="false" [style]="{'width': '5rem'}"
-                                   inputStyleClass="text-center p-1 text-sm" [placeholder]="'±'"
-                                   [allowEmpty]="false">
+                    <!-- Valeur absolue de crédits extra, pré-remplie -->
+                    <p-inputNumber [(ngModel)]="adjustNewValue" [showButtons]="true" [min]="0"
+                                   [style]="{'width': '6.5rem'}" inputStyleClass="text-center p-1 text-sm">
                     </p-inputNumber>
                     <input pInputText [(ngModel)]="adjustReason" [placeholder]="'ADMIN.REASON_PLACEHOLDER' | translate"
                            style="width: 8rem; font-size: 0.78rem; height: 2rem">
@@ -106,7 +134,7 @@ import { AdminService, AdminUser, AdminStats } from '../../services/admin.servic
           </ng-template>
         </p-table>
 
-        <!-- Pagination manuelle -->
+        <!-- Pagination -->
         <div *ngIf="total() > pageSize" style="display: flex; justify-content: space-between; align-items: center; padding: 0.625rem 1rem; border-top: 1px solid var(--p-surface-200)">
           <span class="text-500 text-sm">{{ total() }} {{ 'ADMIN.USERS_TOTAL' | translate }}</span>
           <div style="display: flex; gap: 0.375rem">
@@ -136,14 +164,45 @@ export class AdminComponent implements OnInit {
 
   editingUserId = signal<number | null>(null);
   savingUserId = signal<number | null>(null);
-  adjustDelta = 0;
+  adjustNewValue = 0;
   adjustReason = '';
+
+  periodOptions: PeriodOption[] = [
+    { label: '24h', days: 1 },
+    { label: '7j', days: 7 },
+    { label: '30j', days: 30 },
+    { label: 'Personnalisé', days: null },
+  ];
+  selectedPeriod: PeriodOption = this.periodOptions[1]; // 7j par défaut
+  customFrom: Date | null = null;
+  customTo: Date | null = null;
 
   constructor(private adminService: AdminService, private messageService: MessageService) {}
 
   ngOnInit() {
     this.loadUsers();
-    this.adminService.getStats().subscribe(s => this.stats.set(s));
+    this.loadStats();
+  }
+
+  private getPeriodDates(): { from?: Date; to?: Date } {
+    if (this.selectedPeriod.days !== null) {
+      const to = new Date();
+      const from = new Date(to.getTime() - this.selectedPeriod.days * 24 * 60 * 60 * 1000);
+      return { from, to };
+    }
+    return {
+      from: this.customFrom ?? undefined,
+      to: this.customTo ?? undefined,
+    };
+  }
+
+  loadStats() {
+    const { from, to } = this.getPeriodDates();
+    this.adminService.getStats(from, to).subscribe(s => this.stats.set(s));
+  }
+
+  onPeriodChange() {
+    if (this.selectedPeriod.days !== null) this.loadStats();
   }
 
   totalPages() {
@@ -151,10 +210,12 @@ export class AdminComponent implements OnInit {
   }
 
   kpiCards(s: AdminStats) {
+    const periodLabel = this.selectedPeriod.days !== null
+      ? this.selectedPeriod.label
+      : 'période';
     return [
       { label: 'Utilisateurs', value: s.totalUsers },
-      { label: 'Actifs 7j', value: s.activeUsers7, sub: `${s.newUsers7} nouveaux` },
-      { label: 'Actifs 30j', value: s.activeUsers30, sub: `${s.newUsers30} nouveaux` },
+      { label: `Actifs (${periodLabel})`, value: s.periodActiveUsers, sub: `${s.periodNewUsers} nouveaux` },
       { label: 'Projets', value: s.totalProjects },
       { label: 'Suggestions', value: s.totalSuggestions },
       { label: 'Moy. sugg./projet', value: s.avgSuggestionsPerProject },
@@ -178,10 +239,7 @@ export class AdminComponent implements OnInit {
 
   onSearch() {
     clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => {
-      this.page.set(1);
-      this.loadUsers();
-    }, 300);
+    this.searchTimer = setTimeout(() => { this.page.set(1); this.loadUsers(); }, 300);
   }
 
   changePage(p: number) {
@@ -191,7 +249,7 @@ export class AdminComponent implements OnInit {
 
   startEdit(user: AdminUser) {
     this.editingUserId.set(user.id);
-    this.adjustDelta = 0;
+    this.adjustNewValue = user.extraCredits; // pré-remplir avec la valeur actuelle
     this.adjustReason = '';
   }
 
@@ -200,14 +258,18 @@ export class AdminComponent implements OnInit {
   }
 
   saveAdjustment(user: AdminUser) {
-    if (this.adjustDelta === 0) { this.cancelEdit(); return; }
+    const delta = this.adjustNewValue - user.extraCredits;
     this.savingUserId.set(user.id);
-    this.adminService.adjustCredits(user.id, this.adjustDelta, this.adjustReason).subscribe({
+    this.adminService.adjustCredits(user.id, delta, this.adjustReason).subscribe({
       next: (updated) => {
         this.users.update(list => list.map(u => u.id === updated.id ? updated : u));
         this.savingUserId.set(null);
         this.editingUserId.set(null);
-        this.messageService.add({ severity: 'success', summary: 'Crédits mis à jour', detail: `${updated.email} : ${updated.totalCredits} crédits` });
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Crédits mis à jour',
+          detail: `${updated.email || updated.keycloakId} : ${updated.totalCredits} crédits (${delta >= 0 ? '+' : ''}${delta})`,
+        });
       },
       error: () => this.savingUserId.set(null),
     });

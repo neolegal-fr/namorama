@@ -8,7 +8,12 @@ export class UsersController {
 
   @Get('me')
   async getMe(@AuthenticatedUser() keycloakUser: any) {
-    const user = await this.usersService.findOrCreate(keycloakUser.sub, keycloakUser.email);
+    const user = await this.usersService.findOrCreate(
+      keycloakUser.sub,
+      keycloakUser.email,
+      keycloakUser.given_name,
+      keycloakUser.family_name,
+    );
     return {
       keycloakId: user.keycloakId,
       email: user.email,

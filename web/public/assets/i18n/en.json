@@ -31,6 +31,7 @@
   "ADMIN": {
     "TITLE": "Administration",
     "SEARCH_PLACEHOLDER": "Search by email…",
+    "COL_USER": "User",
     "COL_EMAIL": "Email",
     "COL_CREDITS": "Credits",
     "COL_PROJECTS": "Projects",
@@ -39,7 +40,9 @@
     "ADJUST_CREDITS": "Adjust credits",
     "REASON_PLACEHOLDER": "Reason…",
     "NO_USERS": "No users found",
-    "USERS_TOTAL": "users"
+    "USERS_TOTAL": "users",
+    "FROM": "From",
+    "TO": "To"
   },
   "PROJECTS": {
     "TITLE": "My Projects",

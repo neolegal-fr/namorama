@@ -27,13 +27,15 @@ export class UsersService {
     }
   }
 
-  async findOrCreate(keycloakId: string, email?: string): Promise<User> {
+  async findOrCreate(keycloakId: string, email?: string, firstName?: string, lastName?: string): Promise<User> {
     let user = await this.usersRepository.findOne({ where: { keycloakId } });
 
     if (!user) {
       user = this.usersRepository.create({
         keycloakId,
         email,
+        firstName,
+        lastName,
         credits: FREE_MONTHLY_QUOTA,
         extraCredits: 0,
         lastFreeReset: new Date(),
@@ -41,11 +43,13 @@ export class UsersService {
       user = await this.usersRepository.save(user);
     } else {
       await this.maybeFreeReset(user, this.usersRepository);
-      // Recharger après un éventuel reset
       user = await this.usersRepository.findOne({ where: { keycloakId } }) ?? user;
+      // Mettre à jour les infos de profil si disponibles
+      if (email) user.email = email;
+      if (firstName) user.firstName = firstName;
+      if (lastName) user.lastName = lastName;
     }
 
-    // Mettre à jour la dernière connexion
     user.lastLogin = new Date();
     await this.usersRepository.save(user);
 

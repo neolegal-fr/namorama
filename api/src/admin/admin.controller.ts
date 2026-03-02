@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, Query, ParseIntPipe, DefaultValuePipe, Optional } from '@nestjs/common';
 import { Roles } from 'nest-keycloak-connect';
 import { AuthenticatedUser } from 'nest-keycloak-connect';
 import { AdminService } from './admin.service';
@@ -32,7 +32,13 @@ export class AdminController {
   }
 
   @Get('stats')
-  async getStats() {
-    return this.adminService.getStats();
+  async getStats(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.adminService.getStats(
+      from ? new Date(from) : undefined,
+      to ? new Date(to) : undefined,
+    );
   }
 }

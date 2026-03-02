@@ -10,6 +10,8 @@ export interface AdminUserRow {
   id: number;
   keycloakId: string;
   email: string;
+  firstName: string;
+  lastName: string;
   credits: number;
   extraCredits: number;
   totalCredits: number;
@@ -20,10 +22,8 @@ export interface AdminUserRow {
 
 export interface AdminStats {
   totalUsers: number;
-  activeUsers7: number;
-  activeUsers30: number;
-  newUsers7: number;
-  newUsers30: number;
+  periodActiveUsers: number;
+  periodNewUsers: number;
   totalProjects: number;
   totalSuggestions: number;
   avgSuggestionsPerProject: number;
@@ -59,6 +59,8 @@ export class AdminService {
       id: u.id,
       keycloakId: u.keycloakId,
       email: u.email,
+      firstName: u.firstName,
+      lastName: u.lastName,
       credits: u.credits,
       extraCredits: u.extraCredits,
       totalCredits: u.credits + u.extraCredits,
@@ -86,6 +88,8 @@ export class AdminService {
       id: user.id,
       keycloakId: user.keycloakId,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       credits: user.credits,
       extraCredits: user.extraCredits,
       totalCredits: user.credits + user.extraCredits,
@@ -95,17 +99,18 @@ export class AdminService {
     };
   }
 
-  async getStats(): Promise<AdminStats> {
-    const now = new Date();
-    const date7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const date30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  async getStats(from?: Date, to?: Date): Promise<AdminStats> {
+    const periodEnd = to ?? new Date();
+    const periodStart = from ?? new Date(periodEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const [totalUsers, activeUsers7, activeUsers30, newUsers7, newUsers30] = await Promise.all([
+    const [totalUsers, periodActiveUsers, periodNewUsers] = await Promise.all([
       this.userRepo.count(),
-      this.userRepo.createQueryBuilder('u').where('u.lastLogin >= :d', { d: date7 }).getCount(),
-      this.userRepo.createQueryBuilder('u').where('u.lastLogin >= :d', { d: date30 }).getCount(),
-      this.userRepo.createQueryBuilder('u').where('u.createdAt >= :d', { d: date7 }).getCount(),
-      this.userRepo.createQueryBuilder('u').where('u.createdAt >= :d', { d: date30 }).getCount(),
+      this.userRepo.createQueryBuilder('u')
+        .where('u.lastLogin >= :from AND u.lastLogin <= :to', { from: periodStart, to: periodEnd })
+        .getCount(),
+      this.userRepo.createQueryBuilder('u')
+        .where('u.createdAt >= :from AND u.createdAt <= :to', { from: periodStart, to: periodEnd })
+        .getCount(),
     ]);
 
     const [totalProjects, totalSuggestions] = await Promise.all([
@@ -126,10 +131,8 @@ export class AdminService {
 
     return {
       totalUsers,
-      activeUsers7,
-      activeUsers30,
-      newUsers7,
-      newUsers30,
+      periodActiveUsers,
+      periodNewUsers,
       totalProjects,
       totalSuggestions,
       avgSuggestionsPerProject: Math.round((avgSuggestionsResult[0]?.avg ?? 0) * 10) / 10,

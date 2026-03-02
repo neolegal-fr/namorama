@@ -7,6 +7,8 @@ export interface AdminUser {
   id: number;
   keycloakId: string;
   email: string;
+  firstName: string;
+  lastName: string;
   credits: number;
   extraCredits: number;
   totalCredits: number;
@@ -17,10 +19,8 @@ export interface AdminUser {
 
 export interface AdminStats {
   totalUsers: number;
-  activeUsers7: number;
-  activeUsers30: number;
-  newUsers7: number;
-  newUsers30: number;
+  periodActiveUsers: number;
+  periodNewUsers: number;
   totalProjects: number;
   totalSuggestions: number;
   avgSuggestionsPerProject: number;
@@ -47,7 +47,10 @@ export class AdminService {
     return this.http.patch<AdminUser>(`${this.base}/users/${userId}/credits`, { delta, reason });
   }
 
-  getStats(): Observable<AdminStats> {
-    return this.http.get<AdminStats>(`${this.base}/stats`);
+  getStats(from?: Date, to?: Date): Observable<AdminStats> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from.toISOString());
+    if (to) params = params.set('to', to.toISOString());
+    return this.http.get<AdminStats>(`${this.base}/stats`, { params });
   }
 }

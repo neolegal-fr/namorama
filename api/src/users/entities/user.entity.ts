@@ -12,6 +12,12 @@ export class User {
   @Column({ nullable: true })
   email: string;
 
+  @Column({ nullable: true })
+  firstName: string;
+
+  @Column({ nullable: true })
+  lastName: string;
+
   /** Crédits gratuits mensuels (remis à 100 chaque mois via lazy reset) */
   @Column({ default: 100 })
   credits: number;
