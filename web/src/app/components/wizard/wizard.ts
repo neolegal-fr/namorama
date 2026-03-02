@@ -158,9 +158,9 @@ export class WizardComponent implements OnInit {
 
   // ─── US-022 : Buy on registrar ────────────────────
   private readonly REGISTRARS = [
-    { label: 'OVH',       buildUrl: (n: string) => `https://www.ovhcloud.com/fr/domains/domain-name-search/?q=${n}` },
-    { label: 'Namecheap', buildUrl: (n: string) => `https://www.namecheap.com/domains/registration/results/?domain=${n}` },
-    { label: 'Gandi',     buildUrl: (n: string) => `https://www.gandi.net/fr/domain/suggest?q=${n}` },
+    { label: 'OVH',       buildUrl: (n: string) => `https://www.ovhcloud.com/fr/domains/?q=${n}` },
+    { label: 'Namecheap', buildUrl: (n: string) => `https://www.namecheap.com/domains/registration/results.aspx?domain=${n}` },
+    { label: 'Gandi',     buildUrl: (n: string) => `https://whois.gandi.net/en?query=${n}` },
   ];
 
   private readonly SEARCH_TIMEOUT_MS = 30_000;

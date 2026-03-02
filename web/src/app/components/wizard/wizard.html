@@ -102,7 +102,7 @@
           <h4 class="font-bold mb-2" style="color: #1d4ed8">{{ 'WIZARD.STEP1.SUGGESTION_TITLE' | translate }}</h4>
           <p class="font-italic text-800">{{ refinedDescription() }}</p>
           <div class="mt-2 text-right">
-             <p-button [label]="'WIZARD.STEP1.USE_VERSION' | translate" severity="info" size="small" (onClick)="description.set(refinedDescription())"></p-button>
+             <p-button [label]="'WIZARD.STEP1.USE_VERSION' | translate" severity="info" size="small" (onClick)="description.set(refinedDescription()); refinedDescription.set('')"></p-button>
           </div>
         </div>
       </div>
