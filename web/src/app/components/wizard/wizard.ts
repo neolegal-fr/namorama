@@ -186,6 +186,13 @@ export class WizardComponent implements OnInit {
         return `https://shop.gandi.net/fr/domain/suggest?search=${d}`;
       },
     },
+    {
+      label: 'Hostinger',
+      url: (n: string, exts: string[]) => {
+        const d = exts.length === 1 ? `${n}${exts[0]}` : n;
+        return `https://www.hostinger.fr/nom-de-domaine?domain=${d}`;
+      },
+    },
   ];
 
   openReg = signal<string | null>(null);
