@@ -2,4 +2,4 @@ User-agent: *
 Disallow: /admin
 Disallow: /payment/
 
-Sitemap: https://namorama.neolegal.fr/sitemap.xml
+Sitemap: https://namorama.com/sitemap.xml
