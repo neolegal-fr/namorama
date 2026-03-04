@@ -195,7 +195,7 @@ export class WizardComponent implements OnInit {
       label: 'Hostinger',
       url: (n: string, exts: string[]) => {
         const d = exts.length === 1 ? `${n}${exts[0]}` : n;
-        return `https://www.hostinger.fr/nom-de-domaine?domain=${d}`;
+        return `https://www.hostinger.com/fr/nom-de-domaine-disponible?domain=${d}`;
       },
     },
   ];
