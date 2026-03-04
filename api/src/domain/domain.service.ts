@@ -133,11 +133,11 @@ ${localeInstruction}`);
       styleInstructions.push(`
 === STYLE "descriptive" (generate exactly ${counts['descriptive']} names) ===
 Descriptive domain names targeting local/regional markets. Criteria:
-- Can be LONGER (up to 28 characters with hyphens).
+- Can be LONGER (up to 28 characters), NO HYPHENS.
 - Must CLEARLY DESCRIBE the business activity and optionally a geographic reference (infer from description).
-- HYPHENS ARE ALLOWED and encouraged between words.
+- Compound words without hyphens, or a single descriptive word.
 - Must sound natural in the target language.
-- Examples: boulangerie-provence.com, plombier-lyon.fr, menuiserie-bretagne.fr`);
+- Examples: boulangerieprovence.com, plombierlyon.fr, menuiseriebretagne.fr`);
     }
 
     if (culturalNames) {
@@ -145,9 +145,9 @@ Descriptive domain names targeting local/regional markets. Criteria:
 === STYLE "cultural" (generate exactly ${counts['cultural']} names) ===
 Domain names referencing public domain cultural works, characters, places, or folklore. Criteria:
 - May reference fairy tales, mythology, fables, classic literature, historical figures (public domain only).
-- HYPHENS ARE ALLOWED.
+- NO HYPHENS — merge words into a single compound name.
 - No justification needed — just strong, memorable cultural references tied to the project spirit.
-- Examples: petit-poucet.fr, hercule-plomberie.com, cendrillon-mode.fr`);
+- Examples: petitpoucet.fr, herculeplomberie.com, cendrillonmode.fr`);
     }
 
     const prompt = `
@@ -163,7 +163,7 @@ Domain names referencing public domain cultural works, characters, places, or fo
       - Generate exactly the number of names specified per style (total: ${total}).
       - Each name must include a "style" field matching its style key exactly.
       - For "standard" names: no hyphens, no numbers, lowercase letters only.
-      - For "descriptive" and "cultural" names: lowercase, hyphens allowed, no numbers.
+      - For "descriptive" and "cultural" names: lowercase, NO hyphens, no numbers.
 
       Your response must be ONLY a JSON object with a "names" key containing a list of objects.
       Example: {"names": [{"name": "velora", "style": "standard"}, {"name": "boulangerie-provence", "style": "descriptive"}, {"name": "petit-poucet", "style": "cultural"}]}
