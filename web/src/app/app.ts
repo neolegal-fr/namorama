@@ -398,7 +398,10 @@ export class AppComponent implements OnInit {
   }
 
   login() {
-    this.keycloak.login({ locale: this.selectedLang });
+    // Map app locale codes to Keycloak locale codes where they differ
+    const localeMap: Record<string, string> = { zh: 'zh-CN', pt: 'pt-BR' };
+    const kcLocale = localeMap[this.selectedLang] ?? this.selectedLang;
+    this.keycloak.login({ locale: kcLocale });
   }
 
   logout() {
