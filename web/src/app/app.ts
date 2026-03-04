@@ -398,7 +398,7 @@ export class AppComponent implements OnInit {
   }
 
   login() {
-    this.keycloak.login();
+    this.keycloak.login({ locale: this.selectedLang });
   }
 
   logout() {
