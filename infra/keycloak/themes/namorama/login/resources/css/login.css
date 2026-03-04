@@ -303,6 +303,16 @@ a:hover {
     text-decoration: none !important;
 }
 
+/* === Sélecteur de langue Keycloak (masqué)
+   La langue est contrôlée par l'app Angular via ui_locales.
+   Le picker natif Keycloak est injecté dans #kc-header-wrapper
+   et casse le layout — on le cache. =============== */
+#kc-locale,
+#kc-locale-wrapper,
+#kc-locale-dropdown {
+    display: none !important;
+}
+
 /* === Page reset password ======================== */
 #kc-reset-password-form .pf-c-form__group:last-child {
     margin-top: 0.25rem !important;
