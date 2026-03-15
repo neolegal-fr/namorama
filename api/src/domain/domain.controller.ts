@@ -46,16 +46,26 @@ export class DomainController {
   @Post('analyze')
   async analyze(
     @Body('suggestionId') suggestionId: string,
+    @Body('lang') lang: string | undefined,
     @AuthenticatedUser() keycloakUser: any,
   ) {
     const user = await this.usersService.findOrCreate(keycloakUser.sub);
     const suggestion = await this.projectsService.getSuggestionForUser(suggestionId, user);
     if (!suggestion) throw new NotFoundException('Suggestion non trouvée');
 
-    // Idempotent — retourner l'analyse en cache si elle existe déjà
-    if (suggestion.analysis) return { analysis: suggestion.analysis };
+    // Retourner le cache uniquement si la langue correspond
+    if (suggestion.analysis) {
+      try {
+        const cached = JSON.parse(suggestion.analysis);
+        if (!lang || cached.lang === lang) return { analysis: suggestion.analysis };
+        // Langue différente → régénérer
+      } catch {
+        // Ancien format texte → régénérer si une langue est demandée
+        if (!lang) return { analysis: suggestion.analysis };
+      }
+    }
 
-    const analysis = await this.domainService.analyzeNameWithAI(suggestion.domainName);
+    const analysis = await this.domainService.analyzeNameWithAI(suggestion.domainName, lang);
     await this.projectsService.saveAnalysis(suggestionId, analysis);
     return { analysis };
   }

@@ -23,8 +23,8 @@ export class DomainService {
     return this.http.post<{ keywords: string[] }>(`${this.apiUrl}/keywords`, { description, ...(locale ? { locale } : {}) });
   }
 
-  analyzeName(suggestionId: string): Observable<{ analysis: string }> {
-    return this.http.post<{ analysis: string }>(`${this.apiUrl}/analyze`, { suggestionId });
+  analyzeName(suggestionId: string, lang?: string): Observable<{ analysis: string }> {
+    return this.http.post<{ analysis: string }>(`${this.apiUrl}/analyze`, { suggestionId, lang });
   }
 
   pickBest(suggestions: { name: string; analysis: string | null; extensions: Record<string, any> }[], lang: string): Observable<{ recommended: string; reason: string }> {

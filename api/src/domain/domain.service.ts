@@ -199,10 +199,11 @@ Domain names referencing public domain cultural works, characters, places, or fo
     }
   }
 
-  async analyzeNameWithAI(name: string): Promise<string> {
-    const prompt = `Analyze the brand/domain name "${name}" across these 5 criteria. Return ONLY valid JSON, no text outside it:
+  async analyzeNameWithAI(name: string, lang = 'en'): Promise<string> {
+    const prompt = `Analyze the brand/domain name "${name}" across these 5 criteria. Respond in the language with code "${lang}". Return ONLY valid JSON, no text outside it:
 
 {
+  "lang": "${lang}",
   "scores": { "memorability": 4, "pronunciation": 3, "international": 5, "seo": 3, "distinctiveness": 4 },
   "comments": { "memorability": "...", "pronunciation": "...", "international": "...", "seo": "...", "distinctiveness": "..." },
   "strengths": "max 15 words",

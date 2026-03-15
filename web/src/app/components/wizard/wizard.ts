@@ -495,7 +495,7 @@ export class WizardComponent implements OnInit {
           setTimeout(() => {
             result.analysisPending = true;
             this.cdr.detectChanges();
-            this.domainService.analyzeName(result.id).subscribe({
+            this.domainService.analyzeName(result.id, this.translate.currentLang).subscribe({
               next: (r) => {
                 result.analysis = r.analysis;
                 result.analysisPending = false;
@@ -606,24 +606,44 @@ export class WizardComponent implements OnInit {
     try {
       const parsed = JSON.parse(analysis);
       if (parsed.scores && parsed.comments) {
-        const criteria: Record<string, string> = {
-          memorability: 'Memorability', pronunciation: 'Pronunciation',
-          international: 'International appeal', seo: 'SEO / searchability',
-          distinctiveness: 'Distinctiveness',
-        };
-        const rows = Object.entries(criteria).map(([key, label]) => {
+        const scoreColor = (s: number) =>
+          s <= 1 ? '#ef4444' : s === 2 ? '#f97316' : s === 3 ? '#f59e0b' : s === 4 ? '#84cc16' : '#16a34a';
+
+        const criteria: [string, string][] = [
+          ['memorability', 'Mémorabilité'],
+          ['pronunciation', 'Prononciation'],
+          ['international', 'Portée internationale'],
+          ['seo', 'SEO'],
+          ['distinctiveness', 'Distinctivité'],
+        ];
+
+        const cells = criteria.map(([key, label]) => {
           const score: number = parsed.scores[key] ?? 0;
           const comment: string = parsed.comments[key] ?? '';
-          const stars = Array.from({ length: 5 }, (_, i) =>
-            i < score
-              ? '<span style="color:#f59e0b">★</span>'
-              : '<span style="color:#d1d5db">☆</span>'
-          ).join('');
-          return `<strong>${label}</strong>: ${stars} — ${comment}`;
-        }).join('<br>');
-        const strengths = parsed.strengths ? `<br>✅ <strong>Strengths</strong>: ${parsed.strengths}` : '';
-        const watchout = parsed.watchout ? `<br>⚠️ <strong>Watch out</strong>: ${parsed.watchout}` : '';
-        return this.sanitizer.bypassSecurityTrustHtml(rows + strengths + watchout);
+          const color = scoreColor(score);
+          const pct = (score / 5) * 100;
+          return `
+            <div style="min-width:0">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.2rem">
+                <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280">${label}</span>
+                <span style="font-size:0.78rem;font-weight:800;color:${color}">${score}/5</span>
+              </div>
+              <div style="height:4px;background:#e5e7eb;border-radius:9999px;margin-bottom:0.3rem">
+                <div style="height:100%;width:${pct}%;background:${color};border-radius:9999px"></div>
+              </div>
+              <span style="font-size:0.75rem;color:#6b7280;line-height:1.4">${comment}</span>
+            </div>`;
+        }).join('');
+
+        const grid = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.75rem 1.25rem">${cells}</div>`;
+
+        const footer = (parsed.strengths || parsed.watchout) ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;border-top:1px solid #e5e7eb;margin-top:0.75rem;padding-top:0.625rem">
+            ${parsed.strengths ? `<div style="font-size:0.76rem;color:#374151;line-height:1.5"><span style="font-weight:700">✅ Points forts</span><br>${parsed.strengths}</div>` : ''}
+            ${parsed.watchout  ? `<div style="font-size:0.76rem;color:#374151;line-height:1.5"><span style="font-weight:700">⚠️ Attention</span><br>${parsed.watchout}</div>`  : ''}
+          </div>` : '';
+
+        return this.sanitizer.bypassSecurityTrustHtml(grid + footer);
       }
     } catch {}
     // Ancien format texte
@@ -937,7 +957,7 @@ export class WizardComponent implements OnInit {
                       setTimeout(() => {
                         domain.analysisPending = true;
                         this.cdr.detectChanges();
-                        this.domainService.analyzeName(saved.id).subscribe({
+                        this.domainService.analyzeName(saved.id, this.translate.currentLang).subscribe({
                           next: (a) => {
                             domain.analysis = a.analysis;
                             domain.analysisPending = false;
