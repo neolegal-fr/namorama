@@ -108,7 +108,12 @@ export class DomainService {
     descriptiveNames = false,
     culturalNames = false,
   ): Promise<{ name: string; style: string }[]> {
-    const vocabStr = keywords.join(', ');
+    // Assainir les keywords avant injection dans le prompt : supprimer les séquences
+    // qui pourraient tromper le modèle (sauts de ligne, guillemets triples, etc.)
+    const sanitizedKeywords = keywords.map(k =>
+      k.replace(/[\r\n]+/g, ' ').replace(/`{3,}/g, '').trim().slice(0, 100)
+    );
+    const vocabStr = sanitizedKeywords.join(', ');
     const localeInstruction = locale
       ? `Names should resonate with a "${locale}"-language audience. Prefer names that are easy to pronounce in that language, and may incorporate roots, sounds, or cultural references familiar to its speakers. Local or regional words are encouraged alongside invented ones.`
       : 'Names should be internationally friendly — easy to pronounce for a global audience, preferring Anglo-Saxon or Latin roots.';

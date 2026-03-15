@@ -17,7 +17,6 @@ export class SearchDomainsDto {
   @ArrayMaxSize(50, { message: 'Maximum 50 mots-clés autorisés' })
   @IsString({ each: true })
   @MaxLength(100, { each: true, message: 'Chaque mot-clé ne peut pas dépasser 100 caractères' })
-  @Matches(/^[\p{L}\p{N}\s\-]{1,100}$/u, { each: true, message: 'Les mots-clés ne peuvent contenir que des lettres, chiffres, espaces et tirets' })
   keywords: string[];
 
   @IsArray()
