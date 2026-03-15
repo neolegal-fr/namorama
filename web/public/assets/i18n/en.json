@@ -27,7 +27,9 @@
     "SECURE_ACCESS": "Secure Access",
     "LOGIN_REQUIRED": "Please log in to start searching for your domain names.",
     "ADMIN": "Administration",
-    "FEEDBACK": "Give feedback"
+    "FEEDBACK": "Give feedback",
+    "LEGAL": "Legal Notice",
+    "PRIVACY": "Privacy Policy"
   },
   "ADMIN": {
     "TITLE": "Administration",

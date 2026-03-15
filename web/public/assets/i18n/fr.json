@@ -27,7 +27,9 @@
     "SECURE_ACCESS": "Accès Sécurisé",
     "LOGIN_REQUIRED": "Veuillez vous connecter pour commencer à chercher vos noms de domaine.",
     "ADMIN": "Administration",
-    "FEEDBACK": "Signaler un problème"
+    "FEEDBACK": "Signaler un problème",
+    "LEGAL": "Mentions légales",
+    "PRIVACY": "Politique de confidentialité"
   },
   "ADMIN": {
     "TITLE": "Administration",

@@ -265,6 +265,10 @@ import { Dialog } from 'primeng/dialog';
                 style="background: none; border: none; cursor: pointer; color: inherit; font-size: inherit; text-decoration: underline; text-decoration-style: dotted; padding: 0">
           {{ 'APP.FEEDBACK' | translate }}
         </button>
+        <span style="margin: 0 0.5rem">·</span>
+        <a routerLink="/legal" style="color: inherit; text-decoration: underline; text-decoration-style: dotted">{{ 'APP.LEGAL' | translate }}</a>
+        <span style="margin: 0 0.5rem">·</span>
+        <a routerLink="/privacy" style="color: inherit; text-decoration: underline; text-decoration-style: dotted">{{ 'APP.PRIVACY' | translate }}</a>
       </footer>
       <p-toast key="app" position="top-right"></p-toast>
     </main>
