@@ -17,6 +17,7 @@ import { UsersModule } from './users/users.module';
 import { ProjectsModule } from './projects/projects.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
+import { FeedbackModule } from './feedback/feedback.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { AdminModule } from './admin/admin.module';
     ProjectsModule,
     PaymentsModule,
     AdminModule,
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [

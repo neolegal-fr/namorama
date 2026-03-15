@@ -3,6 +3,7 @@ import { RouterOutlet, Router, RouterModule } from '@angular/router';
 import { UserService, CreditInfo } from './services/user';
 import { ProjectService } from './services/project';
 import { PaymentService, PackType } from './services/payment';
+import { FeedbackService } from './services/feedback';
 import { CookieConsentService } from './services/cookie-consent';
 import { KeycloakService } from 'keycloak-angular';
 import { CommonModule, DatePipe } from '@angular/common';
@@ -11,7 +12,10 @@ import { MenuModule } from 'primeng/menu';
 import { ButtonModule } from 'primeng/button';
 import { MenubarModule } from 'primeng/menubar';
 import { AvatarModule } from 'primeng/avatar';
-import { MenuItem } from 'primeng/api';
+import { MenuItem, MessageService } from 'primeng/api';
+import { Toast } from 'primeng/toast';
+import { Textarea } from 'primeng/textarea';
+import { InputText } from 'primeng/inputtext';
 
 import { FormsModule } from '@angular/forms';
 
@@ -32,6 +36,9 @@ import { Dialog } from 'primeng/dialog';
     FormsModule,
     Dialog,
     DatePipe,
+    Toast,
+    Textarea,
+    InputText,
   ],
   template: `
     <main class="min-h-screen">
@@ -199,11 +206,57 @@ import { Dialog } from 'primeng/dialog';
         </div>
       </p-dialog>
 
+      <!-- Dialog Feedback -->
+      <p-dialog [header]="'FEEDBACK.DIALOG_TITLE' | translate"
+                [visible]="showFeedbackDialog()"
+                (visibleChange)="showFeedbackDialog.set($event)"
+                [modal]="true"
+                [style]="{ width: 'min(34rem, 92vw)' }"
+                [draggable]="false"
+                [resizable]="false">
+        <div style="display: flex; flex-direction: column; gap: 1rem">
+          <p style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--p-surface-700)">
+            {{ 'FEEDBACK.DIALOG_HEADLINE' | translate }}
+          </p>
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.375rem; color: var(--p-surface-600)">
+              {{ 'FEEDBACK.MESSAGE_LABEL' | translate }} *
+            </label>
+            <textarea pInputTextarea
+                      [(ngModel)]="feedbackMessage"
+                      rows="5"
+                      style="width: 100%; resize: vertical"
+                      [placeholder]="'FEEDBACK.MESSAGE_PLACEHOLDER' | translate">
+            </textarea>
+          </div>
+          <div>
+            <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.375rem; color: var(--p-surface-600)">
+              {{ 'FEEDBACK.EMAIL_LABEL' | translate }}
+            </label>
+            <input pInputText [(ngModel)]="feedbackEmail" type="email" style="width: 100%" [placeholder]="userName()">
+          </div>
+          <p-button
+            [label]="'FEEDBACK.SUBMIT_BTN' | translate"
+            icon="pi pi-send"
+            [loading]="feedbackLoading()"
+            [disabled]="feedbackMessage.length < 20"
+            (onClick)="submitFeedback()"
+            style="align-self: flex-end">
+          </p-button>
+        </div>
+      </p-dialog>
+
       <footer class="mt-8 py-6 border-top-1 border-solid text-center text-400 text-sm" style="background: white">
         <div class="mb-2 font-bold text-500">Namorama &copy; 2026</div>
         {{ 'APP.FOOTER' | translate }}
         <a href="https://neolegal.fr" target="_blank" rel="noopener" style="color: inherit; font-weight: 600; text-decoration: none; border-bottom: 1px solid currentColor">NeoLegal</a>
+        <span style="margin: 0 0.5rem">·</span>
+        <button type="button" (click)="openFeedback()"
+                style="background: none; border: none; cursor: pointer; color: inherit; font-size: inherit; text-decoration: underline; text-decoration-style: dotted; padding: 0">
+          {{ 'APP.FEEDBACK' | translate }}
+        </button>
       </footer>
+      <p-toast position="top-right"></p-toast>
     </main>
   `,
   styles: []
@@ -254,6 +307,12 @@ export class AppComponent implements OnInit {
   profileMenuItems: MenuItem[] = [];
   projectMenuItems: MenuItem[] = [];
 
+  // Feedback
+  showFeedbackDialog = signal(false);
+  feedbackMessage = '';
+  feedbackEmail = '';
+  feedbackLoading = signal(false);
+
   constructor(
     private userService: UserService,
     public projectService: ProjectService,
@@ -263,6 +322,8 @@ export class AppComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private paymentService: PaymentService,
     private cookieConsent: CookieConsentService,
+    private feedbackService: FeedbackService,
+    private messageService: MessageService,
   ) {}
 
   async ngOnInit() {
@@ -315,7 +376,7 @@ export class AppComponent implements OnInit {
   }
 
   updateProfileMenu() {
-    this.translate.get(['APP.CREDITS', 'APP.LOGOUT', 'APP.MANAGE_ACCOUNT', 'APP.ADMIN']).subscribe(res => {
+    this.translate.get(['APP.CREDITS', 'APP.LOGOUT', 'APP.MANAGE_ACCOUNT', 'APP.ADMIN', 'FEEDBACK.MENU_ITEM']).subscribe(res => {
       this.profileMenuItems = [
         {
           label: this.userName(),
@@ -324,6 +385,11 @@ export class AppComponent implements OnInit {
               label: `${res['APP.CREDITS']}: ${this.credits()}`,
               icon: 'pi pi-wallet',
               command: () => this.triggerCreditDialog()
+            },
+            {
+              label: res['FEEDBACK.MENU_ITEM'],
+              icon: 'pi pi-comment',
+              command: () => this.openFeedback()
             },
             {
               label: res['APP.MANAGE_ACCOUNT'],
@@ -414,5 +480,37 @@ export class AppComponent implements OnInit {
 
   reload() {
     window.location.reload();
+  }
+
+  openFeedback() {
+    if (!this.isLoggedIn()) {
+      this.login();
+      return;
+    }
+    this.feedbackMessage = '';
+    this.feedbackEmail = '';
+    this.showFeedbackDialog.set(true);
+  }
+
+  submitFeedback() {
+    if (this.feedbackMessage.length < 20) return;
+    this.feedbackLoading.set(true);
+    this.feedbackService.submit(this.feedbackMessage, this.feedbackEmail || undefined).subscribe({
+      next: () => {
+        this.feedbackLoading.set(false);
+        this.showFeedbackDialog.set(false);
+        this.translate.get(['FEEDBACK.SUCCESS_SUMMARY', 'FEEDBACK.SUCCESS_DETAIL']).subscribe(res => {
+          this.messageService.add({ severity: 'success', summary: res['FEEDBACK.SUCCESS_SUMMARY'], detail: res['FEEDBACK.SUCCESS_DETAIL'], life: 6000 });
+        });
+        this.userService.getCredits().subscribe();
+      },
+      error: (err) => {
+        this.feedbackLoading.set(false);
+        const key = err?.error?.message === 'RATE_LIMIT' ? 'FEEDBACK.RATE_LIMIT' : 'FEEDBACK.ERROR_DETAIL';
+        this.translate.get(key).subscribe(msg => {
+          this.messageService.add({ severity: err?.error?.message === 'RATE_LIMIT' ? 'warn' : 'error', summary: '', detail: msg, life: 6000 });
+        });
+      }
+    });
   }
 }
