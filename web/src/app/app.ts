@@ -272,6 +272,7 @@ export class AppComponent implements OnInit {
     const lang = this.translate.currentLang || 'fr';
     this.currentLang.set(lang);
     this.selectedLang = lang;
+    document.documentElement.lang = lang;
     
     if (this.isLoggedIn()) {
       const profile = await this.keycloak.loadUserProfile();

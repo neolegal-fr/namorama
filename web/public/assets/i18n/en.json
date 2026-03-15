@@ -1,17 +1,17 @@
 {
   "LANDING": {
-    "TAGLINE": "A relevant, available domain name. Fast.",
-    "SUBTITLE": "Describe your project in a few words — AI does the rest.",
-    "B1_TITLE": "AI-powered suggestions",
-    "B1_DESC": "GPT generates names tailored to your business and audience",
-    "B2_TITLE": "Real availability check",
-    "B2_DESC": "Live WHOIS lookup on the extensions you choose",
-    "B3_TITLE": "Favourites & history",
-    "B3_DESC": "Save your searches and pick up where you left off",
-    "B4_TITLE": "Multi-extension",
-    "B4_DESC": ".com, .fr, .io, .net… check all your extensions at once",
-    "CTA": "Find my domain name for free",
-    "FREE_NOTE": "No subscription · No credit card required · 100 free credits on sign-up"
+    "TAGLINE": "Find the perfect brand name — with the domain available.",
+    "SUBTITLE": "Describe your project in a few words. AI generates original brand name ideas and checks domain availability in real time.",
+    "B1_TITLE": "Tailored brand name ideas",
+    "B1_DESC": "AI generates names tailored to your business, audience and values",
+    "B2_TITLE": "Real-time availability check",
+    "B2_DESC": "Instant WHOIS lookup on every extension you choose",
+    "B3_TITLE": "Short, memorable, distinctive",
+    "B3_DESC": "Quality criteria built in: pronunciation, originality, international appeal",
+    "B4_TITLE": "Favourites & history",
+    "B4_DESC": "Save searches, compare your favourites, and pick up where you left off",
+    "CTA": "Find my brand name",
+    "FREE_NOTE": "No subscription · No credit card · 100 free credits = up to 100 brand name ideas"
   },
   "APP": {
     "TITLE": "Namorama",
@@ -26,7 +26,8 @@
     "FOOTER": "Designed by",
     "SECURE_ACCESS": "Secure Access",
     "LOGIN_REQUIRED": "Please log in to start searching for your domain names.",
-    "ADMIN": "Administration"
+    "ADMIN": "Administration",
+    "FEEDBACK": "Give feedback"
   },
   "ADMIN": {
     "TITLE": "Administration",
@@ -175,5 +176,19 @@
       "CANCEL": "Cancel",
       "BUY": "Refill"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Give feedback — earn 1,000 free credits",
+    "DIALOG_TITLE": "Share your feedback",
+    "DIALOG_HEADLINE": "Tell us what could be improved — get 1,000 free credits",
+    "MESSAGE_LABEL": "Your message",
+    "MESSAGE_PLACEHOLDER": "What's missing? What would you prioritise improving?",
+    "EMAIL_LABEL": "Your email (optional)",
+    "SUBMIT_BTN": "Send and get 1,000 credits",
+    "SUCCESS_SUMMARY": "Thank you!",
+    "SUCCESS_DETAIL": "Your feedback has been sent. 1,000 credits have been added to your account.",
+    "ERROR_DETAIL": "Something went wrong. Please try again in a moment.",
+    "RATE_LIMIT": "You already submitted feedback in the last 30 days. Thank you for your contribution!",
+    "LOGIN_REQUIRED": "Log in to share your feedback and receive credits."
   }
 }

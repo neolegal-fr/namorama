@@ -1,17 +1,17 @@
 {
   "LANDING": {
-    "TAGLINE": "Un nom de domaine pertinent et disponible, vite.",
-    "SUBTITLE": "Décrivez votre projet en quelques mots — l'IA fait le reste.",
-    "B1_TITLE": "Suggestions IA",
-    "B1_DESC": "GPT génère des noms adaptés à votre activité et votre cible",
-    "B2_TITLE": "Disponibilité réelle",
-    "B2_DESC": "Vérification Whois en temps réel sur les extensions de votre choix",
-    "B3_TITLE": "Favoris & historique",
-    "B3_DESC": "Sauvegardez vos recherches et reprenez-les quand vous voulez",
-    "B4_TITLE": "Multi-extensions",
-    "B4_DESC": ".com, .fr, .io, .net… vérifiez toutes vos extensions en une fois",
-    "CTA": "Trouver mon nom de domaine gratuitement",
-    "FREE_NOTE": "Sans abonnement · Sans carte bancaire · 100 crédits offerts à l'inscription"
+    "TAGLINE": "Trouvez le nom de marque idéal — avec le domaine disponible.",
+    "SUBTITLE": "Décrivez votre projet en quelques mots. L'IA génère des noms de marque originaux et vérifie leur disponibilité en temps réel.",
+    "B1_TITLE": "Noms de marque sur mesure",
+    "B1_DESC": "L'IA génère des idées adaptées à votre activité, votre cible et vos valeurs",
+    "B2_TITLE": "Disponibilité vérifiée en temps réel",
+    "B2_DESC": "Vérification Whois instantanée sur toutes les extensions de votre choix",
+    "B3_TITLE": "Court, mémorable, distinctif",
+    "B3_DESC": "Des critères de qualité intégrés : prononciation, originalité, portée internationale",
+    "B4_TITLE": "Favoris & historique",
+    "B4_DESC": "Sauvegardez vos recherches, comparez vos favoris et reprenez quand vous voulez",
+    "CTA": "Trouver mon nom de marque",
+    "FREE_NOTE": "Sans abonnement · Sans carte bancaire · 100 crédits offerts = jusqu'à 100 idées de noms"
   },
   "APP": {
     "TITLE": "Namorama",
@@ -26,7 +26,8 @@
     "FOOTER": "Conçu par",
     "SECURE_ACCESS": "Accès Sécurisé",
     "LOGIN_REQUIRED": "Veuillez vous connecter pour commencer à chercher vos noms de domaine.",
-    "ADMIN": "Administration"
+    "ADMIN": "Administration",
+    "FEEDBACK": "Donner mon avis"
   },
   "ADMIN": {
     "TITLE": "Administration",
@@ -175,5 +176,19 @@
       "CANCEL": "Annuler",
       "BUY": "Recharger"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Donner mon avis — 1 000 crédits offerts",
+    "DIALOG_TITLE": "Partagez vos suggestions",
+    "DIALOG_HEADLINE": "Dites-nous ce qui pourrait être amélioré — recevez 1 000 crédits gratuits",
+    "MESSAGE_LABEL": "Votre message",
+    "MESSAGE_PLACEHOLDER": "Qu'est-ce qui vous a manqué ? Qu'amélioreriez-vous en priorité ?",
+    "EMAIL_LABEL": "Votre email (optionnel)",
+    "SUBMIT_BTN": "Envoyer et recevoir 1 000 crédits",
+    "SUCCESS_SUMMARY": "Merci !",
+    "SUCCESS_DETAIL": "Votre avis a été envoyé. 1 000 crédits ont été ajoutés à votre compte.",
+    "ERROR_DETAIL": "Une erreur est survenue. Réessayez dans quelques instants.",
+    "RATE_LIMIT": "Vous avez déjà soumis un avis dans les 30 derniers jours. Merci de votre participation !",
+    "LOGIN_REQUIRED": "Connectez-vous pour partager votre avis et recevoir des crédits."
   }
 }
