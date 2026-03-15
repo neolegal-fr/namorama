@@ -26,7 +26,8 @@
     "FOOTER": "Ontwikkeld door",
     "SECURE_ACCESS": "Beveiligde toegang",
     "LOGIN_REQUIRED": "Log in om te beginnen met het zoeken naar domeinnamen.",
-    "ADMIN": "Beheer"
+    "ADMIN": "Beheer",
+    "FEEDBACK": "Een probleem melden"
   },
   "PROJECTS": {
     "TITLE": "Mijn Projecten",
@@ -157,5 +158,26 @@
       "CANCEL": "Annuleren",
       "BUY": "Opladen"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Feedback geven — verdien tot wel 500 gratis credits",
+    "DIALOG_TITLE_REPORT": "Een probleem melden",
+    "DIALOG_HEADLINE_REPORT": "Een bug? Een pagina die niet laadt? Vertel ons alles — we bijten niet (nou ja, bijna niet).",
+    "DIALOG_TITLE_CREDITS": "Deel uw feedback",
+    "DIALOG_HEADLINE_CREDITS": "Vertel ons hoe we Namorama kunnen verbeteren en verdien tot wel 500 credits.",
+    "MESSAGE_LABEL": "Uw bericht",
+    "MESSAGE_PLACEHOLDER_REPORT": "Beschrijf het probleem dat u heeft ondervonden…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Wat miste u? Wat zou u als eerste verbeteren?",
+    "EMAIL_LABEL": "Uw e-mail (zodat we kunnen antwoorden, optioneel)",
+    "CONTACT_ALT": "Liever via e-mail? Schrijf ons op",
+    "SUBMIT_BTN_REPORT": "Melden",
+    "SUBMIT_BTN_CREDITS": "Verzenden en mijn beloning ontvangen",
+    "SUCCESS_SUMMARY": "Bedankt!",
+    "SUCCESS_DETAIL_REPORT": "Uw melding is ontvangen. Bedankt dat u ons helpt Namorama te verbeteren!",
+    "SUCCESS_DETAIL_CREDITS": "Uw feedback is verzonden. 500 credits zijn aan uw account toegevoegd.",
+    "ERROR_DETAIL": "Er is iets misgegaan. Probeer het over een ogenblik opnieuw.",
+    "RATE_LIMIT": "U heeft al feedback ingediend in de afgelopen 30 dagen. Bedankt voor uw bijdrage!",
+    "WIZARD_CTA_LINK": "Meld een bug of stel een verbetering voor",
+    "WIZARD_CTA_SUFFIX": ", en verdien tot wel 500 credits."
   }
 }

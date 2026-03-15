@@ -26,7 +26,8 @@
     "FOOTER": "Entwickelt von",
     "SECURE_ACCESS": "Sicherer Zugang",
     "LOGIN_REQUIRED": "Bitte melden Sie sich an, um mit der Domainsuche zu beginnen.",
-    "ADMIN": "Administration"
+    "ADMIN": "Administration",
+    "FEEDBACK": "Problem melden"
   },
   "PROJECTS": {
     "TITLE": "Meine Projekte",
@@ -157,5 +158,26 @@
       "CANCEL": "Abbrechen",
       "BUY": "Aufladen"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Feedback geben — bis zu 500 Gratisguthaben erhalten",
+    "DIALOG_TITLE_REPORT": "Problem melden",
+    "DIALOG_HEADLINE_REPORT": "Ein Bug? Eine Seite, die nicht lädt? Sagen Sie uns alles — wir beißen nicht (naja, fast nicht).",
+    "DIALOG_TITLE_CREDITS": "Feedback teilen",
+    "DIALOG_HEADLINE_CREDITS": "Sagen Sie uns, wie wir Namorama verbessern können, und verdienen Sie bis zu 500 Guthaben.",
+    "MESSAGE_LABEL": "Ihre Nachricht",
+    "MESSAGE_PLACEHOLDER_REPORT": "Beschreiben Sie das aufgetretene Problem…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Was hat Ihnen gefehlt? Was würden Sie als Erstes verbessern?",
+    "EMAIL_LABEL": "Ihre E-Mail (damit wir antworten können, optional)",
+    "CONTACT_ALT": "Lieber per E-Mail? Schreiben Sie uns an",
+    "SUBMIT_BTN_REPORT": "Melden",
+    "SUBMIT_BTN_CREDITS": "Senden und meine Belohnung erhalten",
+    "SUCCESS_SUMMARY": "Danke!",
+    "SUCCESS_DETAIL_REPORT": "Ihr Bericht wurde erhalten. Vielen Dank, dass Sie uns helfen, Namorama zu verbessern!",
+    "SUCCESS_DETAIL_CREDITS": "Ihr Feedback wurde gesendet. 500 Guthaben wurden Ihrem Konto gutgeschrieben.",
+    "ERROR_DETAIL": "Etwas ist schiefgelaufen. Bitte versuchen Sie es gleich erneut.",
+    "RATE_LIMIT": "Sie haben in den letzten 30 Tagen bereits Feedback eingereicht. Vielen Dank für Ihren Beitrag!",
+    "WIZARD_CTA_LINK": "Melden Sie einen Bug oder schlagen Sie eine Verbesserung vor",
+    "WIZARD_CTA_SUFFIX": ", und verdienen Sie bis zu 500 Guthaben."
   }
 }

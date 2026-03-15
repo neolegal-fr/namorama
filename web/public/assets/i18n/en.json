@@ -178,17 +178,24 @@
     }
   },
   "FEEDBACK": {
-    "MENU_ITEM": "Give feedback — earn 1,000 free credits",
-    "DIALOG_TITLE": "Share your feedback",
-    "DIALOG_HEADLINE": "Tell us what could be improved — get 1,000 free credits",
+    "MENU_ITEM": "Give feedback — earn up to 500 free credits",
+    "DIALOG_TITLE_REPORT": "Report an issue",
+    "DIALOG_HEADLINE_REPORT": "A bug? A page that won't load? Tell us everything — we don't bite (well, almost).",
+    "DIALOG_TITLE_CREDITS": "Share your feedback",
+    "DIALOG_HEADLINE_CREDITS": "Tell us how to improve Namorama and earn up to 500 credits.",
     "MESSAGE_LABEL": "Your message",
-    "MESSAGE_PLACEHOLDER": "What's missing? What would you prioritise improving?",
-    "EMAIL_LABEL": "Your email (optional)",
-    "SUBMIT_BTN": "Send and get 1,000 credits",
+    "MESSAGE_PLACEHOLDER_REPORT": "Describe the issue you encountered…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "What's missing? What would you prioritise improving?",
+    "EMAIL_LABEL": "Your email (so we can reply, optional)",
+    "CONTACT_ALT": "Prefer email? Reach us at",
+    "SUBMIT_BTN_REPORT": "Report",
+    "SUBMIT_BTN_CREDITS": "Send and get my reward",
     "SUCCESS_SUMMARY": "Thank you!",
-    "SUCCESS_DETAIL": "Your feedback has been sent. 1,000 credits have been added to your account.",
+    "SUCCESS_DETAIL_REPORT": "Your report has been received. Thanks for helping us improve Namorama!",
+    "SUCCESS_DETAIL_CREDITS": "Your feedback has been received. The 500 credits will be added after your message is reviewed.",
     "ERROR_DETAIL": "Something went wrong. Please try again in a moment.",
     "RATE_LIMIT": "You already submitted feedback in the last 30 days. Thank you for your contribution!",
-    "LOGIN_REQUIRED": "Log in to share your feedback and receive credits."
+    "WIZARD_CTA_LINK": "Report a bug or suggest an improvement",
+    "WIZARD_CTA_SUFFIX": ", and earn up to 500 credits."
   }
 }

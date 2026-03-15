@@ -1,7 +1,8 @@
-import { Controller, Get, Patch, Param, Body, Query, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Delete, Param, Body, Query, ParseIntPipe, DefaultValuePipe, HttpCode } from '@nestjs/common';
 import { IsNumber, IsOptional, IsString } from 'class-validator';
 import { Roles, AuthenticatedUser } from 'nest-keycloak-connect';
 import { AdminService } from './admin.service';
+import { FeedbackService } from '../feedback/feedback.service';
 
 class AdjustCreditsDto {
   @IsNumber()
@@ -15,7 +16,10 @@ class AdjustCreditsDto {
 @Controller('admin')
 @Roles({ roles: ['realm:admin'] })
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly feedbackService: FeedbackService,
+  ) {}
 
   @Get('users')
   async getUsers(
@@ -44,5 +48,26 @@ export class AdminController {
       from ? new Date(from) : undefined,
       to ? new Date(to) : undefined,
     );
+  }
+
+  @Get('feedback')
+  async getFeedback() {
+    return this.feedbackService.findAll();
+  }
+
+  @Post('feedback/:id/award-credits')
+  async awardCredits(@Param('id') id: string) {
+    return this.feedbackService.awardCredits(id);
+  }
+
+  @Post('feedback/:id/reject')
+  async rejectFeedback(@Param('id') id: string) {
+    return this.feedbackService.reject(id);
+  }
+
+  @Delete('feedback/:id')
+  @HttpCode(204)
+  async deleteFeedback(@Param('id') id: string) {
+    await this.feedbackService.delete(id);
   }
 }

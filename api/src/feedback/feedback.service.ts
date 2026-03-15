@@ -1,11 +1,10 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Feedback } from './feedback.entity';
 import { UsersService } from '../users/users.service';
 
-const CREDITS_REWARD = 1000;
-const RATE_LIMIT_DAYS = 30;
+const CREDITS_REWARD = 500;
 
 @Injectable()
 export class FeedbackService {
@@ -15,28 +14,43 @@ export class FeedbackService {
     private usersService: UsersService,
   ) {}
 
-  async submit(keycloakId: string, message: string, email?: string): Promise<void> {
-    // Rate limit : 1 feedback par 30 jours par utilisateur
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - RATE_LIMIT_DAYS);
-
-    const recent = await this.feedbackRepo.findOne({
-      where: { keycloakId },
-      order: { createdAt: 'DESC' },
-    });
-
-    if (recent && recent.createdAt > cutoff) {
-      throw new BadRequestException('RATE_LIMIT');
-    }
-
+  async submit(keycloakId: string | null, message: string, email?: string): Promise<{ creditsAwarded: boolean }> {
     const feedback = this.feedbackRepo.create({
-      keycloakId,
+      keycloakId: keycloakId ?? null,
       message: message.trim(),
       email: email?.trim() || null,
     });
     await this.feedbackRepo.save(feedback);
 
-    await this.usersService.addExtraCredits(keycloakId, CREDITS_REWARD);
+    return { creditsAwarded: false };
+  }
+
+  async awardCredits(feedbackId: string): Promise<Feedback> {
+    const feedback = await this.feedbackRepo.findOne({ where: { id: feedbackId } });
+    if (!feedback) throw new NotFoundException('Feedback not found');
+    if (feedback.creditAwarded) throw new BadRequestException('Credits already awarded');
+    if (feedback.rejected) throw new BadRequestException('Feedback already rejected');
+    if (!feedback.keycloakId) throw new BadRequestException('Anonymous feedback — no user to reward');
+
+    await this.usersService.addExtraCredits(feedback.keycloakId, CREDITS_REWARD);
+    feedback.creditAwarded = true;
+    return this.feedbackRepo.save(feedback);
+  }
+
+  async reject(feedbackId: string): Promise<Feedback> {
+    const feedback = await this.feedbackRepo.findOne({ where: { id: feedbackId } });
+    if (!feedback) throw new NotFoundException('Feedback not found');
+    if (feedback.creditAwarded) throw new BadRequestException('Credits already awarded');
+    if (feedback.rejected) throw new BadRequestException('Feedback already rejected');
+
+    feedback.rejected = true;
+    return this.feedbackRepo.save(feedback);
+  }
+
+  async delete(feedbackId: string): Promise<void> {
+    const feedback = await this.feedbackRepo.findOne({ where: { id: feedbackId } });
+    if (!feedback) throw new NotFoundException('Feedback not found');
+    await this.feedbackRepo.remove(feedback);
   }
 
   async findAll(): Promise<Feedback[]> {

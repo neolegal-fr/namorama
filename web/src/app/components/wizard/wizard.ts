@@ -24,6 +24,7 @@ import { Toast } from 'primeng/toast';
 import { MenuItem, ConfirmationService, MessageService } from 'primeng/api';
 import { UserService } from '../../services/user';
 import { ProjectService } from '../../services/project';
+import { FeedbackService } from '../../services/feedback';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -265,8 +266,13 @@ export class WizardComponent implements OnInit {
     private confirmationService: ConfirmationService,
     private messageService: MessageService,
     private appRef: ApplicationRef,
-    private sanitizer: DomSanitizer
+    private sanitizer: DomSanitizer,
+    private feedbackService: FeedbackService,
   ) {}
+
+  openFeedback() {
+    this.feedbackService.openDialog();
+  }
 
   async ngOnInit() {
     this.isLoggedIn.set(await this.keycloak.isLoggedIn());

@@ -26,7 +26,8 @@
     "FOOTER": "开发者",
     "SECURE_ACCESS": "安全访问",
     "LOGIN_REQUIRED": "请登录以开始搜索域名。",
-    "ADMIN": "管理"
+    "ADMIN": "管理",
+    "FEEDBACK": "报告问题"
   },
   "PROJECTS": {
     "TITLE": "我的项目",
@@ -157,5 +158,26 @@
       "CANCEL": "取消",
       "BUY": "充值"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "提交反馈 — 免费获得最多500积分",
+    "DIALOG_TITLE_REPORT": "报告问题",
+    "DIALOG_HEADLINE_REPORT": "发现bug？页面无法加载？告诉我们一切 — 我们不咬人（嗯，几乎不）。",
+    "DIALOG_TITLE_CREDITS": "分享您的建议",
+    "DIALOG_HEADLINE_CREDITS": "告诉我们如何改进Namorama，并赢取最多500积分。",
+    "MESSAGE_LABEL": "您的留言",
+    "MESSAGE_PLACEHOLDER_REPORT": "请描述您遇到的问题…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "您觉得缺少什么？您最希望优先改进什么？",
+    "EMAIL_LABEL": "您的邮箱（以便我们回复，可选）",
+    "CONTACT_ALT": "更喜欢邮件？请写信至",
+    "SUBMIT_BTN_REPORT": "提交报告",
+    "SUBMIT_BTN_CREDITS": "发送并获取我的奖励",
+    "SUCCESS_SUMMARY": "感谢！",
+    "SUCCESS_DETAIL_REPORT": "您的报告已收到。感谢您帮助我们改进Namorama！",
+    "SUCCESS_DETAIL_CREDITS": "您的反馈已发送。500积分已添加到您的账户。",
+    "ERROR_DETAIL": "出现错误，请稍后再试。",
+    "RATE_LIMIT": "您在过去30天内已提交过反馈。感谢您的参与！",
+    "WIZARD_CTA_LINK": "报告问题或建议改进",
+    "WIZARD_CTA_SUFFIX": "，即可获得最多500积分。"
   }
 }

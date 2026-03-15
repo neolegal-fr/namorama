@@ -17,6 +17,16 @@ export interface AdminUser {
   projectCount: number;
 }
 
+export interface FeedbackItem {
+  id: string;
+  keycloakId: string | null;
+  email: string | null;
+  message: string;
+  creditAwarded: boolean;
+  rejected: boolean;
+  createdAt: string;
+}
+
 export interface AdminStats {
   totalUsers: number;
   periodActiveUsers: number;
@@ -54,5 +64,21 @@ export class AdminService {
     if (from) params = params.set('from', from.toISOString());
     if (to) params = params.set('to', to.toISOString());
     return this.http.get<AdminStats>(`${this.base}/stats`, { params });
+  }
+
+  getFeedback(): Observable<FeedbackItem[]> {
+    return this.http.get<FeedbackItem[]>(`${this.base}/feedback`);
+  }
+
+  awardFeedbackCredits(feedbackId: string): Observable<FeedbackItem> {
+    return this.http.post<FeedbackItem>(`${this.base}/feedback/${feedbackId}/award-credits`, {});
+  }
+
+  rejectFeedback(feedbackId: string): Observable<FeedbackItem> {
+    return this.http.post<FeedbackItem>(`${this.base}/feedback/${feedbackId}/reject`, {});
+  }
+
+  deleteFeedback(feedbackId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/feedback/${feedbackId}`);
   }
 }

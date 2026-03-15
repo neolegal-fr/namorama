@@ -206,8 +206,8 @@ import { Dialog } from 'primeng/dialog';
         </div>
       </p-dialog>
 
-      <!-- Dialog Feedback -->
-      <p-dialog [header]="'FEEDBACK.DIALOG_TITLE' | translate"
+      <!-- Dialog Feedback / Signalement -->
+      <p-dialog [header]="(isLoggedIn() ? 'FEEDBACK.DIALOG_TITLE_CREDITS' : 'FEEDBACK.DIALOG_TITLE_REPORT') | translate"
                 [visible]="showFeedbackDialog()"
                 (visibleChange)="showFeedbackDialog.set($event)"
                 [modal]="true"
@@ -215,8 +215,8 @@ import { Dialog } from 'primeng/dialog';
                 [draggable]="false"
                 [resizable]="false">
         <div style="display: flex; flex-direction: column; gap: 1rem">
-          <p style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--p-surface-700)">
-            {{ 'FEEDBACK.DIALOG_HEADLINE' | translate }}
+          <p style="margin: 0; font-size: 0.9rem; color: var(--p-surface-600)">
+            {{ (isLoggedIn() ? 'FEEDBACK.DIALOG_HEADLINE_CREDITS' : 'FEEDBACK.DIALOG_HEADLINE_REPORT') | translate }}
           </p>
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.375rem; color: var(--p-surface-600)">
@@ -226,21 +226,30 @@ import { Dialog } from 'primeng/dialog';
                       [(ngModel)]="feedbackMessage"
                       rows="5"
                       style="width: 100%; resize: vertical"
-                      [placeholder]="'FEEDBACK.MESSAGE_PLACEHOLDER' | translate">
+                      [placeholder]="(isLoggedIn() ? 'FEEDBACK.MESSAGE_PLACEHOLDER_CREDITS' : 'FEEDBACK.MESSAGE_PLACEHOLDER_REPORT') | translate">
             </textarea>
+            <div style="display: flex; justify-content: space-between; margin-top: 0.25rem; font-size: 0.75rem; color: var(--p-surface-400)">
+              <span *ngIf="feedbackMessage.length < 10" style="color: var(--p-orange-500)">Minimum 10 caractères</span>
+              <span *ngIf="feedbackMessage.length >= 10"></span>
+              <span>{{ feedbackMessage.length }} / 1000</span>
+            </div>
           </div>
           <div>
             <label style="display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.375rem; color: var(--p-surface-600)">
               {{ 'FEEDBACK.EMAIL_LABEL' | translate }}
             </label>
-            <input pInputText [(ngModel)]="feedbackEmail" type="email" style="width: 100%" [placeholder]="userName()">
+            <input pInputText [(ngModel)]="feedbackEmail" type="email" style="width: 100%" placeholder="ex: moi@email.com">
           </div>
+          <p style="margin: 0; font-size: 0.8rem; color: var(--p-surface-400)">
+            {{ 'FEEDBACK.CONTACT_ALT' | translate }}
+            <a href="mailto:contact@namorama.com" style="color: var(--p-primary-color); text-decoration: none; font-weight: 600">contact@namorama.com</a>
+          </p>
           <div style="display: flex; justify-content: flex-end">
             <p-button
-              [label]="'FEEDBACK.SUBMIT_BTN' | translate"
+              [label]="(isLoggedIn() ? 'FEEDBACK.SUBMIT_BTN_CREDITS' : 'FEEDBACK.SUBMIT_BTN_REPORT') | translate"
               icon="pi pi-send"
               [loading]="feedbackLoading()"
-              [disabled]="feedbackMessage.length < 20"
+              [disabled]="feedbackMessage.length < 10"
               (onClick)="submitFeedback()">
             </p-button>
           </div>
@@ -257,7 +266,7 @@ import { Dialog } from 'primeng/dialog';
           {{ 'APP.FEEDBACK' | translate }}
         </button>
       </footer>
-      <p-toast position="top-right"></p-toast>
+      <p-toast key="app" position="top-right"></p-toast>
     </main>
   `,
   styles: []
@@ -272,6 +281,7 @@ export class AppComponent implements OnInit {
   currentLang = signal('fr');
   selectedLang = 'fr';
   userName = signal('');
+  userEmail = signal('');
   
   readonly languages = [
     { label: 'Čeština',    code: 'cs', flag: 'fi fi-cz' },
@@ -339,6 +349,7 @@ export class AppComponent implements OnInit {
     if (this.isLoggedIn()) {
       const profile = await this.keycloak.loadUserProfile();
       this.userName.set(profile.firstName || profile.username || '');
+      this.userEmail.set(profile.email || '');
       this.loadCredits();
 
       // Locale depuis le token Keycloak (prioritaire sur le navigateur)
@@ -364,6 +375,8 @@ export class AppComponent implements OnInit {
     this.userService.creditInfo$.subscribe(info => {
       this.creditInfo.set(info);
     });
+
+    this.feedbackService.openDialog$.subscribe(() => this.openFeedback());
   }
 
   updateProjectMenu() {
@@ -377,7 +390,7 @@ export class AppComponent implements OnInit {
   }
 
   updateProfileMenu() {
-    this.translate.get(['APP.CREDITS', 'APP.LOGOUT', 'APP.MANAGE_ACCOUNT', 'APP.ADMIN', 'FEEDBACK.MENU_ITEM']).subscribe(res => {
+    this.translate.get(['APP.CREDITS', 'APP.LOGOUT', 'APP.MANAGE_ACCOUNT', 'APP.ADMIN']).subscribe(res => {
       this.profileMenuItems = [
         {
           label: this.userName(),
@@ -386,11 +399,6 @@ export class AppComponent implements OnInit {
               label: `${res['APP.CREDITS']}: ${this.credits()}`,
               icon: 'pi pi-wallet',
               command: () => this.triggerCreditDialog()
-            },
-            {
-              label: res['FEEDBACK.MENU_ITEM'],
-              icon: 'pi pi-comment',
-              command: () => this.openFeedback()
             },
             {
               label: res['APP.MANAGE_ACCOUNT'],
@@ -484,32 +492,29 @@ export class AppComponent implements OnInit {
   }
 
   openFeedback() {
-    if (!this.isLoggedIn()) {
-      this.login();
-      return;
-    }
     this.feedbackMessage = '';
-    this.feedbackEmail = '';
+    this.feedbackEmail = this.userEmail();
     this.showFeedbackDialog.set(true);
   }
 
   submitFeedback() {
-    if (this.feedbackMessage.length < 20) return;
+    if (this.feedbackMessage.length < 10) return;
     this.feedbackLoading.set(true);
     this.feedbackService.submit(this.feedbackMessage, this.feedbackEmail || undefined).subscribe({
-      next: () => {
+      next: (res) => {
         this.feedbackLoading.set(false);
         this.showFeedbackDialog.set(false);
-        this.translate.get(['FEEDBACK.SUCCESS_SUMMARY', 'FEEDBACK.SUCCESS_DETAIL']).subscribe(res => {
-          this.messageService.add({ severity: 'success', summary: res['FEEDBACK.SUCCESS_SUMMARY'], detail: res['FEEDBACK.SUCCESS_DETAIL'], life: 6000 });
+        const detailKey = res.creditsAwarded ? 'FEEDBACK.SUCCESS_DETAIL_CREDITS' : 'FEEDBACK.SUCCESS_DETAIL_REPORT';
+        this.translate.get(['FEEDBACK.SUCCESS_SUMMARY', detailKey]).subscribe(t => {
+          this.messageService.add({ key: 'app', severity: 'success', summary: t['FEEDBACK.SUCCESS_SUMMARY'], detail: t[detailKey], life: 6000 });
         });
-        this.userService.getCredits().subscribe();
+        if (res.creditsAwarded) this.userService.getCredits().subscribe();
       },
       error: (err) => {
         this.feedbackLoading.set(false);
         const key = err?.error?.message === 'RATE_LIMIT' ? 'FEEDBACK.RATE_LIMIT' : 'FEEDBACK.ERROR_DETAIL';
         this.translate.get(key).subscribe(msg => {
-          this.messageService.add({ severity: err?.error?.message === 'RATE_LIMIT' ? 'warn' : 'error', summary: '', detail: msg, life: 6000 });
+          this.messageService.add({ key: 'app', severity: err?.error?.message === 'RATE_LIMIT' ? 'warn' : 'error', summary: '', detail: msg, life: 6000 });
         });
       }
     });

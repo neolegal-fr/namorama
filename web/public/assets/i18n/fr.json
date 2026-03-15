@@ -27,7 +27,7 @@
     "SECURE_ACCESS": "Accès Sécurisé",
     "LOGIN_REQUIRED": "Veuillez vous connecter pour commencer à chercher vos noms de domaine.",
     "ADMIN": "Administration",
-    "FEEDBACK": "Donner mon avis"
+    "FEEDBACK": "Signaler un problème"
   },
   "ADMIN": {
     "TITLE": "Administration",
@@ -178,17 +178,24 @@
     }
   },
   "FEEDBACK": {
-    "MENU_ITEM": "Donner mon avis — 1 000 crédits offerts",
-    "DIALOG_TITLE": "Partagez vos suggestions",
-    "DIALOG_HEADLINE": "Dites-nous ce qui pourrait être amélioré — recevez 1 000 crédits gratuits",
+    "MENU_ITEM": "Donner mon avis — jusqu'à 500 crédits offerts",
+    "DIALOG_TITLE_REPORT": "Signaler un problème",
+    "DIALOG_HEADLINE_REPORT": "Un bug ? Une page qui ne charge pas ? Dites-nous tout — on ne mord pas (enfin, presque).",
+    "DIALOG_TITLE_CREDITS": "Partagez vos suggestions",
+    "DIALOG_HEADLINE_CREDITS": "Dites-nous comment améliorer Namorama, et gagnez jusqu'à 500 crédits.",
     "MESSAGE_LABEL": "Votre message",
-    "MESSAGE_PLACEHOLDER": "Qu'est-ce qui vous a manqué ? Qu'amélioreriez-vous en priorité ?",
-    "EMAIL_LABEL": "Votre email (optionnel)",
-    "SUBMIT_BTN": "Envoyer et recevoir 1 000 crédits",
+    "MESSAGE_PLACEHOLDER_REPORT": "Décrivez le problème rencontré…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Qu'est-ce qui vous a manqué ? Qu'amélioreriez-vous en priorité ?",
+    "EMAIL_LABEL": "Votre email (pour qu'on puisse vous répondre, optionnel)",
+    "CONTACT_ALT": "Vous préférez l'email ? Écrivez-nous à",
+    "SUBMIT_BTN_REPORT": "Signaler",
+    "SUBMIT_BTN_CREDITS": "Envoyer et obtenir ma récompense",
     "SUCCESS_SUMMARY": "Merci !",
-    "SUCCESS_DETAIL": "Votre avis a été envoyé. 1 000 crédits ont été ajoutés à votre compte.",
+    "SUCCESS_DETAIL_REPORT": "Votre signalement a bien été reçu. Merci de nous aider à améliorer Namorama !",
+    "SUCCESS_DETAIL_CREDITS": "Votre avis a bien été reçu. Les 500 crédits seront ajoutés après validation de votre message.",
     "ERROR_DETAIL": "Une erreur est survenue. Réessayez dans quelques instants.",
     "RATE_LIMIT": "Vous avez déjà soumis un avis dans les 30 derniers jours. Merci de votre participation !",
-    "LOGIN_REQUIRED": "Connectez-vous pour partager votre avis et recevoir des crédits."
+    "WIZARD_CTA_LINK": "Signalez un bug ou proposez une amélioration",
+    "WIZARD_CTA_SUFFIX": ", et gagnez jusqu'à 500 crédits."
   }
 }

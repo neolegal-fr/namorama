@@ -26,7 +26,8 @@
     "FOOTER": "Stworzone przez",
     "SECURE_ACCESS": "Bezpieczny dostęp",
     "LOGIN_REQUIRED": "Zaloguj się, aby zacząć szukać nazw domen.",
-    "ADMIN": "Administracja"
+    "ADMIN": "Administracja",
+    "FEEDBACK": "Zgłoś problem"
   },
   "PROJECTS": {
     "TITLE": "Moje Projekty",
@@ -157,5 +158,26 @@
       "CANCEL": "Anuluj",
       "BUY": "Doładuj"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Podziel się opinią — do 500 kredytów gratis",
+    "DIALOG_TITLE_REPORT": "Zgłoś problem",
+    "DIALOG_HEADLINE_REPORT": "Błąd? Strona się nie ładuje? Powiedz nam wszystko — nie gryziemy (no, prawie nie).",
+    "DIALOG_TITLE_CREDITS": "Podziel się swoimi sugestiami",
+    "DIALOG_HEADLINE_CREDITS": "Powiedz nam, jak ulepszyć Namorama, i zdobądź do 500 kredytów.",
+    "MESSAGE_LABEL": "Twoja wiadomość",
+    "MESSAGE_PLACEHOLDER_REPORT": "Opisz napotkany problem…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Czego Ci brakowało? Co byś poprawił w pierwszej kolejności?",
+    "EMAIL_LABEL": "Twój e-mail (abyśmy mogli odpowiedzieć, opcjonalne)",
+    "CONTACT_ALT": "Wolisz e-mail? Napisz do nas na",
+    "SUBMIT_BTN_REPORT": "Zgłoś",
+    "SUBMIT_BTN_CREDITS": "Wyślij i odbierz nagrodę",
+    "SUCCESS_SUMMARY": "Dziękujemy!",
+    "SUCCESS_DETAIL_REPORT": "Twoje zgłoszenie zostało odebrane. Dziękujemy za pomoc w ulepszaniu Namoramy!",
+    "SUCCESS_DETAIL_CREDITS": "Twoja opinia została wysłana. 500 kredytów zostało dodanych do Twojego konta.",
+    "ERROR_DETAIL": "Wystąpił błąd. Spróbuj ponownie za chwilę.",
+    "RATE_LIMIT": "Opinia została już przesłana w ciągu ostatnich 30 dni. Dziękujemy za uczestnictwo!",
+    "WIZARD_CTA_LINK": "Zgłoś błąd lub zaproponuj ulepszenie",
+    "WIZARD_CTA_SUFFIX": ", i zdobądź do 500 kredytów."
   }
 }

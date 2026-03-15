@@ -26,7 +26,8 @@
     "FOOTER": "Geliştiren",
     "SECURE_ACCESS": "Güvenli Erişim",
     "LOGIN_REQUIRED": "Alan adı aramaya başlamak için giriş yapın.",
-    "ADMIN": "Yönetim"
+    "ADMIN": "Yönetim",
+    "FEEDBACK": "Sorun bildir"
   },
   "PROJECTS": {
     "TITLE": "Projelerim",
@@ -157,5 +158,26 @@
       "CANCEL": "İptal",
       "BUY": "Yükle"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Geri bildirim ver — en fazla 500 ücretsiz kredi kazan",
+    "DIALOG_TITLE_REPORT": "Sorun bildir",
+    "DIALOG_HEADLINE_REPORT": "Bir hata mı? Yüklenmeyen bir sayfa mı? Her şeyi bize söyleyin — ısırmıyoruz (neredeyse).",
+    "DIALOG_TITLE_CREDITS": "Önerilerinizi paylaşın",
+    "DIALOG_HEADLINE_CREDITS": "Namorama'yı nasıl geliştirebileceğimizi söyleyin ve en fazla 500 kredi kazanın.",
+    "MESSAGE_LABEL": "Mesajınız",
+    "MESSAGE_PLACEHOLDER_REPORT": "Karşılaştığınız sorunu açıklayın…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Ne eksikti? Öncelikli olarak neyi geliştirirdiniz?",
+    "EMAIL_LABEL": "E-posta adresiniz (yanıt verebilmemiz için, isteğe bağlı)",
+    "CONTACT_ALT": "E-postayı tercih ediyor musunuz? Bize şu adresten yazın:",
+    "SUBMIT_BTN_REPORT": "Bildir",
+    "SUBMIT_BTN_CREDITS": "Gönder ve ödülümü al",
+    "SUCCESS_SUMMARY": "Teşekkürler!",
+    "SUCCESS_DETAIL_REPORT": "Bildiriminiz alındı. Namorama'yı geliştirmemize yardım ettiğiniz için teşekkürler!",
+    "SUCCESS_DETAIL_CREDITS": "Geri bildiriminiz gönderildi. Hesabınıza 500 kredi eklendi.",
+    "ERROR_DETAIL": "Bir hata oluştu. Lütfen biraz sonra tekrar deneyin.",
+    "RATE_LIMIT": "Son 30 gün içinde zaten geri bildirim gönderdınız. Katılımınız için teşekkürler!",
+    "WIZARD_CTA_LINK": "Bir hata bildirin veya iyileştirme önerin",
+    "WIZARD_CTA_SUFFIX": ", ve en fazla 500 kredi kazanın."
   }
 }

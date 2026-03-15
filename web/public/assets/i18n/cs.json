@@ -26,7 +26,8 @@
     "FOOTER": "Vyvinuto",
     "SECURE_ACCESS": "Zabezpečený přístup",
     "LOGIN_REQUIRED": "Přihlaste se a začněte hledat názvy domén.",
-    "ADMIN": "Administrace"
+    "ADMIN": "Administrace",
+    "FEEDBACK": "Nahlásit problém"
   },
   "PROJECTS": {
     "TITLE": "Moje Projekty",
@@ -157,5 +158,26 @@
       "CANCEL": "Zrušit",
       "BUY": "Dobít"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Sdílet zpětnou vazbu — až 500 kreditů zdarma",
+    "DIALOG_TITLE_REPORT": "Nahlásit problém",
+    "DIALOG_HEADLINE_REPORT": "Chyba? Stránka se nenačítá? Řekněte nám vše — nekousáme (no, skoro).",
+    "DIALOG_TITLE_CREDITS": "Sdílejte své návrhy",
+    "DIALOG_HEADLINE_CREDITS": "Řekněte nám, jak zlepšit Namorama, a získejte až 500 kreditů.",
+    "MESSAGE_LABEL": "Vaše zpráva",
+    "MESSAGE_PLACEHOLDER_REPORT": "Popište problém, se kterým jste se setkali…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Co vám chybělo? Co byste zlepšili jako první?",
+    "EMAIL_LABEL": "Váš e-mail (abychom vám mohli odpovědět, nepovinné)",
+    "CONTACT_ALT": "Preferujete e-mail? Napište nám na",
+    "SUBMIT_BTN_REPORT": "Nahlásit",
+    "SUBMIT_BTN_CREDITS": "Odeslat a získat odměnu",
+    "SUCCESS_SUMMARY": "Děkujeme!",
+    "SUCCESS_DETAIL_REPORT": "Vaše hlášení bylo přijato. Děkujeme, že nám pomáháte zlepšovat Namorama!",
+    "SUCCESS_DETAIL_CREDITS": "Vaše zpětná vazba byla odeslána. Na váš účet bylo přidáno 500 kreditů.",
+    "ERROR_DETAIL": "Došlo k chybě. Zkuste to prosím za chvíli znovu.",
+    "RATE_LIMIT": "V posledních 30 dnech jste již zpětnou vazbu odeslali. Děkujeme za vaši účast!",
+    "WIZARD_CTA_LINK": "Nahlaste chybu nebo navrhněte vylepšení",
+    "WIZARD_CTA_SUFFIX": ", a získejte až 500 kreditů."
   }
 }

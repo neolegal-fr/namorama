@@ -26,7 +26,8 @@
     "FOOTER": "Desarrollado por",
     "SECURE_ACCESS": "Acceso seguro",
     "LOGIN_REQUIRED": "Por favor inicie sesión para comenzar a buscar nombres de dominio.",
-    "ADMIN": "Administración"
+    "ADMIN": "Administración",
+    "FEEDBACK": "Reportar un problema"
   },
   "PROJECTS": {
     "TITLE": "Mis Proyectos",
@@ -157,5 +158,26 @@
       "CANCEL": "Cancelar",
       "BUY": "Recargar"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Dar mi opinión — hasta 500 créditos gratis",
+    "DIALOG_TITLE_REPORT": "Reportar un problema",
+    "DIALOG_HEADLINE_REPORT": "¿Un bug? ¿Una página que no carga? Cuéntenos todo — no mordemos (bueno, casi).",
+    "DIALOG_TITLE_CREDITS": "Comparte tus sugerencias",
+    "DIALOG_HEADLINE_CREDITS": "Díganos cómo mejorar Namorama y gane hasta 500 créditos.",
+    "MESSAGE_LABEL": "Su mensaje",
+    "MESSAGE_PLACEHOLDER_REPORT": "Describa el problema encontrado…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "¿Qué le faltó? ¿Qué mejoraría con prioridad?",
+    "EMAIL_LABEL": "Su email (para que podamos responderle, opcional)",
+    "CONTACT_ALT": "¿Prefiere el email? Escríbanos a",
+    "SUBMIT_BTN_REPORT": "Reportar",
+    "SUBMIT_BTN_CREDITS": "Enviar y obtener mi recompensa",
+    "SUCCESS_SUMMARY": "¡Gracias!",
+    "SUCCESS_DETAIL_REPORT": "Su reporte ha sido recibido. ¡Gracias por ayudarnos a mejorar Namorama!",
+    "SUCCESS_DETAIL_CREDITS": "Su opinión ha sido enviada. 500 créditos han sido añadidos a su cuenta.",
+    "ERROR_DETAIL": "Ha ocurrido un error. Inténtelo de nuevo en unos instantes.",
+    "RATE_LIMIT": "Ya ha enviado una opinión en los últimos 30 días. ¡Gracias por su participación!",
+    "WIZARD_CTA_LINK": "Reporte un bug o sugiera una mejora",
+    "WIZARD_CTA_SUFFIX": ", y gane hasta 500 créditos."
   }
 }

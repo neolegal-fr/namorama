@@ -26,7 +26,8 @@
     "FOOTER": "Kehittänyt",
     "SECURE_ACCESS": "Turvallinen pääsy",
     "LOGIN_REQUIRED": "Kirjaudu sisään aloittaaksesi verkkotunnusten etsimisen.",
-    "ADMIN": "Hallinto"
+    "ADMIN": "Hallinto",
+    "FEEDBACK": "Ilmoita ongelmasta"
   },
   "PROJECTS": {
     "TITLE": "Omat Projektit",
@@ -157,5 +158,26 @@
       "CANCEL": "Peruuta",
       "BUY": "Lataa"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Anna palautetta — ansaitse jopa 500 ilmaista krediittiä",
+    "DIALOG_TITLE_REPORT": "Ilmoita ongelmasta",
+    "DIALOG_HEADLINE_REPORT": "Bugi? Sivu ei lataudu? Kerro meille kaikki — emme pure (no, melkein emme).",
+    "DIALOG_TITLE_CREDITS": "Jaa ehdotuksesi",
+    "DIALOG_HEADLINE_CREDITS": "Kerro meille, miten parantaa Namoramaa, ja ansaitse jopa 500 krediittiä.",
+    "MESSAGE_LABEL": "Viestisi",
+    "MESSAGE_PLACEHOLDER_REPORT": "Kuvaile kohtaamasi ongelma…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Mitä kaipasit? Mitä parantaisit ensisijaisesti?",
+    "EMAIL_LABEL": "Sähköpostiosoitteesi (jotta voimme vastata, valinnainen)",
+    "CONTACT_ALT": "Haluatko mieluummin sähköpostia? Kirjoita meille osoitteeseen",
+    "SUBMIT_BTN_REPORT": "Ilmoita",
+    "SUBMIT_BTN_CREDITS": "Lähetä ja saa palkkioni",
+    "SUCCESS_SUMMARY": "Kiitos!",
+    "SUCCESS_DETAIL_REPORT": "Ilmoituksesi on vastaanotettu. Kiitos, että autat meitä parantamaan Namoramaa!",
+    "SUCCESS_DETAIL_CREDITS": "Palautteesi on lähetetty. 500 krediittiä on lisätty tilillesi.",
+    "ERROR_DETAIL": "Tapahtui virhe. Yritä uudelleen hetken kuluttua.",
+    "RATE_LIMIT": "Olet jo lähettänyt palautetta viimeisten 30 päivän aikana. Kiitos osallistumisestasi!",
+    "WIZARD_CTA_LINK": "Ilmoita bugista tai ehdota parannusta",
+    "WIZARD_CTA_SUFFIX": ", ja ansaitse jopa 500 krediittiä."
   }
 }

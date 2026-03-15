@@ -26,7 +26,8 @@
     "FOOTER": "開発者",
     "SECURE_ACCESS": "セキュアアクセス",
     "LOGIN_REQUIRED": "ドメイン名を検索するにはログインしてください。",
-    "ADMIN": "管理"
+    "ADMIN": "管理",
+    "FEEDBACK": "問題を報告する"
   },
   "PROJECTS": {
     "TITLE": "マイプロジェクト",
@@ -157,5 +158,26 @@
       "CANCEL": "キャンセル",
       "BUY": "チャージ"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "フィードバックを送る — 最大500クレジット無料でゲット",
+    "DIALOG_TITLE_REPORT": "問題を報告する",
+    "DIALOG_HEADLINE_REPORT": "バグですか？ページが読み込まれない？何でも教えてください — 噛みませんから（まあ、ほぼ）。",
+    "DIALOG_TITLE_CREDITS": "ご意見をシェアする",
+    "DIALOG_HEADLINE_CREDITS": "Namoramaの改善点を教えてください。最大500クレジットをプレゼントします。",
+    "MESSAGE_LABEL": "メッセージ",
+    "MESSAGE_PLACEHOLDER_REPORT": "発生した問題を説明してください…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "何が足りなかったですか？優先的に改善してほしいことは？",
+    "EMAIL_LABEL": "メールアドレス（返信のために、任意）",
+    "CONTACT_ALT": "メールを希望の場合はこちらへ",
+    "SUBMIT_BTN_REPORT": "報告する",
+    "SUBMIT_BTN_CREDITS": "送信して報酬を受け取る",
+    "SUCCESS_SUMMARY": "ありがとうございます！",
+    "SUCCESS_DETAIL_REPORT": "ご報告を受け取りました。Namoramaの改善にご協力いただきありがとうございます！",
+    "SUCCESS_DETAIL_CREDITS": "フィードバックを送信しました。500クレジットがアカウントに追加されました。",
+    "ERROR_DETAIL": "エラーが発生しました。しばらくしてから再度お試しください。",
+    "RATE_LIMIT": "過去30日以内にすでにフィードバックを送信済みです。ご参加いただきありがとうございます！",
+    "WIZARD_CTA_LINK": "バグを報告する、または改善を提案する",
+    "WIZARD_CTA_SUFFIX": "で最大500クレジットを獲得しましょう。"
   }
 }

@@ -26,7 +26,8 @@
     "FOOTER": "Utvecklad av",
     "SECURE_ACCESS": "Säker åtkomst",
     "LOGIN_REQUIRED": "Logga in för att börja söka efter domännamn.",
-    "ADMIN": "Administration"
+    "ADMIN": "Administration",
+    "FEEDBACK": "Rapportera ett problem"
   },
   "PROJECTS": {
     "TITLE": "Mina Projekt",
@@ -157,5 +158,26 @@
       "CANCEL": "Avbryt",
       "BUY": "Fyll på"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Ge feedback — tjäna upp till 500 gratispoäng",
+    "DIALOG_TITLE_REPORT": "Rapportera ett problem",
+    "DIALOG_HEADLINE_REPORT": "En bugg? En sida som inte laddar? Berätta allt för oss — vi biter inte (nästan inte).",
+    "DIALOG_TITLE_CREDITS": "Dela dina förslag",
+    "DIALOG_HEADLINE_CREDITS": "Berätta hur vi kan förbättra Namorama och tjäna upp till 500 poäng.",
+    "MESSAGE_LABEL": "Ditt meddelande",
+    "MESSAGE_PLACEHOLDER_REPORT": "Beskriv problemet du stötte på…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Vad saknades? Vad skulle du prioritera att förbättra?",
+    "EMAIL_LABEL": "Din e-post (så att vi kan svara, valfritt)",
+    "CONTACT_ALT": "Föredrar du e-post? Skriv till oss på",
+    "SUBMIT_BTN_REPORT": "Rapportera",
+    "SUBMIT_BTN_CREDITS": "Skicka och få min belöning",
+    "SUCCESS_SUMMARY": "Tack!",
+    "SUCCESS_DETAIL_REPORT": "Din rapport har mottagits. Tack för att du hjälper oss förbättra Namorama!",
+    "SUCCESS_DETAIL_CREDITS": "Din feedback har skickats. 500 poäng har lagts till ditt konto.",
+    "ERROR_DETAIL": "Något gick fel. Försök igen om ett ögonblick.",
+    "RATE_LIMIT": "Du har redan skickat in feedback de senaste 30 dagarna. Tack för ditt bidrag!",
+    "WIZARD_CTA_LINK": "Rapportera en bugg eller föreslå en förbättring",
+    "WIZARD_CTA_SUFFIX": ", och tjäna upp till 500 poäng."
   }
 }

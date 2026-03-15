@@ -26,7 +26,8 @@
     "FOOTER": "Dezvoltat de",
     "SECURE_ACCESS": "Acces securizat",
     "LOGIN_REQUIRED": "Conectează-te pentru a începe căutarea numelor de domeniu.",
-    "ADMIN": "Administrare"
+    "ADMIN": "Administrare",
+    "FEEDBACK": "Raportează o problemă"
   },
   "PROJECTS": {
     "TITLE": "Proiectele Mele",
@@ -157,5 +158,26 @@
       "CANCEL": "Anulează",
       "BUY": "Reîncarcă"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Dă-mi părerea — până la 500 credite cadou",
+    "DIALOG_TITLE_REPORT": "Raportează o problemă",
+    "DIALOG_HEADLINE_REPORT": "Un bug? O pagină care nu se încarcă? Spune-ne tot — nu mușcăm (aproape).",
+    "DIALOG_TITLE_CREDITS": "Împărtășește-ți sugestiile",
+    "DIALOG_HEADLINE_CREDITS": "Spune-ne cum să îmbunătățim Namorama și câștigă până la 500 credite.",
+    "MESSAGE_LABEL": "Mesajul tău",
+    "MESSAGE_PLACEHOLDER_REPORT": "Descrie problema întâmpinată…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Ce ți-a lipsit? Ce ai îmbunătăți cu prioritate?",
+    "EMAIL_LABEL": "Emailul tău (pentru a-ți putea răspunde, opțional)",
+    "CONTACT_ALT": "Preferi emailul? Scrie-ne la",
+    "SUBMIT_BTN_REPORT": "Raportează",
+    "SUBMIT_BTN_CREDITS": "Trimite și primește recompensa mea",
+    "SUCCESS_SUMMARY": "Mulțumim!",
+    "SUCCESS_DETAIL_REPORT": "Raportul tău a fost primit. Mulțumim că ne ajuți să îmbunătățim Namorama!",
+    "SUCCESS_DETAIL_CREDITS": "Opinia ta a fost trimisă. 500 credite au fost adăugate în contul tău.",
+    "ERROR_DETAIL": "A apărut o eroare. Încearcă din nou în câteva momente.",
+    "RATE_LIMIT": "Ai trimis deja o opinie în ultimele 30 de zile. Mulțumim pentru participare!",
+    "WIZARD_CTA_LINK": "Raportează un bug sau sugerează o îmbunătățire",
+    "WIZARD_CTA_SUFFIX": ", și câștigă până la 500 credite."
   }
 }

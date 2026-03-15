@@ -26,7 +26,8 @@
     "FOOTER": "Fejlesztette",
     "SECURE_ACCESS": "Biztonságos hozzáférés",
     "LOGIN_REQUIRED": "Jelentkezzen be a domain nevek kereséséhez.",
-    "ADMIN": "Adminisztráció"
+    "ADMIN": "Adminisztráció",
+    "FEEDBACK": "Probléma jelentése"
   },
   "PROJECTS": {
     "TITLE": "Saját Projektek",
@@ -157,5 +158,26 @@
       "CANCEL": "Mégse",
       "BUY": "Feltöltés"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Véleményem megosztása — akár 500 ingyenes kredit",
+    "DIALOG_TITLE_REPORT": "Probléma jelentése",
+    "DIALOG_HEADLINE_REPORT": "Hiba? Nem töltődik be az oldal? Mondjon el mindent — nem harapunk (hát, majdnem).",
+    "DIALOG_TITLE_CREDITS": "Ossza meg javaslatait",
+    "DIALOG_HEADLINE_CREDITS": "Mondja el, hogyan javíthatnánk a Namoramát, és nyerjen akár 500 kreditet.",
+    "MESSAGE_LABEL": "Az üzenete",
+    "MESSAGE_PLACEHOLDER_REPORT": "Írja le a tapasztalt problémát…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Mi hiányzott? Mit javítana elsőként?",
+    "EMAIL_LABEL": "E-mail-cím (hogy válaszolhassunk, opcionális)",
+    "CONTACT_ALT": "Inkább e-mailt szeretne? Írjon nekünk a",
+    "SUBMIT_BTN_REPORT": "Jelentés",
+    "SUBMIT_BTN_CREDITS": "Küldés és jutalmam megszerzése",
+    "SUCCESS_SUMMARY": "Köszönjük!",
+    "SUCCESS_DETAIL_REPORT": "Bejelentése megérkezett. Köszönjük, hogy segít javítani a Namoramát!",
+    "SUCCESS_DETAIL_CREDITS": "Véleménye elküldve. 500 kredit hozzáadva a fiókjához.",
+    "ERROR_DETAIL": "Hiba történt. Kérjük, próbálja újra egy pillanat múlva.",
+    "RATE_LIMIT": "Az elmúlt 30 napban már küldött visszajelzést. Köszönjük a részvételét!",
+    "WIZARD_CTA_LINK": "Jelentsen hibát vagy javasoljon fejlesztést",
+    "WIZARD_CTA_SUFFIX": ", és nyerjen akár 500 kreditet."
   }
 }

@@ -6,9 +6,10 @@ import { CreditAdjustment } from './entities/credit-adjustment.entity';
 import { User } from '../users/entities/user.entity';
 import { Project } from '../projects/entities/project.entity';
 import { DomainSuggestion } from '../projects/entities/domain-suggestion.entity';
+import { FeedbackModule } from '../feedback/feedback.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([CreditAdjustment, User, Project, DomainSuggestion])],
+  imports: [TypeOrmModule.forFeature([CreditAdjustment, User, Project, DomainSuggestion]), FeedbackModule],
   controllers: [AdminController],
   providers: [AdminService],
 })

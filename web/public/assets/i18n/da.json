@@ -26,7 +26,8 @@
     "FOOTER": "Udviklet af",
     "SECURE_ACCESS": "Sikker adgang",
     "LOGIN_REQUIRED": "Log ind for at begynde at søge efter domænenavne.",
-    "ADMIN": "Administration"
+    "ADMIN": "Administration",
+    "FEEDBACK": "Rapporter et problem"
   },
   "PROJECTS": {
     "TITLE": "Mine Projekter",
@@ -157,5 +158,26 @@
       "CANCEL": "Annuller",
       "BUY": "Opfyld"
     }
+  },
+  "FEEDBACK": {
+    "MENU_ITEM": "Giv feedback — tjen op til 500 gratis kreditter",
+    "DIALOG_TITLE_REPORT": "Rapporter et problem",
+    "DIALOG_HEADLINE_REPORT": "En fejl? En side der ikke loader? Fortæl os det hele — vi bider ikke (næsten ikke).",
+    "DIALOG_TITLE_CREDITS": "Del din feedback",
+    "DIALOG_HEADLINE_CREDITS": "Fortæl os, hvordan vi kan forbedre Namorama, og tjen op til 500 kreditter.",
+    "MESSAGE_LABEL": "Din besked",
+    "MESSAGE_PLACEHOLDER_REPORT": "Beskriv det problem, du har oplevet…",
+    "MESSAGE_PLACEHOLDER_CREDITS": "Hvad manglede du? Hvad ville du prioritere at forbedre?",
+    "EMAIL_LABEL": "Din e-mail (så vi kan svare dig, valgfrit)",
+    "CONTACT_ALT": "Foretrækker du e-mail? Skriv til os på",
+    "SUBMIT_BTN_REPORT": "Rapporter",
+    "SUBMIT_BTN_CREDITS": "Send og modtag min belønning",
+    "SUCCESS_SUMMARY": "Tak!",
+    "SUCCESS_DETAIL_REPORT": "Din rapport er modtaget. Tak fordi du hjælper os med at forbedre Namorama!",
+    "SUCCESS_DETAIL_CREDITS": "Din feedback er sendt. 500 kreditter er blevet tilføjet til din konto.",
+    "ERROR_DETAIL": "Noget gik galt. Prøv igen om et øjeblik.",
+    "RATE_LIMIT": "Du har allerede indsendt feedback i løbet af de sidste 30 dage. Tak for dit bidrag!",
+    "WIZARD_CTA_LINK": "Rapporter en fejl eller foreslå en forbedring",
+    "WIZARD_CTA_SUFFIX": ", og tjen op til 500 kreditter."
   }
 }
