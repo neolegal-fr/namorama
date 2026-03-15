@@ -1,11 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { MatchMode } from './dto/search-domains.dto';
 
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
+
+const DOMAIN_REGEX = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9-]{1,61})+$/;
+
+function validateDomain(domain: string): void {
+  if (!DOMAIN_REGEX.test(domain)) {
+    throw new BadRequestException(`Invalid domain: ${domain}`);
+  }
+}
 
 @Injectable()
 export class DomainService {
@@ -184,6 +192,7 @@ Domain names referencing public domain cultural works, characters, places, or fo
       const parsed = JSON.parse(content);
       const items: { name: string; style?: string }[] = parsed.names || [];
 
+      const CLEANED_NAME_REGEX = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
       return items
         .map(item => {
           const style = activeStyles.includes(item.style ?? '') ? (item.style ?? 'standard') : 'standard';
@@ -192,7 +201,7 @@ Domain names referencing public domain cultural works, characters, places, or fo
             : item.name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').replace(/-{2,}/g, '-');
           return { name: cleaned, style };
         })
-        .filter(item => item.name.length > 3);
+        .filter(item => item.name.length > 3 && item.name.length <= 63 && CLEANED_NAME_REGEX.test(item.name));
     } catch (error) {
       this.logger.error('Erreur lors de la génération des noms:', error);
       return [];
@@ -272,8 +281,9 @@ ${langInstruction}`;
   }
 
   async isDomainAvailable(domain: string): Promise<boolean> {
+    validateDomain(domain);
     try {
-      const { stdout } = await execAsync(`whois ${domain}`, { timeout: 10000 });
+      const { stdout } = await execFileAsync('whois', [domain], { timeout: 10000 });
       const output = stdout.toLowerCase();
 
       // Check "available" patterns first — some TLDs (.io, .co, etc.) include

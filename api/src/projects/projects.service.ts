@@ -97,9 +97,17 @@ export class ProjectsService {
     await this.suggestionsRepository.update(id, { analysis });
   }
 
-  async updateSuggestionsAvailability(updates: { id: string; availability: Record<string, boolean> }[]): Promise<void> {
+  async updateSuggestionsAvailability(updates: { id: string; availability: Record<string, boolean> }[], user: User): Promise<void> {
     await Promise.all(
-      updates.map(({ id, availability }) => this.suggestionsRepository.update(id, { availability }))
+      updates.map(async ({ id, availability }) => {
+        // Verify the suggestion belongs to the authenticated user before updating
+        const suggestion = await this.suggestionsRepository.findOne({
+          where: { id, project: { user: { id: user.id } } },
+          relations: ['project', 'project.user'],
+        });
+        if (!suggestion) return; // silently skip suggestions that don't belong to the user
+        await this.suggestionsRepository.update(id, { availability });
+      })
     );
   }
 
@@ -140,7 +148,11 @@ export class ProjectsService {
 
   async update(id: string, user: User, data: Partial<Project>): Promise<Project> {
     const project = await this.findOne(id, user);
-    Object.assign(project, data);
+    if (data.name !== undefined) project.name = data.name;
+    if (data.description !== undefined) project.description = data.description;
+    if (data.keywords !== undefined) project.keywords = data.keywords;
+    if (data.extensions !== undefined) project.extensions = data.extensions;
+    if (data.matchMode !== undefined) project.matchMode = data.matchMode;
     return this.projectsRepository.save(project);
   }
 

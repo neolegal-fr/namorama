@@ -567,6 +567,15 @@ export class WizardComponent implements OnInit {
     return this.domains().find(d => d.name === name) ?? null;
   }
 
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   parseAnalysisScore(analysis: string | null): number {
     if (!analysis) return 0;
     try {
@@ -619,13 +628,14 @@ export class WizardComponent implements OnInit {
 
         const cells = criteria.map(([key, label]) => {
           const score: number = parsed.scores[key] ?? 0;
-          const comment: string = parsed.comments[key] ?? '';
+          const comment: string = this.escapeHtml(parsed.comments[key] ?? '');
+          const safeLabel = this.escapeHtml(label);
           const color = scoreColor(score);
           const pct = (score / 5) * 100;
           return `
             <div style="min-width:0">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.2rem">
-                <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280">${label}</span>
+                <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280">${safeLabel}</span>
                 <span style="font-size:0.78rem;font-weight:800;color:${color}">${score}/5</span>
               </div>
               <div style="height:4px;background:#e5e7eb;border-radius:9999px;margin-bottom:0.3rem">
@@ -637,17 +647,20 @@ export class WizardComponent implements OnInit {
 
         const grid = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.75rem 1.25rem">${cells}</div>`;
 
-        const footer = (parsed.strengths || parsed.watchout) ? `
+        const safeStrengths = parsed.strengths ? this.escapeHtml(parsed.strengths) : '';
+        const safeWatchout = parsed.watchout ? this.escapeHtml(parsed.watchout) : '';
+        const footer = (safeStrengths || safeWatchout) ? `
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;border-top:1px solid #e5e7eb;margin-top:0.75rem;padding-top:0.625rem">
-            ${parsed.strengths ? `<div style="font-size:0.76rem;color:#374151;line-height:1.5"><span style="font-weight:700">✅ Points forts</span><br>${parsed.strengths}</div>` : ''}
-            ${parsed.watchout  ? `<div style="font-size:0.76rem;color:#374151;line-height:1.5"><span style="font-weight:700">⚠️ Attention</span><br>${parsed.watchout}</div>`  : ''}
+            ${safeStrengths ? `<div style="font-size:0.76rem;color:#374151;line-height:1.5"><span style="font-weight:700">✅ Points forts</span><br>${safeStrengths}</div>` : ''}
+            ${safeWatchout  ? `<div style="font-size:0.76rem;color:#374151;line-height:1.5"><span style="font-weight:700">⚠️ Attention</span><br>${safeWatchout}</div>`  : ''}
           </div>` : '';
 
         return this.sanitizer.bypassSecurityTrustHtml(grid + footer);
       }
     } catch {}
-    // Ancien format texte
-    const html = analysis
+    // Ancien format texte — échapper d'abord, puis restaurer le balisage autorisé
+    const escaped = this.escapeHtml(analysis);
+    const html = escaped
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       .replace(/★/g, '<span style="color:#f59e0b">★</span>')
       .replace(/☆/g, '<span style="color:#d1d5db">☆</span>')

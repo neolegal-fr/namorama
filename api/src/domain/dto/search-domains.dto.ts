@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsArray, IsEnum, IsOptional, IsBoolean, MinLength, MaxLength, ArrayMinSize, ArrayMaxSize, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsArray, IsEnum, IsOptional, IsBoolean, MinLength, MaxLength, ArrayMinSize, ArrayMaxSize, Matches, IsIn } from 'class-validator';
 
 export enum MatchMode {
   ANY = 'any',
@@ -9,7 +9,7 @@ export class SearchDomainsDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(10, { message: 'La description doit faire au moins 10 caractères' })
-  @MaxLength(1000, { message: 'La description ne peut pas dépasser 1000 caractères' })
+  @MaxLength(2000, { message: 'La description ne peut pas dépasser 2000 caractères' })
   description: string;
 
   @IsArray()
@@ -17,6 +17,7 @@ export class SearchDomainsDto {
   @ArrayMaxSize(50, { message: 'Maximum 50 mots-clés autorisés' })
   @IsString({ each: true })
   @MaxLength(100, { each: true, message: 'Chaque mot-clé ne peut pas dépasser 100 caractères' })
+  @Matches(/^[\p{L}\p{N}\s\-]{1,100}$/u, { each: true, message: 'Les mots-clés ne peuvent contenir que des lettres, chiffres, espaces et tirets' })
   keywords: string[];
 
   @IsArray()
@@ -40,8 +41,8 @@ export class SearchDomainsDto {
   @IsOptional()
   projectName?: string;
 
-  @IsString()
   @IsOptional()
+  @IsIn(['cs','da','de','en','es','fi','fr','hu','it','ja','nl','no','pl','pt','ro','ru','sv','tr','zh'])
   locale?: string;
 
   @IsArray()

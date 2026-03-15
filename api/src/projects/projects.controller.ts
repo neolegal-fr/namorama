@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Delete, Post, Logger, Body } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Delete, Post, Logger, Body, ParseUUIDPipe } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { AuthenticatedUser } from 'nest-keycloak-connect';
 import { UsersService } from '../users/users.service';
@@ -19,26 +19,26 @@ export class ProjectsController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @AuthenticatedUser() keycloakUser: any) {
+  async findOne(@Param('id', new ParseUUIDPipe()) id: string, @AuthenticatedUser() keycloakUser: any) {
     const user = await this.usersService.findOrCreate(keycloakUser.sub);
     return this.projectsService.findOne(id, user);
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @AuthenticatedUser() keycloakUser: any, @Body() data: any) {
+  async update(@Param('id', new ParseUUIDPipe()) id: string, @AuthenticatedUser() keycloakUser: any, @Body() data: any) {
     const user = await this.usersService.findOrCreate(keycloakUser.sub);
     return this.projectsService.update(id, user, data);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string, @AuthenticatedUser() keycloakUser: any) {
+  async remove(@Param('id', new ParseUUIDPipe()) id: string, @AuthenticatedUser() keycloakUser: any) {
     const user = await this.usersService.findOrCreate(keycloakUser.sub);
     return this.projectsService.remove(id, user);
   }
 
   @Post(':id/suggestions')
   async addSuggestion(
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @AuthenticatedUser() keycloakUser: any,
     @Body() body: { domainName: string; availability: Record<string, boolean> },
   ) {
@@ -48,14 +48,16 @@ export class ProjectsController {
 
   @Patch('suggestions/availability')
   async updateAvailability(
+    @AuthenticatedUser() keycloakUser: any,
     @Body() body: { updates: { id: string; availability: Record<string, boolean> }[] },
   ) {
-    await this.projectsService.updateSuggestionsAvailability(body.updates);
+    const user = await this.usersService.findOrCreate(keycloakUser.sub);
+    await this.projectsService.updateSuggestionsAvailability(body.updates, user);
     return { ok: true };
   }
 
   @Patch('suggestions/:id/favorite')
-  async toggleFavorite(@Param('id') id: string, @AuthenticatedUser() keycloakUser: any) {
+  async toggleFavorite(@Param('id', new ParseUUIDPipe()) id: string, @AuthenticatedUser() keycloakUser: any) {
     const user = await this.usersService.findOrCreate(keycloakUser.sub);
     const isFavorite = await this.projectsService.toggleFavorite(id, user);
     return { isFavorite };

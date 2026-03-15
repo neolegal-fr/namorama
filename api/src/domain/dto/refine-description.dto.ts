@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, MinLength, MaxLength, IsIn } from 'class-validator';
 
 export class RefineDescriptionDto {
   @IsString()
@@ -7,7 +7,7 @@ export class RefineDescriptionDto {
   @MaxLength(2000, { message: 'La description ne peut pas dépasser 2000 caractères' })
   description: string;
 
-  @IsString()
   @IsOptional()
+  @IsIn(['cs','da','de','en','es','fi','fr','hu','it','ja','nl','no','pl','pt','ro','ru','sv','tr','zh'])
   locale?: string; // ex: 'fr', 'de', 'es' — null/absent = international
 }
