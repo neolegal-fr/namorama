@@ -30,6 +30,10 @@ export class User {
   @Column({ nullable: true })
   stripeCustomerId: string;
 
+  /** Locale préférée (ex: 'fr', 'en'), peuplée depuis le token Keycloak */
+  @Column({ nullable: true })
+  locale: string;
+
   /** Dernière date de reset des crédits gratuits (lazy reset mensuel) */
   @Column({ nullable: true, type: 'datetime' })
   lastFreeReset: Date | null;

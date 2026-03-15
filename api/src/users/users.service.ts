@@ -27,7 +27,7 @@ export class UsersService {
     }
   }
 
-  async findOrCreate(keycloakId: string, email?: string, firstName?: string, lastName?: string): Promise<User> {
+  async findOrCreate(keycloakId: string, email?: string, firstName?: string, lastName?: string, locale?: string): Promise<User> {
     let user = await this.usersRepository.findOne({ where: { keycloakId } });
 
     if (!user) {
@@ -36,6 +36,7 @@ export class UsersService {
         email,
         firstName,
         lastName,
+        locale,
         credits: FREE_MONTHLY_QUOTA,
         extraCredits: 0,
         lastFreeReset: new Date(),
@@ -48,6 +49,7 @@ export class UsersService {
       if (email) user.email = email;
       if (firstName) user.firstName = firstName;
       if (lastName) user.lastName = lastName;
+      if (locale) user.locale = locale;
     }
 
     user.lastLogin = new Date();
@@ -97,13 +99,13 @@ export class UsersService {
     return user.totalCredits;
   }
 
-  /** Ajoute des crédits pack (achat ponctuel, permanents) */
-  async addExtraCredits(keycloakId: string, amount: number, manager?: EntityManager): Promise<void> {
+  /** Ajoute des crédits pack (achat ponctuel, permanents). Retourne le User mis à jour. */
+  async addExtraCredits(keycloakId: string, amount: number, manager?: EntityManager): Promise<User | null> {
     const repo = manager ? manager.getRepository(User) : this.usersRepository;
     const user = await repo.findOne({ where: { keycloakId } });
-    if (!user) return;
+    if (!user) return null;
     user.extraCredits += amount;
-    await repo.save(user);
+    return repo.save(user);
   }
 
   async setStripeCustomerId(keycloakId: string, stripeCustomerId: string): Promise<void> {

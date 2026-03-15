@@ -41,9 +41,23 @@ export class FeedbackService {
     if (feedback.rejected) throw new BadRequestException('Feedback already rejected');
     if (!feedback.keycloakId) throw new BadRequestException('Anonymous feedback — no user to reward');
 
-    await this.usersService.addExtraCredits(feedback.keycloakId, CREDITS_REWARD);
+    const user = await this.usersService.addExtraCredits(feedback.keycloakId, CREDITS_REWARD);
     feedback.creditAwarded = true;
-    return this.feedbackRepo.save(feedback);
+    const saved = await this.feedbackRepo.save(feedback);
+
+    // Envoie le mail de récompense si on a une adresse de destination
+    const rewardTo = user?.email || feedback.email;
+    if (rewardTo && user) {
+      this.mailService.sendRewardEmail({
+        to: rewardTo,
+        firstName: user.firstName ?? null,
+        locale: user.locale ?? null,
+        creditsAwarded: CREDITS_REWARD,
+        totalCredits: user.totalCredits,
+      }).catch(() => {/* already logged in MailService */});
+    }
+
+    return saved;
   }
 
   async reject(feedbackId: string): Promise<Feedback> {

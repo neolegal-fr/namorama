@@ -13,6 +13,7 @@ export class UsersController {
       keycloakUser.email,
       keycloakUser.given_name,
       keycloakUser.family_name,
+      keycloakUser.locale,
     );
     return {
       keycloakId: user.keycloakId,
@@ -35,6 +36,7 @@ export class UsersController {
       keycloakUser.email,
       keycloakUser.given_name,
       keycloakUser.family_name,
+      keycloakUser.locale,
     );
     return {
       credits: user.totalCredits,
