@@ -1,0 +1,466 @@
+/* ================================================
+   NameSpotter — Keycloak Login Theme
+   Sélecteurs vérifiés sur le HTML réel de KC 22
+   ================================================ */
+
+/* === Variables PatternFly 4 ==================== */
+:root {
+    --pf-global--primary-color--100: #10b981;
+    --pf-global--primary-color--200: #059669;
+    --pf-global--primary-color--300: #047857;
+    --pf-global--BackgroundColor--100: #f3f4f6;
+    --pf-global--BackgroundColor--200: #ffffff;
+    --pf-global--Color--100: #111827;
+    --pf-global--Color--200: #374151;
+    --pf-global--BorderColor--100: #d1d5db;
+    --pf-global--BorderRadius--sm: 0.5rem;
+    --pf-global--FontFamily--sans-serif: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --pf-global--FontSize--md: 0.875rem;
+    --pf-global--spacer--md: 1rem;
+}
+
+/* === Reset & fond ==============================
+   html.login-pf est la racine du thème keycloak.
+   C'est là que le background-image est appliqué. */
+html,
+html.login-pf,
+body,
+.login-pf-page {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #f3f4f6 !important;
+    background-image: none !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* === Header / logo bar ========================= */
+#kc-header {
+    background: #ffffff !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+    padding: 0 1.5rem !important;
+    margin: 0 !important;
+    min-height: 4rem !important;
+    display: flex !important;
+    align-items: center !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+#kc-header-wrapper {
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+    text-shadow: none !important;
+    letter-spacing: -0.01em !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    background: transparent !important;
+}
+
+#kc-header-wrapper::before {
+    content: '';
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex-shrink: 0;
+    background-color: #10b981;
+    border-radius: 50%;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13l-3 7 7-3 3-7-7 3z'/%3E%3C/svg%3E");
+    background-size: 1rem;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+/* === Conteneur de la carte ===================== */
+.login-pf-page {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100vh !important;
+}
+
+.card-pf {
+    flex: 1 !important;
+    max-width: 26rem !important;
+    width: 100% !important;
+    margin: 2rem auto !important;
+    background: #ffffff !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.75rem !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07),
+                0 2px 4px -1px rgba(0, 0, 0, 0.04) !important;
+    padding: 2rem !important;
+    background-image: none !important;
+}
+
+/* === Titre ===================================== */
+.login-pf-header {
+    margin-bottom: 1.5rem !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+#kc-page-title {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    text-align: center !important;
+}
+
+/* === Labels (classe réelle : pf-c-form__label) = */
+.pf-c-form__label,
+.pf-c-form__label-text {
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    color: #374151 !important;
+}
+
+/* === Inputs (classe réelle : pf-c-form-control) = */
+.pf-c-form-control,
+input.pf-c-form-control {
+    border: 1px solid #d1d5db !important;
+    border-radius: 0.5rem !important;
+    padding: 0.625rem 0.875rem !important;
+    font-size: 0.875rem !important;
+    color: #111827 !important;
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    height: auto !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.pf-c-form-control:focus,
+input.pf-c-form-control:focus {
+    border-color: #10b981 !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
+    outline: none !important;
+    background-color: #ffffff !important;
+}
+
+/* Autofill navigateur */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+    -webkit-text-fill-color: #111827 !important;
+}
+
+/* === Zone "Remember me" + "Forgot password"
+   Classe réelle : .login-pf-settings              */
+.login-pf-settings,
+#kc-form-options,
+.form-group.login-pf-settings {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-bottom: 0.75rem !important;
+}
+
+/* === Bouton Sign In
+   Classe réelle : pf-c-button pf-m-primary        */
+.pf-c-button.pf-m-primary,
+#kc-login {
+    background-color: #10b981 !important;
+    border-color: #10b981 !important;
+    border-radius: 0.5rem !important;
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+    padding: 0.625rem 1rem !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    transition: background-color 0.15s ease !important;
+    color: #ffffff !important;
+}
+
+.pf-c-button.pf-m-primary:hover,
+#kc-login:hover {
+    background-color: #059669 !important;
+    border-color: #059669 !important;
+}
+
+.pf-c-button.pf-m-primary:focus,
+#kc-login:focus {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+    outline: none !important;
+}
+
+/* === Section "New user? Register"
+   Classe réelle : .login-pf-signup / #kc-info     */
+#kc-info,
+.login-pf-signup,
+#kc-registration-container,
+#kc-registration,
+#kc-info-wrapper {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    border: none !important;
+}
+
+#kc-info,
+.login-pf-signup {
+    border-top: 1px solid #e5e7eb !important;
+    margin-top: 1.25rem !important;
+    padding-top: 1.25rem !important;
+    text-align: center !important;
+    font-size: 0.875rem !important;
+    color: #6b7280 !important;
+}
+
+/* === Liens =================================== */
+a {
+    color: #10b981 !important;
+    text-decoration: none !important;
+}
+
+a:hover {
+    color: #059669 !important;
+    text-decoration: underline !important;
+}
+
+/* === Checkbox ================================ */
+#rememberMe {
+    accent-color: #10b981;
+}
+
+/* === Espacement form groups ================== */
+.form-group {
+    margin-bottom: 1rem !important;
+}
+
+#kc-form-buttons {
+    margin-top: 1.25rem !important;
+}
+
+/* === Alertes ================================= */
+.pf-c-alert,
+.alert {
+    border-radius: 0.5rem !important;
+    border: 1px solid !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+    margin-bottom: 1rem !important;
+    background-image: none !important;
+}
+
+.alert-error,
+.pf-m-danger {
+    background-color: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #dc2626 !important;
+}
+
+.alert-warning {
+    background-color: #fffbeb !important;
+    border-color: #fde68a !important;
+    color: #d97706 !important;
+}
+
+.alert-success {
+    background-color: #f0fdf4 !important;
+    border-color: #bbf7d0 !important;
+    color: #16a34a !important;
+}
+
+/* === Page d'erreur ============================= */
+#kc-error-message {
+    text-align: center !important;
+    padding: 0.5rem 0 !important;
+}
+
+.instruction {
+    font-size: 0.9375rem !important;
+    color: #374151 !important;
+    line-height: 1.6 !important;
+    margin-bottom: 1.25rem !important;
+}
+
+#backToApplication {
+    display: inline-block !important;
+    margin-top: 0.5rem !important;
+    padding: 0.625rem 1.25rem !important;
+    background-color: #10b981 !important;
+    color: #ffffff !important;
+    border-radius: 0.5rem !important;
+    font-weight: 500 !important;
+    font-size: 0.875rem !important;
+    text-decoration: none !important;
+    transition: background-color 0.15s ease !important;
+}
+
+#backToApplication:hover {
+    background-color: #059669 !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+}
+
+/* === Sélecteur de langue Keycloak (masqué)
+   La langue est contrôlée par l'app Angular via ui_locales.
+   Le picker natif Keycloak est injecté dans #kc-header-wrapper
+   et casse le layout — on le cache. =============== */
+#kc-locale,
+#kc-locale-wrapper,
+#kc-locale-dropdown {
+    display: none !important;
+}
+
+/* === Page reset password ======================== */
+#kc-reset-password-form .pf-c-form__group:last-child {
+    margin-top: 0.25rem !important;
+}
+
+/* === Page vérification email =================== */
+#kc-info-message {
+    text-align: center !important;
+}
+
+#kc-info-message .instruction {
+    margin-bottom: 1.5rem !important;
+}
+
+/* === SSO providers FIRST ========================
+   On inverse l'ordre : SSO avant formulaire.      */
+#kc-content-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+#kc-social-providers {
+    order: -1 !important;
+    margin-bottom: 0 !important;
+}
+
+#kc-form {
+    order: 0 !important;
+    position: relative !important;
+    border-top: 1px solid #e5e7eb !important;
+    margin-top: 1rem !important;
+    padding-top: 1.5rem !important;
+}
+
+/* Pastille "ou" centrée sur le séparateur */
+#kc-form::before {
+    content: 'ou' !important;
+    position: absolute !important;
+    top: -0.65rem !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: #ffffff !important;
+    padding: 0 0.625rem !important;
+    font-size: 0.75rem !important;
+    color: #9ca3af !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.05em !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+}
+
+/* Masquer le hr dans la section SSO */
+#kc-social-providers > hr {
+    display: none !important;
+}
+
+/* === Label "Se connecter avec" =================
+   On le garde mais on harmonise la typographie.  */
+#kc-social-providers > h2 {
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    color: #6b7280 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.07em !important;
+    text-align: center !important;
+    margin: 0 0 0.875rem 0 !important;
+    padding: 0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+    background: none !important;
+    border: none !important;
+    line-height: 1 !important;
+}
+
+/* === Style des boutons SSO ===================== */
+.kc-social-links {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.kc-social-item {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.625rem !important;
+    min-height: 2.75rem !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 0.5rem !important;
+    background: #ffffff !important;
+    color: #111827 !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+    text-decoration: none !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease !important;
+    padding: 0.5rem 1rem !important;
+    margin-bottom: 0.5rem !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+
+.kc-social-item:hover {
+    background-color: #f9fafb !important;
+    border-color: #9ca3af !important;
+    color: #111827 !important;
+    text-decoration: none !important;
+}
+
+/* === Logo Microsoft ============================
+   KC n'injecte pas d'icône pour Microsoft,
+   on la crée via ::before sur le <a>.            */
+#social-Microsoft::before {
+    content: '' !important;
+    display: block !important;
+    width: 1.125rem !important;
+    height: 1.125rem !important;
+    flex-shrink: 0 !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 21 21'%3E%3Crect x='0' y='0' width='10' height='10' fill='%23f25022'/%3E%3Crect x='11' y='0' width='10' height='10' fill='%237fba00'/%3E%3Crect x='0' y='11' width='10' height='10' fill='%2300a4ef'/%3E%3Crect x='11' y='11' width='10' height='10' fill='%23ffb900'/%3E%3C/svg%3E") !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+}
+
+/* === Logo Google ================================
+   KC injecte <i class="fa fa-google"> mais FA5
+   ne supporte pas cette classe. On remplace l'<i>
+   par le SVG officiel Google.                    */
+#social-google .kc-social-provider-logo,
+#social-Google .kc-social-provider-logo {
+    display: block !important;
+    width: 1.125rem !important;
+    height: 1.125rem !important;
+    flex-shrink: 0 !important;
+    font-size: 0 !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z' fill='%234285F4'/%3E%3Cpath d='M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z' fill='%2334A853'/%3E%3Cpath d='M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z' fill='%23FBBC05'/%3E%3Cpath d='M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z' fill='%23EA4335'/%3E%3C/svg%3E") !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+}
+
+/* === Responsive mobile (< 480px) =============== */
+@media (max-width: 480px) {
+    .card-pf {
+        margin: 1rem !important;
+        padding: 1.5rem !important;
+        border-radius: 0.5rem !important;
+    }
+
+    #kc-header {
+        padding: 0 1rem !important;
+    }
+}
