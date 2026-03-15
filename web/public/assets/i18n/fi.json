@@ -1,6 +1,6 @@
 {
   "LANDING": {
-    "TAGLINE": "Sopiva ja vapaa verkkotunnus — heti.",
+    "TAGLINE": "Vapaa, relevantti ja mieleenpainuva verkkotunnus. Nopeasti.",
     "SUBTITLE": "Kuvaile projektiasi muutamalla sanalla — tekoäly tekee loput.",
     "B1_TITLE": "Tekoälyehdotukset",
     "B1_DESC": "GPT luo nimiä jotka sopivat toimintaasi ja kohderyhmääsi",
@@ -11,7 +11,7 @@
     "B4_TITLE": "Useita päätteitä",
     "B4_DESC": ".com, .fi, .io, .net… tarkista kaikki päätteet kerralla",
     "CTA": "Löydä verkkotunnukseni ilmaiseksi",
-    "FREE_NOTE": "Ei tilausta · Ei luottokorttia · 100 ilmaista krediittiä rekisteröinnissä"
+    "FREE_NOTE": "Ei tilausta · Ei luottokorttia · 100 ilmaista krediittiä = 100 saatavilla olevaa verkkotunnusehdotusta"
   },
   "APP": {
     "TITLE": "Namorama",
