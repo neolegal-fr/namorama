@@ -2,3 +2,12 @@ node_modules/
 package-lock.json
 package.json
 .claude/
+
+# Secrets — ne JAMAIS commiter
+.env
+.env.local
+.env.production
+.env.prod
+api/.env
+web/.env
+*.env
