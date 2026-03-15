@@ -59,6 +59,12 @@
     background: var(--p-surface-50, #f9fafb);
 }
 
+/* Ligne d'analyse pleine largeur : pas de bordure haute, pas de padding superflu */
+.analysis-row > td {
+    border-top: none !important;
+    padding-top: 0 !important;
+}
+
 /* ─── US-022 : custom split button registrar ── */
 .reg-split {
     position: relative;
