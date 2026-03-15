@@ -8,7 +8,7 @@ export class Feedback {
   @Column()
   keycloakId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   email: string | null;
 
   @Column({ type: 'text' })

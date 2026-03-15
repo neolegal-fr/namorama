@@ -235,14 +235,15 @@ import { Dialog } from 'primeng/dialog';
             </label>
             <input pInputText [(ngModel)]="feedbackEmail" type="email" style="width: 100%" [placeholder]="userName()">
           </div>
-          <p-button
-            [label]="'FEEDBACK.SUBMIT_BTN' | translate"
-            icon="pi pi-send"
-            [loading]="feedbackLoading()"
-            [disabled]="feedbackMessage.length < 20"
-            (onClick)="submitFeedback()"
-            style="align-self: flex-end">
-          </p-button>
+          <div style="display: flex; justify-content: flex-end">
+            <p-button
+              [label]="'FEEDBACK.SUBMIT_BTN' | translate"
+              icon="pi pi-send"
+              [loading]="feedbackLoading()"
+              [disabled]="feedbackMessage.length < 20"
+              (onClick)="submitFeedback()">
+            </p-button>
+          </div>
         </div>
       </p-dialog>
 
