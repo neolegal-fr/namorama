@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Feedback } from './feedback.entity';
 import { UsersService } from '../users/users.service';
+import { MailService } from '../mail/mail.service';
 
 const CREDITS_REWARD = 500;
 
@@ -12,6 +13,7 @@ export class FeedbackService {
     @InjectRepository(Feedback)
     private feedbackRepo: Repository<Feedback>,
     private usersService: UsersService,
+    private mailService: MailService,
   ) {}
 
   async submit(keycloakId: string | null, message: string, email?: string): Promise<{ creditsAwarded: boolean }> {
@@ -21,6 +23,13 @@ export class FeedbackService {
       email: email?.trim() || null,
     });
     await this.feedbackRepo.save(feedback);
+
+    // Fire-and-forget — ne bloque pas la réponse si l'envoi échoue
+    this.mailService.sendFeedbackNotification({
+      message: feedback.message,
+      email: feedback.email,
+      keycloakId: feedback.keycloakId,
+    }).catch(() => {/* already logged in MailService */});
 
     return { creditsAwarded: false };
   }
