@@ -1,5 +1,6 @@
 import { Component, signal, computed, OnInit, HostListener, ChangeDetectorRef, ApplicationRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { DomainService } from '../../services/domain';
 import { KeycloakService } from 'keycloak-angular';
@@ -263,7 +264,8 @@ export class WizardComponent implements OnInit {
     private route: ActivatedRoute,
     private confirmationService: ConfirmationService,
     private messageService: MessageService,
-    private appRef: ApplicationRef
+    private appRef: ApplicationRef,
+    private sanitizer: DomSanitizer
   ) {}
 
   async ngOnInit() {
@@ -490,14 +492,17 @@ export class WizardComponent implements OnInit {
         result.isFavorite = res.isFavorite;
         // US-005 — déclencher l'analyse IA si le favori vient d'être activé et pas encore analysé
         if (res.isFavorite && !result.analysis && !result.analysisPending) {
-          result.analysisPending = true;
-          this.domainService.analyzeName(result.id).subscribe({
-            next: (r) => {
-              result.analysis = r.analysis;
-              result.analysisPending = false;
-              this.cdr.detectChanges();
-            },
-            error: () => { result.analysisPending = false; },
+          setTimeout(() => {
+            result.analysisPending = true;
+            this.cdr.detectChanges();
+            this.domainService.analyzeName(result.id).subscribe({
+              next: (r) => {
+                result.analysis = r.analysis;
+                result.analysisPending = false;
+                this.cdr.detectChanges();
+              },
+              error: () => { result.analysisPending = false; this.cdr.detectChanges(); },
+            });
           });
         }
       },
@@ -568,18 +573,66 @@ export class WizardComponent implements OnInit {
       const parsed = JSON.parse(analysis);
       if (parsed.scores) {
         const vals = Object.values(parsed.scores) as number[];
-        return vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
+        if (vals.length > 0) return vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
       }
     } catch {}
-    // Fallback : compter les ★ dans le texte libre
-    const stars = (analysis.match(/★/g) || []).length;
-    const total = (analysis.match(/[★☆]/g) || []).length;
-    return total > 0 ? (stars / total) * 5 : 0;
+    // Ancien format texte : chercher des patterns comme "4/5", ": 4 —", "★★★★"
+    const numericMatches = analysis.match(/:\s*([1-5])(?:\/5)?\s*[—–-]/g);
+    if (numericMatches && numericMatches.length > 0) {
+      const scores = numericMatches.map(m => parseInt(m.match(/([1-5])/)?.[1] ?? '0'));
+      return scores.reduce((a, b) => a + b, 0) / scores.length;
+    }
+    // Fallback : compter les ★ (pleines ou avec ☆)
+    const lines = analysis.split('\n');
+    const criteriaScores: number[] = [];
+    for (const line of lines) {
+      const stars = (line.match(/★/g) || []).length;
+      const total = (line.match(/[★☆]/g) || []).length;
+      if (total >= 1 && total <= 5 && stars >= 1) criteriaScores.push(stars);
+    }
+    if (criteriaScores.length > 0) {
+      return criteriaScores.reduce((a, b) => a + b, 0) / criteriaScores.length;
+    }
+    return 0;
   }
 
-  renderStars(score: number): string {
+  getStarArray(score: number): boolean[] {
     const full = Math.round(score);
-    return '★'.repeat(full) + '☆'.repeat(5 - full);
+    return Array.from({ length: 5 }, (_, i) => i < full);
+  }
+
+  parseAnalysisHtml(analysis: string | null): SafeHtml {
+    if (!analysis) return this.sanitizer.bypassSecurityTrustHtml('');
+    try {
+      const parsed = JSON.parse(analysis);
+      if (parsed.scores && parsed.comments) {
+        const criteria: Record<string, string> = {
+          memorability: 'Memorability', pronunciation: 'Pronunciation',
+          international: 'International appeal', seo: 'SEO / searchability',
+          distinctiveness: 'Distinctiveness',
+        };
+        const rows = Object.entries(criteria).map(([key, label]) => {
+          const score: number = parsed.scores[key] ?? 0;
+          const comment: string = parsed.comments[key] ?? '';
+          const stars = Array.from({ length: 5 }, (_, i) =>
+            i < score
+              ? '<span style="color:#f59e0b">★</span>'
+              : '<span style="color:#d1d5db">☆</span>'
+          ).join('');
+          return `<strong>${label}</strong>: ${stars} — ${comment}`;
+        }).join('<br>');
+        const strengths = parsed.strengths ? `<br>✅ <strong>Strengths</strong>: ${parsed.strengths}` : '';
+        const watchout = parsed.watchout ? `<br>⚠️ <strong>Watch out</strong>: ${parsed.watchout}` : '';
+        return this.sanitizer.bypassSecurityTrustHtml(rows + strengths + watchout);
+      }
+    } catch {}
+    // Ancien format texte
+    const html = analysis
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/★/g, '<span style="color:#f59e0b">★</span>')
+      .replace(/☆/g, '<span style="color:#d1d5db">☆</span>')
+      .replace(/\n/g, '<br>');
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 
   toggleAnalysis(id: string) {
@@ -881,15 +934,17 @@ export class WizardComponent implements OnInit {
                   next: () => {
                     const domain = this.domains().find(d => d.id === saved.id);
                     if (domain && !domain.analysis && !domain.analysisPending) {
-                      domain.analysisPending = true;
-                      this.cdr.detectChanges();
-                      this.domainService.analyzeName(saved.id).subscribe({
-                        next: (a) => {
-                          domain.analysis = a.analysis;
-                          domain.analysisPending = false;
-                          this.cdr.detectChanges();
-                        },
-                        error: () => { domain.analysisPending = false; },
+                      setTimeout(() => {
+                        domain.analysisPending = true;
+                        this.cdr.detectChanges();
+                        this.domainService.analyzeName(saved.id).subscribe({
+                          next: (a) => {
+                            domain.analysis = a.analysis;
+                            domain.analysisPending = false;
+                            this.cdr.detectChanges();
+                          },
+                          error: () => { domain.analysisPending = false; this.cdr.detectChanges(); },
+                        });
                       });
                     }
                   },

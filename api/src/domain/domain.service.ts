@@ -200,19 +200,16 @@ Domain names referencing public domain cultural works, characters, places, or fo
   }
 
   async analyzeNameWithAI(name: string): Promise<string> {
-    const prompt = `Analyze the brand/domain name "${name}" concisely across these 6 criteria. Use this exact format (one line each, max 15 words per line):
+    const prompt = `Analyze the brand/domain name "${name}" across these 5 criteria. Return ONLY valid JSON, no text outside it:
 
-**Memorability**: [★ rating 1-5] — [comment]
-**Pronunciation**: [★ rating 1-5] — [comment]
-**International appeal**: [★ rating 1-5] — [comment]
-**SEO / searchability**: [★ rating 1-5] — [comment]
-**Distinctiveness**: [★ rating 1-5] — [comment]
-**Length**: ${name.length} chars — [comment]
+{
+  "scores": { "memorability": 4, "pronunciation": 3, "international": 5, "seo": 3, "distinctiveness": 4 },
+  "comments": { "memorability": "...", "pronunciation": "...", "international": "...", "seo": "...", "distinctiveness": "..." },
+  "strengths": "max 15 words",
+  "watchout": "max 15 words"
+}
 
-✅ **Strengths**: [max 15 words]
-⚠️ **Watch out**: [max 15 words]
-
-Be direct and honest. Total: max 100 words.`;
+Scores are integers 1-5. Be honest and concise.`;
 
     try {
       const response = await this.openai.chat.completions.create({
