@@ -22,7 +22,7 @@ export class Project {
   @Column({ default: 'any' })
   matchMode: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   user: User;
 
   @OneToMany(() => DomainSuggestion, (suggestion) => suggestion.project, { cascade: true })

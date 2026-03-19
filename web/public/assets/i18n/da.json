@@ -27,7 +27,12 @@
     "SECURE_ACCESS": "Sikker adgang",
     "LOGIN_REQUIRED": "Log ind for at begynde at søge efter domænenavne.",
     "ADMIN": "Administration",
-    "FEEDBACK": "Rapporter et problem"
+    "FEEDBACK": "Rapporter et problem",
+    "DELETE_ACCOUNT": "Delete my account",
+    "DELETE_ACCOUNT_TITLE": "Delete account",
+    "DELETE_ACCOUNT_MSG": "This action is irreversible. All your projects and credits will be permanently deleted.",
+    "DELETE_ACCOUNT_BTN": "Delete permanently",
+    "CANCEL": "Cancel"
   },
   "PROJECTS": {
     "TITLE": "Mine Projekter",

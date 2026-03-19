@@ -256,6 +256,36 @@ import { Dialog } from 'primeng/dialog';
         </div>
       </p-dialog>
 
+      <!-- Dialog suppression de compte -->
+      <p-dialog [header]="'APP.DELETE_ACCOUNT_TITLE' | translate"
+                [visible]="showDeleteAccountDialog()"
+                (visibleChange)="showDeleteAccountDialog.set($event)"
+                [modal]="true"
+                [style]="{ width: 'min(26rem, 92vw)' }"
+                [draggable]="false"
+                [resizable]="false">
+        <div style="display: flex; flex-direction: column; gap: 1rem">
+          <p style="margin: 0; font-size: 0.9rem; color: var(--p-surface-600)">
+            {{ 'APP.DELETE_ACCOUNT_MSG' | translate }}
+          </p>
+          <div style="display: flex; justify-content: flex-end; gap: 0.5rem">
+            <p-button
+              [label]="'APP.CANCEL' | translate"
+              severity="secondary"
+              [text]="true"
+              (onClick)="showDeleteAccountDialog.set(false)">
+            </p-button>
+            <p-button
+              [label]="'APP.DELETE_ACCOUNT_BTN' | translate"
+              severity="danger"
+              icon="pi pi-trash"
+              [loading]="deleteAccountLoading()"
+              (onClick)="deleteAccount()">
+            </p-button>
+          </div>
+        </div>
+      </p-dialog>
+
       <footer class="mt-8 py-6 border-top-1 border-solid text-center text-400 text-sm" style="background: white">
         <div class="mb-2 font-bold text-500">Namorama &copy; 2026</div>
         {{ 'APP.FOOTER' | translate }}
@@ -328,6 +358,10 @@ export class AppComponent implements OnInit {
   feedbackEmail = '';
   feedbackLoading = signal(false);
 
+  // Suppression de compte
+  showDeleteAccountDialog = signal(false);
+  deleteAccountLoading = signal(false);
+
   constructor(
     private userService: UserService,
     public projectService: ProjectService,
@@ -394,7 +428,7 @@ export class AppComponent implements OnInit {
   }
 
   updateProfileMenu() {
-    this.translate.get(['APP.CREDITS', 'APP.LOGOUT', 'APP.MANAGE_ACCOUNT', 'APP.ADMIN']).subscribe(res => {
+    this.translate.get(['APP.CREDITS', 'APP.LOGOUT', 'APP.MANAGE_ACCOUNT', 'APP.ADMIN', 'APP.DELETE_ACCOUNT']).subscribe(res => {
       this.profileMenuItems = [
         {
           label: this.userName(),
@@ -415,6 +449,11 @@ export class AppComponent implements OnInit {
               command: () => this.router.navigate(['/admin'])
             }] : []),
             { separator: true },
+            {
+              label: res['APP.DELETE_ACCOUNT'],
+              icon: 'pi pi-trash',
+              command: () => this.showDeleteAccountDialog.set(true)
+            },
             {
               label: res['APP.LOGOUT'],
               icon: 'pi pi-sign-out',
@@ -485,6 +524,19 @@ export class AppComponent implements OnInit {
 
   logout() {
     this.keycloak.logout(window.location.origin);
+  }
+
+  deleteAccount() {
+    this.deleteAccountLoading.set(true);
+    this.userService.deleteAccount().subscribe({
+      next: () => {
+        this.showDeleteAccountDialog.set(false);
+        this.keycloak.logout(window.location.origin);
+      },
+      error: () => {
+        this.deleteAccountLoading.set(false);
+      },
+    });
   }
 
   goToHome() {

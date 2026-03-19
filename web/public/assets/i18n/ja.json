@@ -27,7 +27,12 @@
     "SECURE_ACCESS": "セキュアアクセス",
     "LOGIN_REQUIRED": "ドメイン名を検索するにはログインしてください。",
     "ADMIN": "管理",
-    "FEEDBACK": "問題を報告する"
+    "FEEDBACK": "問題を報告する",
+    "DELETE_ACCOUNT": "Delete my account",
+    "DELETE_ACCOUNT_TITLE": "Delete account",
+    "DELETE_ACCOUNT_MSG": "This action is irreversible. All your projects and credits will be permanently deleted.",
+    "DELETE_ACCOUNT_BTN": "Delete permanently",
+    "CANCEL": "Cancel"
   },
   "PROJECTS": {
     "TITLE": "マイプロジェクト",

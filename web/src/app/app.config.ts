@@ -31,20 +31,28 @@ function initializeApp(keycloak: KeycloakService, translate: TranslateService, c
     await config.load();
 
     // 2. Initialiser Keycloak
-    await keycloak.init({
-      config: {
-        url: config.keycloakUrl,
-        realm: 'namorama',
-        clientId: 'namorama-web'
-      },
-      initOptions: {
-        onLoad: 'check-sso',
-        silentCheckSsoRedirectUri:
-          window.location.origin + '/assets/silent-check-sso.html',
-        checkLoginIframe: false
-      },
-      bearerExcludedUrls: ['/assets']
-    });
+    // Le try/catch évite une page blanche sur Safari : ITP bloque l'iframe du
+    // silent check-sso (Storage Access API), ce qui fait échouer keycloak.init()
+    // et gèle l'APP_INITIALIZER si l'erreur n'est pas capturée.
+    try {
+      await keycloak.init({
+        config: {
+          url: config.keycloakUrl,
+          realm: 'namorama',
+          clientId: 'namorama-web'
+        },
+        initOptions: {
+          onLoad: 'check-sso',
+          silentCheckSsoRedirectUri:
+            window.location.origin + '/assets/silent-check-sso.html',
+          checkLoginIframe: false
+        },
+        bearerExcludedUrls: ['/assets']
+      });
+    } catch {
+      // SSO check bloqué (Safari ITP, navigateur sans cookies tiers, etc.)
+      // L'app charge en mode non-authentifié ; l'utilisateur peut se connecter manuellement.
+    }
 
     // 2. Initialiser la langue
     const supportedLangs = ['cs', 'da', 'de', 'en', 'es', 'fi', 'fr', 'hu', 'it', 'ja', 'nl', 'no', 'pl', 'pt', 'ro', 'ru', 'sv', 'tr', 'zh'];

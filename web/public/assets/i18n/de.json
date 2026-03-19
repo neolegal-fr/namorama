@@ -27,7 +27,12 @@
     "SECURE_ACCESS": "Sicherer Zugang",
     "LOGIN_REQUIRED": "Bitte melden Sie sich an, um mit der Domainsuche zu beginnen.",
     "ADMIN": "Administration",
-    "FEEDBACK": "Problem melden"
+    "FEEDBACK": "Problem melden",
+    "DELETE_ACCOUNT": "Delete my account",
+    "DELETE_ACCOUNT_TITLE": "Delete account",
+    "DELETE_ACCOUNT_MSG": "This action is irreversible. All your projects and credits will be permanently deleted.",
+    "DELETE_ACCOUNT_BTN": "Delete permanently",
+    "CANCEL": "Cancel"
   },
   "PROJECTS": {
     "TITLE": "Meine Projekte",

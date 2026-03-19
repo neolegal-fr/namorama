@@ -27,7 +27,12 @@
     "SECURE_ACCESS": "Bezpieczny dostęp",
     "LOGIN_REQUIRED": "Zaloguj się, aby zacząć szukać nazw domen.",
     "ADMIN": "Administracja",
-    "FEEDBACK": "Zgłoś problem"
+    "FEEDBACK": "Zgłoś problem",
+    "DELETE_ACCOUNT": "Delete my account",
+    "DELETE_ACCOUNT_TITLE": "Delete account",
+    "DELETE_ACCOUNT_MSG": "This action is irreversible. All your projects and credits will be permanently deleted.",
+    "DELETE_ACCOUNT_BTN": "Delete permanently",
+    "CANCEL": "Cancel"
   },
   "PROJECTS": {
     "TITLE": "Moje Projekty",

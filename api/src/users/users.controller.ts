@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Delete, Get, HttpCode } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AuthenticatedUser } from 'nest-keycloak-connect';
 
@@ -27,6 +27,12 @@ export class UsersController {
   @Get('me/subscription')
   async getSubscription(@AuthenticatedUser() keycloakUser: any) {
     return this.usersService.getSubscription(keycloakUser.sub);
+  }
+
+  @Delete('me')
+  @HttpCode(204)
+  async deleteAccount(@AuthenticatedUser() keycloakUser: any) {
+    await this.usersService.deleteAccount(keycloakUser.sub);
   }
 
   @Get('credits')

@@ -1,16 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import { Project } from '../projects/entities/project.entity';
 
 /** Quota mensuel de crédits gratuits */
 const FREE_MONTHLY_QUOTA = 100;
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Project)
+    private projectsRepository: Repository<Project>,
+    private configService: ConfigService,
   ) {}
 
   /**
@@ -110,6 +117,57 @@ export class UsersService {
 
   async setStripeCustomerId(keycloakId: string, stripeCustomerId: string): Promise<void> {
     await this.usersRepository.update({ keycloakId }, { stripeCustomerId });
+  }
+
+  async findById(id: number) {
+    return this.usersRepository.findOne({ where: { id } });
+  }
+
+  /** Supprime le compte par id interne (usage admin). */
+  async deleteAccountById(id: number): Promise<void> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) return;
+    await this.deleteAccount(user.keycloakId);
+  }
+
+  /** Supprime le compte : user en base (cascade DB → projets → suggestions), puis Keycloak. */
+  async deleteAccount(keycloakId: string): Promise<void> {
+    await this.usersRepository.delete({ keycloakId });
+    await this.deleteFromKeycloak(keycloakId);
+  }
+
+  private async deleteFromKeycloak(keycloakId: string): Promise<void> {
+    try {
+      const authServerUrl = this.configService.get<string>('KEYCLOAK_AUTH_SERVER_URL');
+      const realm = this.configService.get<string>('KEYCLOAK_REALM');
+      const clientId = this.configService.get<string>('KEYCLOAK_CLIENT_ID');
+      const clientSecret = this.configService.get<string>('KEYCLOAK_SECRET');
+
+      const tokenRes = await fetch(
+        `${authServerUrl}/realms/${realm}/protocol/openid-connect/token`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'client_credentials',
+            client_id: clientId ?? '',
+            client_secret: clientSecret ?? '',
+          }),
+        },
+      );
+      const { access_token } = await tokenRes.json();
+
+      const res = await fetch(`${authServerUrl}/admin/realms/${realm}/users/${keycloakId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${access_token}` },
+      });
+
+      if (!res.ok) {
+        this.logger.warn(`Keycloak DELETE user ${keycloakId} returned ${res.status} — user already removed from DB`);
+      }
+    } catch (err) {
+      this.logger.error(`Failed to delete Keycloak user ${keycloakId}`, err);
+    }
   }
 
   /** Retourne les informations de crédits de l'utilisateur */

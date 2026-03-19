@@ -29,7 +29,12 @@
     "ADMIN": "Administration",
     "FEEDBACK": "Signaler un problème",
     "LEGAL": "Mentions légales",
-    "PRIVACY": "Politique de confidentialité"
+    "PRIVACY": "Politique de confidentialité",
+    "DELETE_ACCOUNT": "Supprimer mon compte",
+    "DELETE_ACCOUNT_TITLE": "Supprimer mon compte",
+    "DELETE_ACCOUNT_MSG": "Cette action est irréversible. Tous vos projets et crédits seront définitivement supprimés.",
+    "DELETE_ACCOUNT_BTN": "Supprimer définitivement",
+    "CANCEL": "Annuler"
   },
   "ADMIN": {
     "TITLE": "Administration",

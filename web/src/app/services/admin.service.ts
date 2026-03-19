@@ -81,4 +81,8 @@ export class AdminService {
   deleteFeedback(feedbackId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/feedback/${feedbackId}`);
   }
+
+  deleteUser(userId: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/users/${userId}`);
+  }
 }

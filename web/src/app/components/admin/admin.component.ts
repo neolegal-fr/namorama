@@ -12,8 +12,10 @@ import { SelectButtonModule } from 'primeng/selectbutton';
 import { DatePickerModule } from 'primeng/datepicker';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Menu } from 'primeng/menu';
-import { MessageService, MenuItem } from 'primeng/api';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { MessageService, MenuItem, ConfirmationService } from 'primeng/api';
 import { AdminService, AdminUser, AdminStats, FeedbackItem } from '../../services/admin.service';
+import { KeycloakService } from 'keycloak-angular';
 
 interface PeriodOption { label: string; days: number | null; }
 
@@ -26,11 +28,12 @@ interface PeriodOption { label: string; days: number | null; }
     InputNumberModule, ToastModule, TooltipModule,
     SelectButtonModule, DatePickerModule,
     Tabs, TabList, Tab, TabPanels, TabPanel,
-    Menu,
+    Menu, ConfirmDialog,
   ],
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   template: `
     <p-toast></p-toast>
+    <p-confirmdialog></p-confirmdialog>
 
     <p-tabs value="dashboard">
       <p-tablist>
@@ -166,6 +169,12 @@ interface PeriodOption { label: string; days: number | null; }
                                   [pTooltip]="'ADMIN.ADJUST_CREDITS' | translate" tooltipPosition="top"
                                   (onClick)="startEdit(user)">
                         </p-button>
+                        <p-button icon="pi pi-trash" size="small" [text]="true" severity="danger"
+                                  [loading]="deletingUserId() === user.id"
+                                  [disabled]="user.keycloakId === currentKeycloakId()"
+                                  pTooltip="Supprimer l'utilisateur" tooltipPosition="top"
+                                  (onClick)="confirmDeleteUser(user)">
+                        </p-button>
                       </ng-template>
                     </td>
                   </tr>
@@ -288,6 +297,8 @@ export class AdminComponent implements OnInit {
 
   editingUserId = signal<number | null>(null);
   savingUserId = signal<number | null>(null);
+  deletingUserId = signal<number | null>(null);
+  currentKeycloakId = signal<string | null>(null);
   adjustNewValue = 0;
   adjustReason = '';
 
@@ -310,9 +321,15 @@ export class AdminComponent implements OnInit {
   customFrom: Date | null = null;
   customTo: Date | null = null;
 
-  constructor(private adminService: AdminService, private messageService: MessageService) {}
+  constructor(
+    private adminService: AdminService,
+    private messageService: MessageService,
+    private confirmationService: ConfirmationService,
+    private keycloak: KeycloakService,
+  ) {}
 
   ngOnInit() {
+    this.keycloak.loadUserProfile().then(p => this.currentKeycloakId.set((p as any).id ?? null));
     this.loadUsers();
     this.loadStats();
     this.loadFeedback();
@@ -395,6 +412,36 @@ export class AdminComponent implements OnInit {
 
   cancelEdit() {
     this.editingUserId.set(null);
+  }
+
+  confirmDeleteUser(user: AdminUser) {
+    const label = user.email || user.keycloakId;
+    this.confirmationService.confirm({
+      message: `Supprimer définitivement l'utilisateur <strong>${label}</strong> ?<br>Ses projets seront également supprimés.`,
+      header: 'Supprimer l\'utilisateur',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Supprimer',
+      rejectLabel: 'Annuler',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => this.deleteUser(user),
+    });
+  }
+
+  deleteUser(user: AdminUser) {
+    this.deletingUserId.set(user.id);
+    this.adminService.deleteUser(user.id).subscribe({
+      next: () => {
+        this.users.update(list => list.filter(u => u.id !== user.id));
+        this.total.update(t => t - 1);
+        this.deletingUserId.set(null);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Utilisateur supprimé',
+          detail: user.email || user.keycloakId,
+        });
+      },
+      error: () => this.deletingUserId.set(null),
+    });
   }
 
   saveAdjustment(user: AdminUser) {

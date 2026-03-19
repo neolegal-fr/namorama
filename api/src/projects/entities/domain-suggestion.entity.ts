@@ -21,6 +21,6 @@ export class DomainSuggestion {
   @Column({ nullable: true, default: 'standard' })
   style: string;
 
-  @ManyToOne(() => Project, (project) => project.suggestions)
+  @ManyToOne(() => Project, (project) => project.suggestions, { onDelete: 'CASCADE' })
   project: Project;
 }

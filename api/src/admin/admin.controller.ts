@@ -1,8 +1,9 @@
-import { Controller, Get, Patch, Post, Delete, Param, Body, Query, ParseIntPipe, DefaultValuePipe, HttpCode } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Delete, Param, Body, Query, ParseIntPipe, DefaultValuePipe, HttpCode, ForbiddenException } from '@nestjs/common';
 import { IsNumber, IsOptional, IsString } from 'class-validator';
 import { Roles, AuthenticatedUser } from 'nest-keycloak-connect';
 import { AdminService } from './admin.service';
 import { FeedbackService } from '../feedback/feedback.service';
+import { UsersService } from '../users/users.service';
 
 class AdjustCreditsDto {
   @IsNumber()
@@ -19,6 +20,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly feedbackService: FeedbackService,
+    private readonly usersService: UsersService,
   ) {}
 
   @Get('users')
@@ -37,6 +39,19 @@ export class AdminController {
     @AuthenticatedUser() admin: any,
   ) {
     return this.adminService.adjustCredits(id, body.delta, body.reason ?? '', admin.sub);
+  }
+
+  @Delete('users/:id')
+  @HttpCode(204)
+  async deleteUser(
+    @Param('id', ParseIntPipe) id: number,
+    @AuthenticatedUser() admin: any,
+  ) {
+    const user = await this.usersService.findById(id);
+    if (user?.keycloakId === admin.sub) {
+      throw new ForbiddenException('You cannot delete your own account from the admin panel');
+    }
+    await this.usersService.deleteAccountById(id);
   }
 
   @Get('stats')

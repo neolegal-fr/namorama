@@ -50,7 +50,7 @@ export class CookieConsentService {
               acceptAllBtn: 'Tout accepter',
               acceptNecessaryBtn: 'Refuser',
               showPreferencesBtn: 'Personnaliser',
-              footer: '<a href="https://namorama.fr/privacy" target="_blank">Politique de confidentialité</a>',
+              footer: '<a href="https://namorama.com/privacy" target="_blank">Politique de confidentialité</a>',
             },
             preferencesModal: {
               title: 'Préférences de cookies',
@@ -87,7 +87,7 @@ export class CookieConsentService {
               acceptAllBtn: 'Accept all',
               acceptNecessaryBtn: 'Reject all',
               showPreferencesBtn: 'Manage preferences',
-              footer: '<a href="https://namorama.fr/privacy" target="_blank">Privacy policy</a>',
+              footer: '<a href="https://namorama.com/privacy" target="_blank">Privacy policy</a>',
             },
             preferencesModal: {
               title: 'Cookie preferences',

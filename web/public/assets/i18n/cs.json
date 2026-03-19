@@ -27,7 +27,12 @@
     "SECURE_ACCESS": "Zabezpečený přístup",
     "LOGIN_REQUIRED": "Přihlaste se a začněte hledat názvy domén.",
     "ADMIN": "Administrace",
-    "FEEDBACK": "Nahlásit problém"
+    "FEEDBACK": "Nahlásit problém",
+    "DELETE_ACCOUNT": "Delete my account",
+    "DELETE_ACCOUNT_TITLE": "Delete account",
+    "DELETE_ACCOUNT_MSG": "This action is irreversible. All your projects and credits will be permanently deleted.",
+    "DELETE_ACCOUNT_BTN": "Delete permanently",
+    "CANCEL": "Cancel"
   },
   "PROJECTS": {
     "TITLE": "Moje Projekty",

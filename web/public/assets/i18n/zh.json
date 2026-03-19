@@ -27,7 +27,12 @@
     "SECURE_ACCESS": "安全访问",
     "LOGIN_REQUIRED": "请登录以开始搜索域名。",
     "ADMIN": "管理",
-    "FEEDBACK": "报告问题"
+    "FEEDBACK": "报告问题",
+    "DELETE_ACCOUNT": "Delete my account",
+    "DELETE_ACCOUNT_TITLE": "Delete account",
+    "DELETE_ACCOUNT_MSG": "This action is irreversible. All your projects and credits will be permanently deleted.",
+    "DELETE_ACCOUNT_BTN": "Delete permanently",
+    "CANCEL": "Cancel"
   },
   "PROJECTS": {
     "TITLE": "我的项目",
