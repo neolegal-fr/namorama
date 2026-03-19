@@ -131,26 +131,40 @@ export class DomainService {
 
     const styleInstructions: string[] = [];
 
+    // US-044 — diversité imposée par sous-groupes pour le style standard
+    const stdCount = counts['standard'];
+    const subShort   = Math.ceil(stdCount * 0.25); // noms courts inventés 7-9 chars
+    const subCompound = Math.ceil(stdCount * 0.25); // mots composés (2 racines fusionnées)
+    const subMetaphor = Math.ceil(stdCount * 0.25); // métaphore / concept évocateur
+    const subSound    = stdCount - subShort - subCompound - subMetaphor; // sonorité / phonie
+
     styleInstructions.push(`
-=== STYLE "standard" (generate exactly ${counts['standard']} names) ===
-Classic startup-style brand names. Criteria:
-- SHORT: ≤ 10 characters, ideally 2-3 syllables max.
-- EASY TO PRONOUNCE: must pass the "radio test".
-- NO HYPHENS OR NUMBERS.
-- DISTINCTIVE: avoid generic constructs. Aim for invented or unexpected combinations.
-- EVOCATIVE of the product's benefit or sector.
-Techniques: portmanteaus, short compound words, evocative metaphors, invented names with Latin/Greek roots.
+=== STYLE "standard" (generate exactly ${stdCount} names) ===
+Classic startup-style brand names. Rules:
+- Lowercase only, NO hyphens, NO numbers.
+- MINIMUM 7 characters, MAXIMUM 12 characters. CRITICAL: names under 7 characters are almost always already registered and must NOT be generated.
+- Must pass the "radio test" (heard once → spelled correctly).
+- MUST draw inspiration from the semantic keywords below — at least half the names must incorporate a keyword root, sound, or concept.
+
+Distribute the ${stdCount} names across these 4 sub-groups:
+  [short] ${subShort} names — concise invented words, 7-9 characters, 2 syllables. Examples: "treloxy", "voxifyn", "lumiqar", "namifex"
+  [compound] ${subCompound} names — two keyword roots fused without separator, 7-12 characters. Examples: "snapflow", "taskbloom", "brandnest"
+  [metaphor] ${subMetaphor} names — abstract concept or vivid image tied to the product's benefit, 6-10 characters. Examples: "veloria", "zephyra", "aurelix"
+  [sound] ${subSound} names — names chosen primarily for their phonetic appeal and memorability, 6-10 characters. Examples: "navioq", "kalivo", "pivoxen"
+
+BAD examples (do NOT generate these kinds): "smartapp", "webtools", "clicksolution", "mybrand" (too generic), "xqtzpr" (unpronounceable), "trelox", "voxify", "namify" (too short — under 7 chars).
 ${localeInstruction}`);
 
     if (descriptiveNames) {
       styleInstructions.push(`
 === STYLE "descriptive" (generate exactly ${counts['descriptive']} names) ===
 Descriptive domain names targeting local/regional markets. Criteria:
-- Can be LONGER (up to 28 characters), NO HYPHENS.
+- Can be LONGER (up to 28 characters), NO HYPHENS, no numbers, lowercase only.
 - Must CLEARLY DESCRIBE the business activity and optionally a geographic reference (infer from description).
 - Compound words without hyphens, or a single descriptive word.
 - Must sound natural in the target language.
-- Examples: boulangerieprovence.com, plombierlyon.fr, menuiseriebretagne.fr`);
+- GOOD examples: boulangerieprovence, plombierlyon, menuiseriebretagne
+- BAD examples: service-pro, my-business (hyphens not allowed)`);
     }
 
     if (culturalNames) {
@@ -158,36 +172,35 @@ Descriptive domain names targeting local/regional markets. Criteria:
 === STYLE "cultural" (generate exactly ${counts['cultural']} names) ===
 Domain names referencing public domain cultural works, characters, places, or folklore. Criteria:
 - May reference fairy tales, mythology, fables, classic literature, historical figures (public domain only).
-- NO HYPHENS — merge words into a single compound name.
-- No justification needed — just strong, memorable cultural references tied to the project spirit.
-- Examples: petitpoucet.fr, herculeplomberie.com, cendrillonmode.fr`);
+- NO HYPHENS — merge words into a single compound name. Lowercase only, no numbers.
+- Strong, memorable cultural references tied to the project spirit.
+- GOOD examples: petitpoucet, herculeplomberie, cendrillonmode
+- BAD examples: petit-poucet, hercule-pro (hyphens not allowed)`);
     }
 
-    const prompt = `
-      You are a world-class branding and naming expert.
-      Generate ORIGINAL domain-name bases for the following project:
-      Description: "${description}"
-      Semantic keywords: ${vocabStr}
-      ${exclusionSection}
+    const prompt = `You are a world-class branding and naming expert.
+Generate ORIGINAL domain-name bases for the following project.
 
-      ${styleInstructions.join('\n')}
+Description: "${description}"
+Semantic keywords to draw from: ${vocabStr}
+${exclusionSection}
+${styleInstructions.join('\n')}
 
-      IMPORTANT:
-      - Generate exactly the number of names specified per style (total: ${total}).
-      - Each name must include a "style" field matching its style key exactly.
-      - For "standard" names: no hyphens, no numbers, lowercase letters only.
-      - For "descriptive" and "cultural" names: lowercase, NO hyphens, no numbers.
+IMPORTANT RULES:
+- Generate exactly the number of names specified per style (total: ${total}).
+- Each object must have a "style" field matching its style key exactly ("standard", "descriptive", or "cultural").
+- "standard" names: lowercase letters only, no hyphens, no numbers, no spaces.
+- "descriptive" and "cultural" names: lowercase only, NO hyphens, no numbers.
 
-      Your response must be ONLY a JSON object with a "names" key containing a list of objects.
-      Example: {"names": [{"name": "velora", "style": "standard"}, {"name": "boulangerie-provence", "style": "descriptive"}, {"name": "petit-poucet", "style": "cultural"}]}
-    `;
+Respond ONLY with a JSON object. Example:
+{"names": [{"name": "velora", "style": "standard"}, {"name": "boulangerieprovence", "style": "descriptive"}, {"name": "petitpoucet", "style": "cultural"}]}`;
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 900,
-        temperature: 0.95,
+        max_tokens: 1200,
+        temperature: 0.85,
         response_format: { type: 'json_object' }
       });
 
@@ -206,7 +219,7 @@ Domain names referencing public domain cultural works, characters, places, or fo
             : item.name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').replace(/-{2,}/g, '-');
           return { name: cleaned, style };
         })
-        .filter(item => item.name.length > 3 && item.name.length <= 63 && CLEANED_NAME_REGEX.test(item.name));
+        .filter(item => item.name.length >= 7 && item.name.length <= 63 && CLEANED_NAME_REGEX.test(item.name));
     } catch (error) {
       this.logger.error('Erreur lors de la génération des noms:', error);
       return [];

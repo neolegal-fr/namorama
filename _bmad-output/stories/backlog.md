@@ -1621,3 +1621,81 @@ A domain name is only one piece of a brand's online identity. Users need to secu
 - Reserving or claiming handles on behalf of the user
 - Checking username variations (exact match only)
 - Paid / authenticated API integrations with social networks
+
+---
+
+## US-044 · Amélioration du prompt de génération de noms — Qualité & Pertinence (Option A)
+
+**Status**: ✅ Done
+
+**As a** user generating domain name ideas,
+**I want** the AI to produce names that are more creative, diverse, and relevant to my project,
+**So that** I spend less time rejecting poor suggestions and find a great name faster.
+
+### Context
+
+The current `generateDomainIdeas` prompt uses `gpt-3.5-turbo` with a loosely structured instruction set. In practice, it tends to produce clusters of similar-sounding names, ignores the semantic keywords provided, and occasionally outputs names that are hard to pronounce or unrelated to the project. This story targets the prompt and model configuration without changing the generation architecture.
+
+### Acceptance Criteria
+
+- [ ] The model is upgraded from `gpt-3.5-turbo` to `gpt-4o-mini` for `generateDomainIdeas`
+- [ ] The prompt explicitly instructs the model to derive name components from the provided keywords (at least 50% of names must incorporate a keyword root, sound, or concept)
+- [ ] The prompt enforces diversity via named sub-groups within the "standard" style: short invented names (≤6 chars), compound words (2 roots), metaphor/concept names, and sound-based names — with a minimum count per sub-group
+- [ ] The prompt includes 3 positive examples and 2 negative examples ("too generic", "unpronounceable") to calibrate the model's output
+- [ ] Temperature is reduced from 0.95 to 0.85 to balance creativity and coherence
+- [ ] `max_tokens` is increased to 1200 to accommodate the richer output format
+- [ ] The JSON example in the prompt is corrected to remove hyphens from "standard" names (current example is inconsistent with rules)
+- [ ] A/B comparison: running the same description through old and new prompt produces measurably more varied and on-topic names (manual review by Nicolas)
+
+### Technical Notes
+
+- Change is limited to `domain.service.ts` → `generateDomainIdeas()`
+- `gpt-4o-mini` is API-compatible with the existing OpenAI client call — no client changes needed
+- `gpt-4o-mini` pricing is comparable to `gpt-3.5-turbo` at this token volume
+- The sub-group diversity constraint is prompt-only (no post-processing code required)
+- Existing `response_format: { type: 'json_object' }` is kept to ensure parseable output
+
+### Out of Scope
+
+- Changing the generation loop or retry logic (covered by US-045)
+- Post-processing or scoring of generated names before Whois check
+- UI changes
+
+---
+
+## US-045 · Amélioration de la stratégie de génération de noms — Multi-passes thématiques (Option B)
+
+**Status**: ❌ To do
+
+**As a** user generating domain name ideas,
+**I want** the AI to explore different creative angles in separate passes,
+**So that** the final list of available names covers a much broader creative spectrum and avoids repetitive clusters.
+
+### Context
+
+Even with an improved prompt (US-044), a single LLM call tends to converge on a stylistic cluster. This story introduces a multi-pass generation strategy: instead of asking for 30 names at once, the system runs several focused passes (e.g. "metaphor pass", "sound/phonetics pass", "acronym/blend pass"), each targeting a different creative technique. Results from all passes are merged and deduplicated before Whois checking. This approach also enables easier future extension by adding new passes.
+
+### Acceptance Criteria
+
+- [ ] `generateDomainIdeas` is refactored to run N thematic passes in parallel (default: 4 passes)
+- [ ] Each pass has a distinct creative brief: (1) Metaphor & Concept, (2) Phonetics & Sound, (3) Portmanteau & Blend, (4) Abstract / Invented
+- [ ] Each pass targets ~10 names, producing ~40 candidates total before deduplication
+- [ ] Passes run concurrently (`Promise.all`) to keep latency comparable to current single-call approach
+- [ ] Deduplication is applied after merging all pass results (exact name match)
+- [ ] The per-style count balancing logic (`counts` object) is preserved and distributed across passes
+- [ ] Total credits consumed per search remains unchanged (generation is free; only Whois checks cost credits)
+- [ ] Existing exclusion list (`excludeNames`) is passed to every pass to avoid re-proposing already-checked names
+
+### Technical Notes
+
+- Each pass is a separate `openai.chat.completions.create` call with a focused system prompt
+- Running 4 calls in parallel multiplies OpenAI API usage by ~4× — acceptable at current scale, revisit if costs spike
+- Pass prompts should be short and focused (< 200 tokens each) to keep per-call cost low
+- The `findAvailableDomains` loop and event emitter (`onEvent`) are unchanged
+- This story depends on US-044 (upgraded model) being completed first, as `gpt-4o-mini` handles parallel focused prompts better than `gpt-3.5-turbo`
+
+### Out of Scope
+
+- Scoring or ranking candidates before Whois check
+- User-facing controls to select which passes run
+- Caching pass results across sessions

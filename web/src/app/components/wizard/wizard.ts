@@ -153,7 +153,7 @@ export class WizardComponent implements OnInit {
   newKeyword = signal('');
   
   newExtension = signal('');
-  selectedExtensions = signal<string[]>(['.com', '.net']);
+  selectedExtensions = signal<string[]>(['.com']);
   matchMode = signal('all');
   matchOptions = signal<any[]>([]);
 
@@ -303,7 +303,7 @@ export class WizardComponent implements OnInit {
       this.projectName.set(state.projectName || '');
       this.refinedDescription.set(state.refinedDescription);
       this.keywords.set(state.keywords);
-      this.selectedExtensions.set(state.selectedExtensions || ['.com', '.net']);
+      this.selectedExtensions.set(state.selectedExtensions || ['.com']);
       this.matchMode.set(state.matchMode || 'all');
       this.projectId.set(state.projectId || null);
       localStorage.removeItem('wizard_state');
@@ -467,7 +467,7 @@ export class WizardComponent implements OnInit {
     this.domains.set([]);
     this.newKeyword.set('');
     this.newExtension.set('');
-    this.selectedExtensions.set(['.com', '.net']);
+    this.selectedExtensions.set(['.com']);
     this.matchMode.set('all');
     this.isLocal.set(false);
     this.localeOverride.set('');
