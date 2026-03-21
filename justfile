@@ -22,6 +22,11 @@ build:
     @echo "Compilation du Web (Angular)..."
     cd web && npm run build
 
+# Installer les dépendances Node (legacy-peer-deps requis pour nest-keycloak-connect)
+install:
+    cd api && npm install --legacy-peer-deps
+    cd web && npm install
+
 # Nettoyer les dépendances, les builds et les volumes Docker
 clean:
     docker-compose -f infra/docker-compose.yml down -v
