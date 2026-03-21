@@ -41,7 +41,7 @@ import { Dialog } from 'primeng/dialog';
     InputText,
   ],
   template: `
-    <main class="min-h-screen">
+    <main style="min-height: 100vh; display: flex; flex-direction: column">
       <p-menubar styleClass="border-0 border-b border-surface bg-surface-0 px-3 md:px-5 sticky top-0" style="height: 4rem; z-index: 100">
         <ng-template pTemplate="start">
           <div class="flex align-items-center gap-2 cursor-pointer" (click)="goToHome()">
@@ -101,7 +101,7 @@ import { Dialog } from 'primeng/dialog';
         </ng-template>
       </p-menubar>
 
-      <div class="flex flex-column align-items-center w-full px-3 py-3 md:py-5">
+      <div class="flex flex-column align-items-center w-full px-3 py-3 md:py-5" style="flex: 1">
         <div class="w-full" [style.max-width]="router.url.startsWith('/admin') ? '72rem' : '44rem'">
           <router-outlet></router-outlet>
         </div>
