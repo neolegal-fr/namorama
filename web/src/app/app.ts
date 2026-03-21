@@ -69,6 +69,17 @@ import { Dialog } from 'primeng/dialog';
               </p-button>
               <p-menu #projectMenu [model]="projectMenuItems" [popup]="true" appendTo="body"></p-menu>
 
+              <ng-container *ngIf="isAdmin()">
+                <p-button
+                  label="Administration"
+                  icon="pi pi-shield"
+                  [text]="true"
+                  severity="secondary"
+                  (onClick)="adminMenu.toggle($event)">
+                </p-button>
+                <p-menu #adminMenu [model]="adminMenuItems" [popup]="true" appendTo="body"></p-menu>
+              </ng-container>
+
                 <p-avatar
                   icon="pi pi-user"
                   shape="circle"
@@ -351,6 +362,11 @@ export class AppComponent implements OnInit {
 
   profileMenuItems: MenuItem[] = [];
   projectMenuItems: MenuItem[] = [];
+  adminMenuItems: MenuItem[] = [
+    { label: 'Dashboard',    icon: 'pi pi-chart-bar', command: () => this.router.navigate(['/admin/dashboard']) },
+    { label: 'Utilisateurs', icon: 'pi pi-users',     command: () => this.router.navigate(['/admin/users']) },
+    { label: 'Feedbacks',    icon: 'pi pi-comment',   command: () => this.router.navigate(['/admin/feedback']) },
+  ];
 
   // Feedback
   showFeedbackDialog = signal(false);
@@ -428,7 +444,7 @@ export class AppComponent implements OnInit {
   }
 
   updateProfileMenu() {
-    this.translate.get(['APP.CREDITS', 'APP.LOGOUT', 'APP.MANAGE_ACCOUNT', 'APP.ADMIN', 'APP.DELETE_ACCOUNT']).subscribe(res => {
+    this.translate.get(['APP.CREDITS', 'APP.LOGOUT', 'APP.MANAGE_ACCOUNT', 'APP.DELETE_ACCOUNT']).subscribe(res => {
       this.profileMenuItems = [
         {
           label: this.userName(),
@@ -443,11 +459,6 @@ export class AppComponent implements OnInit {
               icon: 'pi pi-cog',
               command: () => this.keycloak.getKeycloakInstance().accountManagement()
             },
-            ...(this.isAdmin() ? [{
-              label: res['APP.ADMIN'],
-              icon: 'pi pi-shield',
-              command: () => this.router.navigate(['/admin'])
-            }] : []),
             { separator: true },
             {
               label: res['APP.DELETE_ACCOUNT'],
