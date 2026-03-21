@@ -54,6 +54,28 @@ api/src/
 - Crédits initiaux : 100
 - Vérification Whois via commande système `whois` (Linux)
 
+## Déploiement en production
+
+Le serveur de prod est accessible via SSH à `192.168.1.95` (user `nicolas`).
+
+Les images Docker sont buildées automatiquement par **GitHub Actions** et poussées sur le registry `git.neolegal.fr/neolegal/`.
+
+Le docker-compose de prod est dans `/var/snap/docker/common/namorama/docker-compose.yml`.
+
+### Mettre à jour la prod (après un push sur `main`)
+
+```bash
+ssh nicolas@192.168.1.95 "cd /var/snap/docker/common/namorama && docker compose pull api web && docker compose up -d api web"
+```
+
+> Attendre que GitHub Actions ait terminé le build avant de lancer cette commande.
+
+### Vérifier l'état des conteneurs
+
+```bash
+ssh nicolas@192.168.1.95 "docker compose -f /var/snap/docker/common/namorama/docker-compose.yml ps"
+```
+
 ## Fonctionnalités
 
 - Wizard : Description → Reformulation IA → Mots-clés → Recherche domaines
