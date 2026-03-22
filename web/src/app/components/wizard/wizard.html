@@ -243,7 +243,7 @@
                       style="background: none; border: none; cursor: pointer; margin-left: 0.4rem; padding: 0; vertical-align: middle; opacity: 0.55"
                       [pTooltip]="(showDisliked() ? ('WIZARD.STEP3.FILTER_HIDE_DISLIKED' | translate) : ('WIZARD.STEP3.FILTER_SHOW_ALL' | translate))"
                       tooltipPosition="top">
-                      <i class="pi" [class.pi-eye]="!showDisliked()" [class.pi-eye-slash]="showDisliked()" style="font-size: 0.75rem"></i>
+                      <i class="pi" [class.pi-filter]="!showDisliked()" [class.pi-filter-slash]="showDisliked()" style="font-size: 0.75rem"></i>
                     </button>
                   </th>
                   <th *ngFor="let ext of selectedExtensions()" class="text-center px-1" style="background: var(--p-surface-50)">{{ ext }}</th>
@@ -261,14 +261,14 @@
                         style="background: none; border: none; cursor: pointer; font-size: 1.1rem; flex-shrink: 0; padding: 0"
                         [pTooltip]="'WIZARD.STEP3.RATE_LIKED' | translate" tooltipPosition="top">
                         <i class="pi" [class.pi-thumbs-up-fill]="result.rating === 'liked'" [class.pi-thumbs-up]="result.rating !== 'liked'"
-                           [style.color]="result.rating === 'liked' ? '#22c55e' : '#9ca3af'"></i>
+                           style="color: #d1d5db"></i>
                       </button>
                       <button type="button"
                         (click)="setRating(result, result.rating === 'disliked' ? 'neutral' : 'disliked'); $event.stopPropagation()"
                         style="background: none; border: none; cursor: pointer; font-size: 1.1rem; flex-shrink: 0; padding: 0"
                         [pTooltip]="'WIZARD.STEP3.RATE_DISLIKED' | translate" tooltipPosition="top">
                         <i class="pi" [class.pi-thumbs-down-fill]="result.rating === 'disliked'" [class.pi-thumbs-down]="result.rating !== 'disliked'"
-                           [style.color]="result.rating === 'disliked' ? '#ef4444' : '#9ca3af'"></i>
+                           style="color: #d1d5db"></i>
                       </button>
                       <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap" [style.color]="isFullyAvailable(result) ? '#16a34a' : null">{{ result.name }}</span>
                       <span *ngIf="isLocal() && result.style && result.style !== 'standard'"
