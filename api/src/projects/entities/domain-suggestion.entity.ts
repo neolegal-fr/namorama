@@ -12,8 +12,8 @@ export class DomainSuggestion {
   @Column({ type: 'json' })
   availability: Record<string, boolean>;
 
-  @Column({ default: false })
-  isFavorite: boolean;
+  @Column({ type: 'varchar', length: 10, default: 'neutral' })
+  rating: 'liked' | 'disliked' | 'neutral';
 
   @Column({ nullable: true, type: 'text' })
   analysis: string | null;

@@ -123,6 +123,8 @@ export class DomainController {
         },
         dto.descriptiveNames ?? false,
         dto.culturalNames ?? false,
+        dto.likedNames ?? [],
+        dto.dislikedNames ?? [],
       );
 
       const actualCost = results.length;
@@ -194,6 +196,8 @@ export class DomainController {
       undefined,
       dto.descriptiveNames ?? false,
       dto.culturalNames ?? false,
+      dto.likedNames ?? [],
+      dto.dislikedNames ?? [],
     );
 
     const actualCost = results.length;

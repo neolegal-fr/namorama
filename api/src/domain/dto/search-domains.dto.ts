@@ -56,4 +56,14 @@ export class SearchDomainsDto {
   @IsBoolean()
   @IsOptional()
   culturalNames?: boolean;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  likedNames?: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  dislikedNames?: string[];
 }

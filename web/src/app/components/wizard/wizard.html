@@ -236,7 +236,16 @@
             <p-table [value]="filteredDomains()" styleClass="p-datatable-sm" [tableStyle]="{'width': '100%'}">
               <ng-template pTemplate="header">
                 <tr>
-                  <th style="background: var(--p-surface-50); min-width: 100px">Nom de domaine</th>
+                  <th style="background: var(--p-surface-50); min-width: 100px">
+                    Nom de domaine
+                    <button type="button"
+                      (click)="showDisliked.set(!showDisliked()); $event.stopPropagation()"
+                      style="background: none; border: none; cursor: pointer; margin-left: 0.4rem; padding: 0; vertical-align: middle; opacity: 0.55"
+                      [pTooltip]="(showDisliked() ? ('WIZARD.STEP3.FILTER_HIDE_DISLIKED' | translate) : ('WIZARD.STEP3.FILTER_SHOW_ALL' | translate))"
+                      tooltipPosition="top">
+                      <i class="pi" [class.pi-eye]="!showDisliked()" [class.pi-eye-slash]="showDisliked()" style="font-size: 0.75rem"></i>
+                    </button>
+                  </th>
                   <th *ngFor="let ext of selectedExtensions()" class="text-center px-1" style="background: var(--p-surface-50)">{{ ext }}</th>
                   <th class="text-center" style="background: var(--p-surface-50); width: 1px; white-space: nowrap; padding: 0.5rem 0.75rem">
                     <i class="pi pi-shopping-cart" style="font-size: 0.8rem; color: var(--p-surface-400)" [pTooltip]="'WIZARD.STEP3.BUY_COL_HEADER' | translate" tooltipPosition="top"></i>
@@ -247,8 +256,19 @@
                 <tr class="domain-row">
                   <td class="font-bold text-sm py-2 px-2" style="font-family: monospace">
                     <div style="display: flex; align-items: center; gap: 0.75rem">
-                      <button type="button" (click)="toggleFavorite(result); $event.stopPropagation()" style="background: none; border: none; cursor: pointer; font-size: 1.25rem; flex-shrink: 0; padding: 0">
-                        <i class="pi" [class.pi-heart-fill]="result.isFavorite" [class.pi-heart]="!result.isFavorite" [style.color]="result.isFavorite ? '#ef4444' : '#9ca3af'"></i>
+                      <button type="button"
+                        (click)="setRating(result, result.rating === 'liked' ? 'neutral' : 'liked'); $event.stopPropagation()"
+                        style="background: none; border: none; cursor: pointer; font-size: 1.1rem; flex-shrink: 0; padding: 0"
+                        [pTooltip]="'WIZARD.STEP3.RATE_LIKED' | translate" tooltipPosition="top">
+                        <i class="pi" [class.pi-thumbs-up-fill]="result.rating === 'liked'" [class.pi-thumbs-up]="result.rating !== 'liked'"
+                           [style.color]="result.rating === 'liked' ? '#22c55e' : '#9ca3af'"></i>
+                      </button>
+                      <button type="button"
+                        (click)="setRating(result, result.rating === 'disliked' ? 'neutral' : 'disliked'); $event.stopPropagation()"
+                        style="background: none; border: none; cursor: pointer; font-size: 1.1rem; flex-shrink: 0; padding: 0"
+                        [pTooltip]="'WIZARD.STEP3.RATE_DISLIKED' | translate" tooltipPosition="top">
+                        <i class="pi" [class.pi-thumbs-down-fill]="result.rating === 'disliked'" [class.pi-thumbs-down]="result.rating !== 'disliked'"
+                           [style.color]="result.rating === 'disliked' ? '#ef4444' : '#9ca3af'"></i>
                       </button>
                       <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap" [style.color]="isFullyAvailable(result) ? '#16a34a' : null">{{ result.name }}</span>
                       <span *ngIf="isLocal() && result.style && result.style !== 'standard'"
@@ -260,7 +280,7 @@
                       <i *ngIf="result.isManual" class="pi pi-pencil" style="font-size: 0.7rem; color: #9ca3af; flex-shrink: 0" [pTooltip]="'WIZARD.STEP3.MANUAL_TOOLTIP' | translate" tooltipPosition="top"></i>
                       <!-- US-005 — note en étoiles (spinner pendant le calcul, étoiles une fois dispo) -->
                       <i *ngIf="result.analysisPending" class="pi pi-spin pi-spinner" style="font-size: 0.75rem; color: #f59e0b; flex-shrink: 0" [pTooltip]="'WIZARD.STEP3.ANALYSIS_PENDING' | translate" tooltipPosition="top"></i>
-                      <button *ngIf="result.isFavorite && result.analysis && !result.analysisPending" type="button"
+                      <button *ngIf="result.rating === 'liked' && result.analysis && !result.analysisPending" type="button"
                               (click)="toggleAnalysis(result.id); $event.stopPropagation()"
                               style="background: none; border: none; cursor: pointer; padding: 0; flex-shrink: 0; display: flex; align-items: center; gap: 3px"
                               [pTooltip]="'WIZARD.STEP3.ANALYSIS_TOGGLE' | translate" tooltipPosition="top">

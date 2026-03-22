@@ -135,7 +135,7 @@ export class AdminService {
       `SELECT AVG(cnt) as avg FROM (SELECT COUNT(*) as cnt FROM domain_suggestion GROUP BY projectId) sub`
     );
     const avgFavoritesResult = await this.dataSource.query(
-      `SELECT AVG(cnt) as avg FROM (SELECT COUNT(*) as cnt FROM domain_suggestion WHERE isFavorite = 1 GROUP BY projectId) sub`
+      `SELECT AVG(cnt) as avg FROM (SELECT COUNT(*) as cnt FROM domain_suggestion WHERE rating = 'liked' GROUP BY projectId) sub`
     );
 
     const creditsResult = await this.dataSource.query(

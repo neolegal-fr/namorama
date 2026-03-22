@@ -107,6 +107,8 @@ export class DomainService {
     excludeNames: string[] = [],
     descriptiveNames = false,
     culturalNames = false,
+    likedNames: string[] = [],
+    dislikedNames: string[] = [],
   ): Promise<{ name: string; style: string }[]> {
     // Assainir les keywords avant injection dans le prompt : supprimer les séquences
     // qui pourraient tromper le modèle (sauts de ligne, guillemets triples, etc.)
@@ -122,6 +124,16 @@ export class DomainService {
     const exclusionSection = excludeNames.length > 0
       ? `\nAlready tested — do NOT reproduce any of these names: ${excludeNames.slice(0, 200).join(', ')}\n`
       : '';
+
+    // US-046 — user preference feedback to guide generation
+    const feedbackSection = [
+      likedNames.length > 0
+        ? `\nThe user LIKED these names (use them as positive style references — generate names with a similar feel): ${likedNames.slice(0, 20).join(', ')}\n`
+        : '',
+      dislikedNames.length > 0
+        ? `\nThe user DISLIKED these names (avoid regenerating them and avoid names that are phonetically or semantically similar): ${dislikedNames.slice(0, 20).join(', ')}\n`
+        : '',
+    ].join('');
 
     // US-032 — calculate proportions across active styles
     const activeStyles = ['standard', ...(descriptiveNames ? ['descriptive'] : []), ...(culturalNames ? ['cultural'] : [])];
@@ -183,7 +195,7 @@ Generate ORIGINAL domain-name bases for the following project.
 
 Description: "${description}"
 Semantic keywords to draw from: ${vocabStr}
-${exclusionSection}
+${exclusionSection}${feedbackSection}
 ${styleInstructions.join('\n')}
 
 IMPORTANT RULES:
@@ -360,6 +372,8 @@ ${langInstruction}`;
     onEvent?: (event: Record<string, any>) => void,
     descriptiveNames = false,
     culturalNames = false,
+    likedNames: string[] = [],
+    dislikedNames: string[] = [],
   ): Promise<{ results: any[], totalChecked: number }> {
     const finalResults: any[] = [];
     // US-015 — pre-seed with already-evaluated names so the LLM never re-proposes them
@@ -369,7 +383,7 @@ ${langInstruction}`;
 
     while (finalResults.length < targetCount && attempts < maxAttempts) {
       onEvent?.({ type: 'generating' });
-      const items = await this.generateDomainIdeas(description, keywords, locale, [...checkedNames], descriptiveNames, culturalNames);
+      const items = await this.generateDomainIdeas(description, keywords, locale, [...checkedNames], descriptiveNames, culturalNames, likedNames, dislikedNames);
 
       const newItems = items.filter(item => !checkedNames.has(item.name));
       newItems.forEach(item => checkedNames.add(item.name));

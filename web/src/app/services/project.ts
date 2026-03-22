@@ -38,8 +38,8 @@ export class ProjectService {
     return this.http.patch<any>(`${this.apiUrl}/${id}`, data);
   }
 
-  toggleFavorite(suggestionId: string): Observable<{ isFavorite: boolean }> {
-    return this.http.patch<{ isFavorite: boolean }>(`${this.apiUrl}/suggestions/${suggestionId}/favorite`, {});
+  setRating(suggestionId: string, rating: 'liked' | 'disliked' | 'neutral'): Observable<{ rating: string }> {
+    return this.http.patch<{ rating: string }>(`${this.apiUrl}/suggestions/${suggestionId}/rating`, { rating });
   }
 
   updateSuggestionsAvailability(updates: { id: string; availability: Record<string, boolean> }[]): Observable<any> {

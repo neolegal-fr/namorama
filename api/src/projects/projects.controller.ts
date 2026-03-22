@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Patch, Delete, Post, Logger, Body, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Param, Patch, Delete, Post, Logger, Body, ParseUUIDPipe, BadRequestException } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { AuthenticatedUser } from 'nest-keycloak-connect';
 import { UsersService } from '../users/users.service';
@@ -56,10 +56,17 @@ export class ProjectsController {
     return { ok: true };
   }
 
-  @Patch('suggestions/:id/favorite')
-  async toggleFavorite(@Param('id', new ParseUUIDPipe()) id: string, @AuthenticatedUser() keycloakUser: any) {
+  @Patch('suggestions/:id/rating')
+  async setRating(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @AuthenticatedUser() keycloakUser: any,
+    @Body('rating') rating: string,
+  ) {
+    if (!['liked', 'disliked', 'neutral'].includes(rating)) {
+      throw new BadRequestException('rating must be liked, disliked or neutral');
+    }
     const user = await this.usersService.findOrCreate(keycloakUser.sub);
-    const isFavorite = await this.projectsService.toggleFavorite(id, user);
-    return { isFavorite };
+    const result = await this.projectsService.setRating(id, user, rating as 'liked' | 'disliked' | 'neutral');
+    return { rating: result };
   }
 }

@@ -33,10 +33,8 @@ export class ProjectsService {
       throw new NotFoundException('Projet non trouvé');
     }
 
-    project.suggestions.sort((a, b) => {
-      if (a.isFavorite === b.isFavorite) return 0;
-      return a.isFavorite ? -1 : 1;
-    });
+    const ratingOrder: Record<string, number> = { liked: 0, neutral: 1, disliked: 2 };
+    project.suggestions.sort((a, b) => (ratingOrder[a.rating] ?? 1) - (ratingOrder[b.rating] ?? 1));
 
     return project;
   }
@@ -132,7 +130,7 @@ export class ProjectsService {
     return this.suggestionsRepository.save(suggestion);
   }
 
-  async toggleFavorite(suggestionId: string, user: User): Promise<boolean> {
+  async setRating(suggestionId: string, user: User, rating: 'liked' | 'disliked' | 'neutral'): Promise<'liked' | 'disliked' | 'neutral'> {
     const suggestion = await this.suggestionsRepository.findOne({
       where: { id: suggestionId, project: { user: { id: user.id } } },
     });
@@ -141,9 +139,9 @@ export class ProjectsService {
       throw new NotFoundException('Suggestion non trouvée');
     }
 
-    suggestion.isFavorite = !suggestion.isFavorite;
+    suggestion.rating = rating;
     await this.suggestionsRepository.save(suggestion);
-    return suggestion.isFavorite;
+    return suggestion.rating;
   }
 
   async update(id: string, user: User, data: Partial<Project>): Promise<Project> {

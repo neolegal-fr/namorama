@@ -170,7 +170,8 @@ export class WizardComponent implements OnInit {
   pickBestResult = signal<{ recommended: string; reason: string } | null>(null);
   pickBestCandidates = signal<string[]>([]);
   private pickBestKey = signal<string | null>(null);
-  favourites = computed(() => this.domains().filter(d => d.isFavorite));
+  showDisliked = signal(false);
+  likedDomains = computed(() => this.domains().filter(d => d.rating === 'liked'));
 
   pickMenuItems = computed<MenuItem[]>(() => [
     {
@@ -180,8 +181,8 @@ export class WizardComponent implements OnInit {
     },
     {
       label: this.translate.instant('WIZARD.STEP3.PICK_FAVOURITES'),
-      icon: 'pi pi-heart-fill',
-      disabled: this.favourites().length < 2,
+      icon: 'pi pi-thumbs-up',
+      disabled: this.likedDomains().length < 2,
       command: () => this.helpMePick('favourites'),
     },
   ]);
@@ -244,8 +245,10 @@ export class WizardComponent implements OnInit {
   filteredDomains = computed(() => {
     const mode = this.matchMode();
     const exts = this.selectedExtensions();
-    if (exts.length === 0) return this.domains();
+    const showDisliked = this.showDisliked();
     return this.domains().filter(d => {
+      if (!showDisliked && d.rating === 'disliked') return false;
+      if (exts.length === 0) return true;
       // Ignorer les extensions en cours de vérification (null) dans le filtre
       const knownExts = exts.filter(ext => d.allExtensions?.[ext] !== null && d.allExtensions?.[ext] !== undefined);
       if (knownExts.length === 0) return true; // toutes en cours → on garde la ligne
@@ -407,7 +410,7 @@ export class WizardComponent implements OnInit {
           name: s.domainName,
           style: s.style || 'standard',
           allExtensions: s.availability,
-          isFavorite: s.isFavorite,
+          rating: s.rating ?? 'neutral',
           analysis: s.analysis ?? null,
           analysisPending: false,
         })));
@@ -480,24 +483,22 @@ export class WizardComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  toggleFavorite(result: any) {
+  private readonly ratingOrder: Record<string, number> = { liked: 0, neutral: 1, disliked: 2 };
+
+  setRating(result: any, rating: 'liked' | 'disliked' | 'neutral') {
     if (!result.id) return;
 
-    // Mise à jour optimiste immédiate — l'UI répond sans attendre le serveur
-    const previousValue = result.isFavorite;
-    result.isFavorite = !result.isFavorite;
-    this.domains.update(d => [...d].sort((a, b) => {
-      if (a.isFavorite === b.isFavorite) return 0;
-      return a.isFavorite ? -1 : 1;
-    }));
+    // Mise à jour optimiste immédiate
+    const previousRating = result.rating;
+    result.rating = rating;
+    this.domains.update(d => [...d].sort((a, b) => (this.ratingOrder[a.rating] ?? 1) - (this.ratingOrder[b.rating] ?? 1)));
     this.cdr.detectChanges();
 
-    // Synchronisation en arrière-plan
-    this.projectService.toggleFavorite(result.id).subscribe({
+    this.projectService.setRating(result.id, rating).subscribe({
       next: (res) => {
-        result.isFavorite = res.isFavorite;
-        // US-005 — déclencher l'analyse IA si le favori vient d'être activé et pas encore analysé
-        if (res.isFavorite && !result.analysis && !result.analysisPending) {
+        result.rating = res.rating;
+        // US-005 — déclencher l'analyse IA si liked et pas encore analysé
+        if (res.rating === 'liked' && !result.analysis && !result.analysisPending) {
           setTimeout(() => {
             result.analysisPending = true;
             this.cdr.detectChanges();
@@ -513,19 +514,15 @@ export class WizardComponent implements OnInit {
         }
       },
       error: () => {
-        // Annulation de la mise à jour optimiste en cas d'erreur
-        result.isFavorite = previousValue;
-        this.domains.update(d => [...d].sort((a, b) => {
-          if (a.isFavorite === b.isFavorite) return 0;
-          return a.isFavorite ? -1 : 1;
-        }));
+        result.rating = previousRating;
+        this.domains.update(d => [...d].sort((a, b) => (this.ratingOrder[a.rating] ?? 1) - (this.ratingOrder[b.rating] ?? 1)));
         this.cdr.detectChanges();
       }
     });
   }
 
   helpMePick(mode: 'all' | 'favourites' = 'all') {
-    const candidates = mode === 'favourites' ? this.favourites() : this.filteredDomains();
+    const candidates = mode === 'favourites' ? this.likedDomains() : this.filteredDomains();
     if (candidates.length < 2) return;
 
     const currentKey = mode + ':' + candidates.map(d => d.name).sort().join('|');
@@ -913,20 +910,17 @@ export class WizardComponent implements OnInit {
       return;
     }
 
-    // Lignes temporaires avec spinners — auto-favourite immédiat (US-025)
+    // Lignes temporaires avec spinners — auto-liked immédiat (US-025)
     const tempRows = newNames.map(name => ({
       id: null as string | null,
       name,
       allExtensions: Object.fromEntries(this.selectedExtensions().map(ext => [ext, null])),
-      isFavorite: true,
+      rating: 'liked' as const,
       isManual: true,
       analysisPending: false,
       analysis: null as string | null,
     }));
-    this.domains.update(d => [...d, ...tempRows].sort((a, b) => {
-      if (a.isFavorite === b.isFavorite) return 0;
-      return a.isFavorite ? -1 : 1;
-    }));
+    this.domains.update(d => [...d, ...tempRows].sort((a, b) => (this.ratingOrder[a.rating] ?? 1) - (this.ratingOrder[b.rating] ?? 1)));
     this.newDomainName.set('');
     this.addingDomain.set(true);
     this.cdr.detectChanges();
@@ -968,8 +962,8 @@ export class WizardComponent implements OnInit {
                 this.domains.update(list =>
                   list.map(d => d.name === r.name && d.isManual ? { ...d, id: saved.id } : d)
                 );
-                // Persister le favori côté serveur puis déclencher l'analyse IA
-                this.projectService.toggleFavorite(saved.id).subscribe({
+                // Persister le rating liked côté serveur puis déclencher l'analyse IA
+                this.projectService.setRating(saved.id, 'liked').subscribe({
                   next: () => {
                     const domain = this.domains().find(d => d.id === saved.id);
                     if (domain && !domain.analysis && !domain.analysisPending) {
@@ -1048,6 +1042,9 @@ export class WizardComponent implements OnInit {
       // US-032 — naming styles (local mode only)
       descriptiveNames: this.isLocal() ? this.descriptiveNames() : false,
       culturalNames: this.isLocal() ? this.culturalNames() : false,
+      // US-046 — feedback utilisateur pour affiner la génération suivante
+      likedNames: this.domains().filter(d => d.rating === 'liked').map(d => d.name),
+      dislikedNames: this.domains().filter(d => d.rating === 'disliked').map(d => d.name),
     }, token).subscribe({
       next: (event: any) => {
         this.clearSearchTimeout();
@@ -1062,7 +1059,7 @@ export class WizardComponent implements OnInit {
             : null);
 
         } else if (event.type === 'result') {
-          const domain = { id: null as string | null, name: event.domain.name, style: event.domain.style || 'standard', allExtensions: event.domain.allExtensions, isFavorite: false };
+          const domain = { id: null as string | null, name: event.domain.name, style: event.domain.style || 'standard', allExtensions: event.domain.allExtensions, rating: 'neutral' as const };
           this.domains.update(d => [...d, domain]);
           this.streamProgress.update(p => p ? { ...p, found: this.domains().length } : null);
 

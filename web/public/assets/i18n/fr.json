@@ -158,7 +158,11 @@
       "PICK_COPY": "Copier le nom",
       "PICK_OTHER": "Autres candidats :",
       "PICK_ALL": "Parmi tous les résultats",
-      "PICK_FAVOURITES": "Parmi les favoris uniquement",
+      "PICK_FAVOURITES": "Parmi les noms aimés uniquement",
+      "RATE_LIKED": "J'aime ce nom",
+      "RATE_DISLIKED": "Je n'aime pas ce nom",
+      "FILTER_SHOW_ALL": "Afficher aussi les noms rejetés",
+      "FILTER_HIDE_DISLIKED": "Masquer les noms rejetés",
       "PICK_URGENCY_TITLE": "Les bons noms partent vite.",
       "PICK_URGENCY_SUB": "Celui-ci est libre en ce moment — peut-être plus demain. Ne laissez pas quelqu'un d'autre l'enregistrer avant vous.",
       "PICK_BUY_BTN": "Acheter ce domaine"

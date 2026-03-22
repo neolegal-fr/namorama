@@ -158,7 +158,11 @@
       "PICK_COPY": "Copy name",
       "PICK_OTHER": "Other candidates:",
       "PICK_ALL": "Among all results",
-      "PICK_FAVOURITES": "Among favourites only",
+      "PICK_FAVOURITES": "Among liked names only",
+      "RATE_LIKED": "I like this name",
+      "RATE_DISLIKED": "I don't like this name",
+      "FILTER_SHOW_ALL": "Also show rejected names",
+      "FILTER_HIDE_DISLIKED": "Hide rejected names",
       "PICK_URGENCY_TITLE": "Good names go fast.",
       "PICK_URGENCY_SUB": "This one is available right now — maybe not tomorrow. Don't let someone else register it before you.",
       "PICK_BUY_BTN": "Buy this domain"
