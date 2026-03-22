@@ -1699,3 +1699,113 @@ Even with an improved prompt (US-044), a single LLM call tends to converge on a 
 - Scoring or ranking candidates before Whois check
 - User-facing controls to select which passes run
 - Caching pass results across sessions
+
+---
+
+## US-046 · Thumb Up / Thumb Down — Replace Favourites with Explicit Rating
+
+**Status**: ❌ To do
+
+**As a** user reviewing domain name suggestions,
+**I want to** explicitly rate each suggestion as liked (👍) or disliked (👎), with disliked names hidden by default,
+**So that** I can keep my workspace clean while retaining the ability to recover dismissed names, and so the AI learns from my preferences when generating additional suggestions.
+
+### Context
+The current "favourite" (❤️) system is a binary on/off toggle that only captures positive signals. There is no way to mark names as actively unwanted. This means disliked names clutter the table alongside neutral ones. Replacing the single heart with a thumb-up / thumb-down pair provides richer feedback, drives a cleaner default view, and allows the AI prompt for subsequent generation runs to avoid repeated mistakes and build on what the user liked.
+
+This story is **distinct from US-033 (Tinder Mode)**, which is a separate swipe-card view. The rating mechanism introduced here applies directly to the standard table view and is the source of truth for `liked` / `disliked` state used by both views.
+
+### UX Behaviour
+
+| Action | Visual | Effect |
+|--------|--------|--------|
+| Click 👍 on a neutral row | Thumb filled blue | Marks as `liked`; row sorted to top; AI analysis triggered (existing US-005 behaviour) |
+| Click 👍 on an already-liked row | Reverts to neutral | Removes `liked` state |
+| Click 👎 on a neutral row | Thumb filled red | Marks as `disliked`; row hidden from default view |
+| Click 👎 on an already-disliked row | Reverts to neutral | Removes `disliked` state; row reappears |
+| Click 👍 on a disliked row | Thumb up filled blue, 👎 cleared | Transitions directly from `disliked` to `liked` |
+| Click 👎 on a liked row | Thumb down filled red, 👍 cleared | Transitions directly from `liked` to `disliked` |
+
+### Filter Behaviour (Column Header Icon)
+
+A small filter icon appears in the column header of the rating column:
+- **Default state (active filter)**: shows only `liked` + `neutral` rows — `disliked` rows are hidden
+- **Filter toggled off**: shows all rows including `disliked` rows (which appear with a muted/strikethrough style to distinguish them)
+- The filter state is local to the session (not persisted with the project)
+- A tooltip on the filter icon reads "Hidden names: N" when the filter is active and N > 0
+
+### Acceptance Criteria
+
+#### Frontend — Data Model
+
+- [ ] Replace the `isFavorite: boolean` field on the local domain object with a `rating: 'liked' | 'disliked' | 'neutral'` field
+- [ ] On load from API, map `isFavorite === true` → `rating: 'liked'`, `isFavorite === false` → `rating: 'neutral'` (backward compatibility)
+- [ ] Replace the `favourites` computed signal with:
+  - `likedDomains = computed(() => this.domains().filter(d => d.rating === 'liked'))`
+  - `dislikedDomains = computed(() => this.domains().filter(d => d.rating === 'disliked'))`
+
+#### Frontend — Table UI
+
+- [ ] Replace the single heart icon (❤️ / 🤍) in each row with two icon buttons: **👍** and **👎** (PrimeIcon `pi-thumbs-up` / `pi-thumbs-down`)
+- [ ] Active state styling:
+  - `liked`: 👍 filled / coloured (blue `#3b82f6`), 👎 outline grey
+  - `disliked`: 👎 filled / coloured (red `#ef4444`), 👍 outline grey
+  - `neutral`: both icons outline grey
+- [ ] Both buttons use the same optimistic-update pattern as the existing `toggleFavorite()` — instant local state change, API sync in background, rollback on error
+- [ ] The column header for the rating column contains a filter toggle icon (`pi-filter` / `pi-filter-slash`)
+  - Default: filter active → `disliked` rows hidden
+  - Toggled: filter inactive → all rows visible; disliked rows rendered with `opacity: 0.45` and a light red row background
+  - A `p-tooltip` on the icon shows "X name(s) hidden" when filter is active and X > 0
+- [ ] Row sort order: `liked` first, then `neutral`, then `disliked` (only visible when filter is off)
+- [ ] The "Aide-moi à choisir" menu items and `helpMePick()` function use `likedDomains` in place of `favourites` — behaviour unchanged
+
+#### Frontend — i18n
+
+- [ ] Add translation keys for the filter tooltip and any new ARIA labels in both `fr.json` and `en.json`
+
+#### Backend — Entity Migration
+
+- [ ] Add a `rating` varchar column to `DomainSuggestion` with values `'liked'` | `'disliked'` | `'neutral'`, default `'neutral'`
+- [ ] Migration script: populate `rating = 'liked'` where `isFavorite = true`, `rating = 'neutral'` elsewhere
+- [ ] Keep the `isFavorite` column for one release cycle for backward compatibility (computed from `rating` on read), then remove in a follow-up migration
+
+#### Backend — API
+
+- [ ] Replace `PATCH /projects/suggestions/:id/favorite` with `PATCH /projects/suggestions/:id/rating`
+  - Body: `{ "rating": "liked" | "disliked" | "neutral" }`
+  - Response: `{ "rating": "liked" | "disliked" | "neutral" }`
+- [ ] `ProjectsService.setRating(id, rating, user)` replaces `toggleFavorite()` — sets the value directly (no toggle logic)
+- [ ] The existing sort in `ProjectsService.findOne()` becomes: `liked` first, then `neutral`, then `disliked`
+- [ ] AI analysis trigger (`analyzeNameWithAI`) is called when `rating` transitions **to** `'liked'` and no analysis exists (same as current `isFavorite = true` trigger)
+
+#### Backend — AI Prompt Improvement
+
+- [ ] `SearchDomainsDto` gains two optional fields:
+  - `likedNames?: string[]` — names the user has rated 👍 in previous runs
+  - `dislikedNames?: string[]` — names the user has rated 👎 in previous runs
+- [ ] `DomainService.generateDomainIdeas()` includes these lists in the prompt when non-empty:
+
+```
+Previously liked names (use as positive style reference — generate names with similar feel):
+${likedNames.join(', ')}
+
+Previously disliked names (do NOT regenerate these, and avoid names that are phonetically or semantically similar):
+${dislikedNames.join(', ')}
+```
+
+- [ ] The frontend passes `likedDomains().map(d => d.name)` and `dislikedDomains().map(d => d.name)` in the search request body when triggering a "More suggestions" run
+- [ ] `likedNames` and `dislikedNames` are merged with the existing `excludeNames` list (US-015) on the backend to guarantee deduplication
+
+### Technical Notes
+
+- `pi-thumbs-up-fill` / `pi-thumbs-down-fill` are available in PrimeIcons — use filled variants for active state
+- The filter toggle signal: `showDisliked = signal<boolean>(false)` in `WizardComponent`; the `filteredDomains` computed signal already used for table rendering gains an additional filter clause: `d.rating !== 'disliked' || this.showDisliked()`
+- Inline styles required for the muted disliked row appearance (PrimeNG overrides Tailwind on `<tr>`)
+- The old `PATCH /suggestions/:id/favorite` endpoint should return a 410 Gone or redirect for one release, then be removed
+
+### Relationship to Other Stories
+
+- **US-005**: AI analysis trigger preserved — fires on transition to `liked` (was `isFavorite = true`)
+- **US-015**: `dislikedNames` merged into exclusion list for re-generation
+- **US-018**: "Aide-moi à choisir" uses `likedDomains` (renamed from `favourites`)
+- **US-033**: Tinder Mode's `dislikedNames` signal should write to the same `rating` field introduced here, ensuring the two views stay in sync
