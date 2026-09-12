@@ -468,6 +468,21 @@ export class WizardComponent implements OnInit, OnDestroy {
   // Remplace les anciens liens profonds registrar/INPI/réseaux (qui laissaient
   // l'utilisateur faire le travail à la main) par un rapport réel et payant.
   readonly brandReportCost = BRAND_REPORT_COST;
+
+  /**
+   * Solde en dessous duquel le compteur passe en avertissement.
+   *
+   * Vingt, soit deux recherches pleines. Le mur ne s'annonçait pas : on
+   * passait de cent à zéro sans qu'aucun écran ne change de ton, et les deux
+   * façons de s'y cogner sont visibles en production — un compte inscrit le
+   * 08/09/2026 a dépensé ses cent crédits en sept minutes (cinq recherches et
+   * un rapport) puis n'est jamais revenu ; un autre a enchaîné neuf recherches
+   * en trois minutes et demie pour finir à dix.
+   *
+   * Pas plus haut : au-dessus de deux recherches, l'avertissement se banalise
+   * et ne veut plus rien dire.
+   */
+  readonly SEUIL_CREDITS_BAS = 20;
   readonly brandReport = signal<BrandReport | null>(null);
   readonly brandReportLoading = signal(false);
   readonly brandReportError = signal<string | null>(null);
@@ -955,10 +970,31 @@ export class WizardComponent implements OnInit, OnDestroy {
     return this.userService.creditsValue >= this.brandReportCost;
   }
 
+  /**
+   * Ouvre le dialogue d'achat de crédits, en disant d'où vient la demande.
+   *
+   * Ce chemin n'émettait AUCUN événement : Stripe est configuré, trois packs
+   * existent, et on ne savait ni si quelqu'un ouvrait l'offre, ni à quel solde,
+   * ni ce qu'il en faisait. Sur les sept jours suivant le 05/09/2026, zéro
+   * appel au module de paiement et trois comptes à zéro crédit — sans moyen de
+   * distinguer « personne n'a vu l'offre » de « tout le monde l'a refusée ».
+   *
+   * `origine` est ce qui rend la mesure utile : un dialogue ouvert depuis la
+   * pastille du menu ne dit pas la même chose qu'un dialogue ouvert parce que
+   * la recherche vient d'être refusée faute de crédits.
+   */
+  ouvrirCredits(origine: 'rapport' | 'solde' | 'recherche_refusee' | 'solde_epuise'): void {
+    this.analytics.track('credits_dialog_opened', {
+      origine,
+      solde: this.userService.creditsValue,
+    });
+    this.projectService.showCreditDialog.set(true);
+  }
+
   /** Renvoie vers l'achat de crédits (dialogue existant). */
   openCreditPurchase(): void {
     this.showReportConfirm.set(false);
-    this.projectService.showCreditDialog.set(true);
+    this.ouvrirCredits('rapport');
   }
 
   /** Régénérer un rapport en cache (redébite) : repasse par la confirmation. */
@@ -1671,7 +1707,7 @@ export class WizardComponent implements OnInit, OnDestroy {
         // Un projet rouvert reçoit le même traitement qu'une recherche fraîche :
         // les noms sans analyse en obtiennent une, en tâche de fond. Le résultat
         // est mémorisé côté serveur, donc ce coût n'est payé qu'une fois par nom.
-        this.analyseEnFond();
+        this.analyserCeQuiEstVu();
         
         if (this.router.url !== `/projects/${id}`) {
           this.router.navigate(['/projects', id], { replaceUrl: true });
@@ -1723,6 +1759,9 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.refinedDescription.set('');
     this.keywords.set([]);
     this.domains.set([]);
+    // Les cartes du projet précédent disparaissent : ce qu'on avait vu d'elles
+    // n'a plus d'objet, et deux projets peuvent proposer le même nom.
+    this.oublierCeQuiEstVu();
     this.newKeyword.set('');
     this.newExtension.set('');
     this.matchMode.set('any');
@@ -1769,20 +1808,11 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.projectService.setRating(result.id, rating).subscribe({
       next: (res) => {
         result.rating = res.rating;
-        // US-005 — déclencher l'analyse IA si liked et pas encore analysé
-        if (res.rating === 'liked' && !result.analysis && !result.analysisPending) {
-          setTimeout(() => {
-            this.domains.update(l => l.map(d => d.id === result.id ? { ...d, analysisPending: true } : d));
-            this.cdr.detectChanges();
-            this.domainService.analyzeName(result.id, this.translate.currentLang() ?? undefined).subscribe({
-              next: (r) => {
-                this.domains.update(l => l.map(d => d.id === result.id ? { ...d, analysis: r.analysis, analysisPending: false } : d));
-                this.cdr.detectChanges();
-              },
-              error: () => { this.domains.update(l => l.map(d => d.id === result.id ? { ...d, analysisPending: false } : d)); this.cdr.detectChanges(); },
-            });
-          });
-        }
+        // US-005 — un nom qu'on aime mérite son analyse, et une carte qu'on
+        // note est forcément sous les yeux : la file s'en charge. Elle avait
+        // ici sa propre implémentation, qui court-circuitait la limite de trois
+        // appels simultanés et dupliquait la mise à jour du signal.
+        if (res.rating === 'liked') this.carteVue(result.name);
       },
       error: () => {
         if (previousRating !== undefined) {
@@ -1950,8 +1980,21 @@ export class WizardComponent implements OnInit, OnDestroy {
     return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 
+  /**
+   * Déplie ou replie l'analyse d'un nom.
+   *
+   * L'ouverture est TRACÉE, et c'est tout l'objet de l'événement : l'analyse
+   * est le premier poste de dépense du produit (69 % des appels au modèle sur
+   * les sept jours suivant le 05/09/2026), et rien ne disait si elle était lue.
+   * `name_analysis_requested` ne pouvait pas répondre — il ne part qu'au clic
+   * sur « Analyser », c'est-à-dire uniquement quand le calcul n'a PAS été fait
+   * d'avance. Un seul exemplaire sur la période, pour 409 analyses produites :
+   * l'absence de signal ne mesurait que l'efficacité du pré-calcul.
+   */
   toggleAnalysis(id: string) {
-    this.expandedAnalysisId.set(this.expandedAnalysisId() === id ? null : id);
+    const ouvre = this.expandedAnalysisId() !== id;
+    this.expandedAnalysisId.set(ouvre ? id : null);
+    if (ouvre) this.analytics.track('name_analysis_opened');
   }
 
   /**
@@ -2013,31 +2056,80 @@ export class WizardComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Lance l'analyse des noms qui n'en ont pas encore, en tâche de fond.
-   *
-   * Trois à la fois, pas trente : chaque analyse est un appel au modèle, et
-   * les tirer d'un coup allongerait la fin de recherche sans rien afficher
-   * plus tôt. À trois, les premières cartes se remplissent pendant qu'on lit
-   * les premières lignes — et l'ordre suit celui de la liste, donc ce qu'on
-   * regarde arrive en premier.
-   *
-   * Best-effort : un échec laisse la carte sur son bouton « Analyser ». Rien
-   * n'est réessayé automatiquement, un modèle qui refuse deux fois refusera
-   * la troisième.
-   */
-  private analyseEnFond(): void {
-    const file = this.domains().filter((d) => d.id && !d.analysis && !d.analysisPending).map((d) => d.id as string);
-    if (!file.length) return;
+  /** Trois analyses simultanées, pas trente : au-delà, on encombre le
+   * navigateur et le modèle sans rien afficher plus tôt. */
+  private static readonly ANALYSES_PARALLELES = 3;
 
-    const PARALLELE = 3;
-    let i = 0;
-    const suivant = () => {
-      if (i >= file.length) return;
-      const id = file[i++];
-      this.analyseOne(id, suivant);
-    };
-    for (let n = 0; n < Math.min(PARALLELE, file.length); n++) suivant();
+  /** Noms dont la carte a été amenée à l'écran au moins une fois. */
+  private readonly nomsVus = new Set<string>();
+
+  /** Identifiants déjà envoyés au modèle — un échec ne se réessaie pas tout seul. */
+  private readonly analysesLancees = new Set<string>();
+
+  private analysesEnCours = 0;
+
+  /** Vide la mémoire de défilement, quand la liste affichée change de contenu. */
+  private oublierCeQuiEstVu(): void {
+    this.nomsVus.clear();
+    this.analysesLancees.clear();
+  }
+
+  /**
+   * La carte de ce nom vient d'entrer dans le champ de vision.
+   *
+   * C'est le seul déclencheur automatique de l'analyse. Elle partait jusqu'ici
+   * pour TOUS les noms dès la fin d'une recherche, ce qui en faisait le premier
+   * poste de dépense du produit : sur les sept jours suivant le déploiement du
+   * 05/09/2026, `POST /domain/analyze` pesait 69 % des appels au modèle et
+   * 61,5 % du temps passé dedans, loin devant la recherche elle-même. Un compte
+   * a enchaîné neuf recherches en trois minutes et demie — 90 analyses pour une
+   * liste survolée vingt secondes par écran.
+   *
+   * Ce qui est conservé : une carte qu'on regarde porte ses étoiles, jamais un
+   * tiret qui se lirait comme une panne. Ce qui disparaît : le même calcul pour
+   * les cartes qu'on n'a pas atteintes.
+   */
+  carteVue(nom: string): void {
+    if (this.nomsVus.has(nom)) return;
+    this.nomsVus.add(nom);
+    this.analyserCeQuiEstVu();
+  }
+
+  /**
+   * Dépile la file des analyses dues.
+   *
+   * Une analyse est due quand les deux conditions sont réunies, et elles
+   * n'arrivent pas dans un ordre garanti : la carte a été vue, ET sa suggestion
+   * a reçu son identifiant côté serveur. Pendant le streaming, l'affichage
+   * précède l'enregistrement ; c'est pourquoi cette méthode est rappelée à
+   * chaque fois que des identifiants arrivent, et pas seulement au défilement.
+   *
+   * Best-effort : un échec laisse la carte sur son bouton « Analyser », qui
+   * reste cliquable. Rien n'est réessayé automatiquement — un modèle qui refuse
+   * deux fois refusera la troisième.
+   */
+  private analyserCeQuiEstVu(): void {
+    while (this.analysesEnCours < WizardComponent.ANALYSES_PARALLELES) {
+      const cible = this.domains().find(
+        (d) =>
+          d.id &&
+          !d.analysis &&
+          !d.analysisPending &&
+          !this.analysesLancees.has(d.id) &&
+          this.nomsVus.has(d.name),
+      );
+      if (!cible) return;
+
+      const id = cible.id as string;
+      // Marqué AVANT l'appel : `analyseOne` peut rendre la main tout de suite,
+      // et la boucle reprendrait le même identifiant indéfiniment.
+      this.analysesLancees.add(id);
+      this.analysesEnCours++;
+      this.analyseOne(id, () => {
+        this.analysesEnCours--;
+        this.analyserCeQuiEstVu();
+      });
+    }
   }
 
   /**
@@ -2452,7 +2544,7 @@ export class WizardComponent implements OnInit, OnDestroy {
                 // L'analyse était donc bien calculée, jamais affichée — la
                 // carte gardait son bouton « Analyser » pour l'éternité.
                 this.projectService.setRating(saved.id, 'liked').subscribe({
-                  next: () => this.analyseEnFond(),
+                  next: () => this.analyserCeQuiEstVu(),
                 });
               },
             });
@@ -2460,9 +2552,9 @@ export class WizardComponent implements OnInit, OnDestroy {
         }
 
         this.addingDomain.set(false);
-        // Même traitement qu'après une recherche : la qualité du nom est la
-        // première ligne de la carte, elle ne doit pas y rester en attente.
-        this.analyseEnFond();
+        // Même traitement qu'après une recherche : la carte ajoutée est sous
+        // les yeux, son analyse part donc tout de suite.
+        this.analyserCeQuiEstVu();
         this.cdr.detectChanges();
       },
       error: () => {
@@ -2496,7 +2588,10 @@ export class WizardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!append) this.domains.set([]);
+    if (!append) {
+      this.domains.set([]);
+      this.oublierCeQuiEstVu();
+    }
     this.showNoResultHelp.set(false);
     this.loading.set(true);
     this.streamProgress.set({ phase: 'generating', checked: 0, found: 0 });
@@ -2563,12 +2658,11 @@ export class WizardComponent implements OnInit, OnDestroy {
             }));
           }
 
-          // L'analyse part TOUTE SEULE, dès que les identifiants existent.
-          // Elle ne se déclenchait qu'au « j'aime » ou à la vérification :
-          // sur une recherche fraîche, les trente cartes affichaient donc un
-          // appel à l'action là où se trouve maintenant la première ligne de
-          // la carte — la qualité du nom, c'est-à-dire ce que l'outil apporte.
-          this.analyseEnFond();
+          // Les identifiants viennent d'arriver : la file des analyses peut
+          // repartir. Elle ne porte QUE sur les cartes déjà amenées à l'écran
+          // — celles du bas attendront qu'on y descende. Voir
+          // `analyserCeQuiEstVu` pour ce que « tout analyser » coûtait.
+          this.analyserCeQuiEstVu();
 
           // Issue #1 — persister les ratings « likés » pendant la recherche (id désormais dispo)
           this.domains().forEach(d => {
@@ -2633,7 +2727,7 @@ export class WizardComponent implements OnInit, OnDestroy {
         this.streamProgress.set(null);
         this.loading.set(false);
         this.clearSearchTimeout();
-        if (err.status === 403) this.projectService.showCreditDialog.set(true);
+        if (err.status === 403) this.ouvrirCredits('recherche_refusee');
         this.cdr.detectChanges();
       },
     });

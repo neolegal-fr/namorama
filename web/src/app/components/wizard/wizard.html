@@ -483,6 +483,7 @@
               (refresh)="refreshBrandReport($event)"
               (refreshDomains)="recheckOneName($event)"
               (analyse)="analyseOne($event)"
+              (carteVue)="carteVue($event)"
               (openReport)="openFullReport($event)"
               (toggleAnalysis)="toggleAnalysis($event)">
             </app-results-grid>
@@ -598,18 +599,39 @@
                     [label]="'WIZARD.STEP3.BUY_CREDITS_BTN' | translate"
                     icon="pi pi-wallet"
                     severity="secondary"
-                    (onClick)="projectService.showCreditDialog.set(true)">
+                    (onClick)="ouvrirCredits('solde_epuise')">
                   </p-button>
                 </ng-template>
                 </ng-container>
               </ng-container>
             </div>
-            <!-- Label crédits sous les boutons -->
+            <!-- Solde sous les boutons.
+                 Il s'affichait déjà, mais sans jamais changer de ton : on
+                 passait de 100 à 0 sans qu'une seule ligne ne prévienne. Un
+                 compte a brûlé ses cent crédits en sept minutes (cinq
+                 recherches et un rapport) et n'est jamais revenu ; un autre a
+                 lancé neuf recherches en trois minutes et demie pour finir à
+                 dix. Sous le seuil, le solde se rappelle donc à l'attention et
+                 dit ce qu'il reste à faire avec — un rapport de marque coûte la
+                 moitié de la réserve mensuelle. -->
+            <!-- Avant la première recherche, il n'y a pas encore de solde à
+                 commenter : c'est le PRIX qui manque. Une ligne, pas une
+                 infobulle — au doigt, une infobulle ne s'ouvre jamais. -->
+            <span *ngIf="domains().length === 0 && !loading()" class="wizard-credits">
+              {{ 'WIZARD.STEP3.SEARCH_COST_HINT' | translate }}
+            </span>
             <ng-container *ngIf="domains().length > 0">
               <ng-container *ngIf="(userService.credits$ | async) as totalCredits">
-                <span (click)="projectService.showCreditDialog.set(true)"
-                      style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); cursor: pointer">
-                  {{ 'WIZARD.STEP3.CREDITS_LEFT' | translate : { n: totalCredits } }}
+                <span (click)="ouvrirCredits('solde')"
+                      class="wizard-credits wizard-credits--clickable"
+                      [class.wizard-credits--low]="totalCredits <= SEUIL_CREDITS_BAS">
+                  <i *ngIf="totalCredits <= SEUIL_CREDITS_BAS" class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                  <ng-container *ngIf="totalCredits > SEUIL_CREDITS_BAS">
+                    {{ 'WIZARD.STEP3.CREDITS_LEFT' | translate : { n: totalCredits } }}
+                  </ng-container>
+                  <ng-container *ngIf="totalCredits <= SEUIL_CREDITS_BAS">
+                    {{ 'WIZARD.STEP3.CREDITS_LOW' | translate : { n: totalCredits, report: brandReportCost } }}
+                  </ng-container>
                 </span>
               </ng-container>
             </ng-container>

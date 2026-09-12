@@ -123,10 +123,10 @@ export class UsersService {
   ): Promise<{ user: User; cree: boolean }> {
     const { email, firstName, lastName, locale, isAdmin } = profile;
     let user = await this.usersRepository.findOne({ where: { keycloakId } });
-    const cree = !user;
+    let cree = !user;
 
     if (!user) {
-      user = this.usersRepository.create({
+      const nouveau = this.usersRepository.create({
         keycloakId,
         email,
         firstName,
@@ -137,7 +137,25 @@ export class UsersService {
         extraCredits: 0,
         lastFreeReset: new Date(),
       });
-      user = await this.usersRepository.save(user);
+      try {
+        user = await this.usersRepository.save(nouveau);
+      } catch (e) {
+        // « Lire puis écrire » n'est pas atomique, et c'est précisément au
+        // premier chargement d'un compte neuf que la fenêtre s'ouvre : le
+        // front tire une dizaine d'appels authentifiés en parallèle, tous
+        // passent par ici, tous voient `null`, et tous tentent l'insertion.
+        // Le perdant remontait en 500 — observé le 21/08/2026 sur
+        // `GET /projects/:id`, « Duplicate entry … for key
+        // IDX_9eccb789f0a033a2cfa5baf4d9 » — c'est-à-dire à la toute première
+        // seconde d'une inscription, le pire moment possible.
+        //
+        // L'index unique sur `keycloakId` reste l'arbitre : on ne tente pas de
+        // l'éviter, on accepte d'avoir perdu et on relit la ligne du gagnant.
+        const gagnant = await this.usersRepository.findOne({ where: { keycloakId } });
+        if (!gagnant) throw e;
+        user = gagnant;
+        cree = false;
+      }
     } else {
       await this.maybeFreeReset(user, this.usersRepository);
       user = await this.usersRepository.findOne({ where: { keycloakId } }) ?? user;

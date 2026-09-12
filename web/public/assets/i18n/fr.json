@@ -215,7 +215,7 @@
       "SUBTITLE": "Voici nos suggestions pour votre projet.",
       "NOTE": "Note : Nous avons analysé {{total}} idées de noms, mais seulement {{count}} étaient réellement disponibles en .com.",
       "NO_RESULTS": "Aucun domaine trouvé. Essayez de changer vos mots-clés.",
-      "MORE_BTN": "10 suggestions de plus",
+      "MORE_BTN": "10 suggestions de plus · 1 crédit chacune",
       "STOP_BTN": "Arrêter la recherche",
       "PARTIAL_SUMMARY": "Beaucoup de concurrence sur ce sujet",
       "PARTIAL_RESULTS": "Désolé, il semble y avoir beaucoup de concurrence sur ce sujet, je n'ai trouvé que {{count}} suggestion(s) supplémentaire(s) dans le temps alloué. Cliquez sur le bouton pour poursuivre la recherche.",
@@ -407,7 +407,9 @@
       "REPORT_SHARE_MENU": "Partager",
       "REPORT_SHARE_PUBLIC_WARN": "Toute personne qui reçoit ce lien pourra consulter le rapport, sans compte.",
       "REPORT_SHARE_BY_MAIL": "Envoyer par e-mail",
-      "REPORT_SHARE_COPY_LINK": "Copier le lien public"
+      "REPORT_SHARE_COPY_LINK": "Copier le lien public",
+      "SEARCH_COST_HINT": "1 crédit par suggestion trouvée, 10 au maximum.",
+      "CREDITS_LOW": "Plus que {{n}} crédits — 1 par suggestion, {{report}} pour un rapport de marque."
     },
     "TIMEOUT": {
       "MESSAGE": "La recherche prend plus de temps que prévu. Voulez-vous continuer à attendre ?",

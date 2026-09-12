@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SafeHtml } from '@angular/platform-browser';
 import { BrandReportSummary } from '../../services/brand-report';
+import { VisibleOnceDirective } from './visible-once.directive';
 
 /** Une extension et son verdict, tels qu'affichés sur une carte. */
 interface ExtVerdict {
@@ -36,7 +37,7 @@ interface ExtVerdict {
 @Component({
   selector: 'app-results-grid',
   standalone: true,
-  imports: [CommonModule, TranslatePipe],
+  imports: [CommonModule, TranslatePipe, VisibleOnceDirective],
   template: `
     <!-- Bandeau de crédits — pièce maîtresse du modèle économique : le débit
          doit être incontestable, donc énoncé avant les résultats. -->
@@ -72,8 +73,19 @@ interface ExtVerdict {
     }
 
     <div class="rg-grid">
-      @for (d of visible(); track d.id) {
-        <article class="rg-card" [class.rg-card--strong]="allFree(d)">
+      <!-- Suivi par le NOM, pas par l'identifiant. Pendant le streaming, les
+           cartes arrivent sans identifiant et ne le reçoivent qu'à la fin de
+           la recherche : suivre l'identifiant revenait à donner la même clé
+           (nulle) à toutes les cartes d'un même flux. Le nom est unique dans
+           la liste — l'API écarte les noms déjà testés, l'ajout manuel les
+           doublons — et existe dès la première image. -->
+      @for (d of visible(); track d.name) {
+        <!-- La directive porte le NOM et non l'identifiant : pendant le
+             streaming, la carte s'affiche avant que le serveur n'ait rendu
+             l'identifiant de sa suggestion. Le nom, lui, existe dès la
+             première image. -->
+        <article class="rg-card" [class.rg-card--strong]="allFree(d)"
+                 [nmVisibleOnce]="d.name" (visibleOnce)="carteVue.emit($event)">
 
           <!-- En-tête sur UNE ligne, toujours.
                Il enveloppait quand le nom était long : les pouces passaient
@@ -358,6 +370,15 @@ export class ResultsGridComponent {
   /** Calculer l'analyse de ce nom, à la demande (identifiant de suggestion). */
   readonly analyse = output<string>();
   readonly toggleAnalysis = output<string>();
+
+  /**
+   * Cette carte vient d'entrer dans le champ de vision (nom de domaine).
+   *
+   * C'est ce qui déclenche le calcul de l'analyse, plutôt que la fin de la
+   * recherche : voir {@link VisibleOnceDirective} pour ce que l'ancien
+   * déclenchement coûtait.
+   */
+  readonly carteVue = output<string>();
 
   readonly filter = signal<'all' | 'free' | 'report' | 'fav' | 'rejected'>('all');
 

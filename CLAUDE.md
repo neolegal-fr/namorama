@@ -49,6 +49,14 @@ api/src/
 
 ### Angular
 - Composants standalone avec **signals** (`signal()`, `.set()`, `.update()`)
+- **Ce qui coûte un appel au modèle se déclenche à la visibilité, pas au chargement.**
+  L'analyse d'un nom partait pour toute la liste dès la fin d'une recherche : sur les
+  sept jours suivant le 05/09/2026, `POST /domain/analyze` pesait **69 % des appels au
+  modèle et 61,5 % du temps passé dedans**, loin devant la recherche elle-même — un
+  compte a enchaîné neuf recherches en trois minutes et demie, soit 90 analyses pour une
+  liste survolée. `VisibleOnceDirective` déclenche désormais au moment où la carte
+  approche de l'écran ; une carte qu'on regarde porte toujours ses étoiles, une carte
+  qu'on n'atteint pas ne coûte rien.
 - Services utilisent RxJS Observables (convention suffixe `$`)
 - i18n : FR/EN via `@ngx-translate`, fichiers dans `web/public/assets/i18n/`
 - Auth Keycloak avec bearer token via interceptor HTTP
@@ -229,6 +237,17 @@ Deux parcours coexistent et ne partagent aucun repère, d'où deux entonnoirs :
 `report_locked_abandoned` mérite une mention à part : il marque un départ du rapport sans
 achat. C'est le seul endroit où le prix se discute vraiment, et le seul moyen de le voir.
 
+Le **parcours d'achat de crédits** n'émettait rien du tout — Stripe configuré, trois packs,
+et aucun moyen de distinguer « personne n'a vu l'offre » de « tout le monde l'a refusée ».
+Trois événements le couvrent depuis le 12/09/2026 : `credits_dialog_opened` (avec
+`origine` — pastille, solde, rapport, recherche refusée — et le `solde` au moment de
+l'ouverture), `pack_checkout_started` et `pack_checkout_failed`.
+
+`name_analysis_opened` répond à une question que `name_analysis_requested` ne pouvait pas
+poser : ce dernier ne part qu'au clic sur « Analyser », donc uniquement quand l'analyse
+n'a PAS été pré-calculée. Un seul exemplaire en sept jours pour 409 analyses produites —
+l'absence de signal mesurait l'efficacité du pré-calcul, pas la lecture.
+
 ### Parcours utilisateur
 
 Deux canaux complémentaires :
@@ -377,11 +396,12 @@ l'inverse les viderait en silence.
 > d'en oublier un pour qu'un indicateur compte les comptes de test sans que rien ne le
 > signale. Le chiffre reste plausible, il est simplement faux.
 
-> Quatre migrations à appliquer **avant** de déployer l'image :
+> Cinq migrations à appliquer **avant** de déployer l'image :
 > `2026-08-23-journal-d-activite-quotidienne.sql`,
 > `2026-08-23-date-de-creation-des-suggestions.sql`,
-> `2026-08-23-comptes-internes.sql` et
-> `2026-08-24-journal-des-visites.sql`.
+> `2026-08-23-comptes-internes.sql`,
+> `2026-08-24-journal-des-visites.sql` et
+> `2026-09-12-inscriptions-manquees.sql`.
 
 #### Entonnoir de conversion : le dénominateur qui manquait
 
@@ -415,6 +435,16 @@ D'où **`visitor_session`** : une ligne par session de navigateur (`sessionStora
 - Une étape marquée **crée la visite si elle manque** : une balise peut être bloquée
   par une extension là où l'appel métier, lui, passe forcément. Sans ce repli,
   l'entonnoir afficherait plus d'étapes que de visiteurs.
+- **L'inscription ne se déduit pas de « quel appel a créé la ligne ».** Au chargement de
+  l'application, une dizaine d'appels authentifiés partent ensemble et passent tous par
+  `findOrCreate` sur un `sub` inconnu : n'importe lequel des vingt appelants peut gagner,
+  et seuls les deux de `UsersController` relayaient l'information. Relevé sur les comptes
+  créés du 05 au 12/09/2026 : **2 marqués sur 9**, le compte étant créé par
+  `GET /brand-report/summaries` quelques dizaines de millisecondes avant
+  `GET /users/credits`. Le critère est donc un fait daté — `user.createdAt >=
+  visitor_session.firstSeenAt` — appliqué dans `FunnelService.rattacher()`, et
+  rétroactivement par `2026-09-12-inscriptions-manquees.sql` (20 visites, 20 comptes
+  distincts, exactement les 20 comptes créés depuis le début du journal).
 - **L'inscription se rapporte aux visites arrivées SANS compte ouvert**, pas au total.
   Quelqu'un déjà connecté ne peut pas s'inscrire : le compter au dénominateur ferait
   baisser le taux à mesure que les habitués reviennent — le chiffre chuterait quand le
