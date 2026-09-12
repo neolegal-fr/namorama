@@ -714,7 +714,16 @@ export class AppComponent implements OnInit {
     });
   }
 
+  /**
+   * Ouvre le dialogue d'achat depuis la pastille de crédits.
+   *
+   * Tracé, comme les autres ouvertures : ce chemin n'émettait rien du tout
+   * alors qu'il porte le seul revenu du produit. Le solde part avec
+   * l'événement — c'est lui qui distingue « je regarde les packs » de « je
+   * viens de taper le mur ».
+   */
   triggerCreditDialog() {
+    this.analytics.track('credits_dialog_opened', { origine: 'pastille', solde: this.credits() });
     this.userService.getCredits().subscribe();
     this.userService.getSubscription().subscribe();
     this.projectService.showCreditDialog.set(true);
@@ -726,10 +735,17 @@ export class AppComponent implements OnInit {
   }
 
   buyPack(packType: PackType) {
+    // Dernier geste avant de quitter l'application pour Stripe : c'est le seul
+    // endroit qui distingue une intention d'achat d'un simple coup d'œil aux
+    // packs, et l'écart entre les deux est la mesure qui manquait.
+    this.analytics.track('pack_checkout_started', { pack: packType, solde: this.credits() });
     this.billingLoading.set(packType);
     this.paymentService.createPackCheckout(packType).subscribe({
       next: ({ url }) => { window.location.href = url; },
-      error: () => this.billingLoading.set(false),
+      error: () => {
+        this.billingLoading.set(false);
+        this.analytics.track('pack_checkout_failed', { pack: packType });
+      },
     });
   }
 

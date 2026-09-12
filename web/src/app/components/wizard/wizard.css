@@ -1082,3 +1082,20 @@
     color: var(--nm-app-text-2);
     white-space: normal;
 }
+
+/* Compteur de crédits : rappel discret, ou avertissement sous le seuil.
+   Voir SEUIL_CREDITS_BAS dans wizard.ts. */
+.wizard-credits {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: var(--nm-text-ui-sm);
+    color: var(--nm-app-text-2);
+}
+
+.wizard-credits--clickable { cursor: pointer; }
+
+.wizard-credits--low {
+    font-weight: 600;
+    color: var(--nm-app-verdict-unknown-fg);
+}

@@ -95,8 +95,25 @@ def load(pattern=LOG_GLOB):
 
 
 def is_scan(row):
-    """Requête d'un scanner sur une route inexistante (« Cannot GET /1.php »)."""
-    return row.get("status") == 404 and SCAN_MESSAGE.match(str(row.get("message") or ""))
+    """Requête d'un scanner, jamais d'un utilisateur.
+
+    Deux formes, et la seconde a mis du temps à se voir :
+
+    * une route inexistante (« Cannot GET /1.php ») ;
+    * un 401 sur la RACINE de l'API, avec ou sans paramètres. Aucun écran du
+      produit n'appelle « / » — le front tape des routes nommées, et la racine
+      n'est servie que par nginx. Ce qui frappe là, ce sont des sondes
+      WordPress et PHP (« /?rest_route=/wp/v2/users/ », « /?phpinfo=1 ») :
+      61 lignes sur 7 jours en septembre 2026, soit 84 % de ce que ce mode
+      affichait.
+
+    Un 401 sur une route NOMMÉE, lui, se garde : c'est une session expirée,
+    donc un blocage réellement vécu — exactement ce que ce mode cherche.
+    """
+    if row.get("status") == 404 and SCAN_MESSAGE.match(str(row.get("message") or "")):
+        return True
+    chemin = str(row.get("path") or "")
+    return row.get("status") == 401 and (chemin == "/" or chemin.startswith("/?"))
 
 
 def errors(rows):
@@ -109,7 +126,7 @@ def errors(rows):
     bad = [r for r in bad if not is_scan(r)]
     print(f"{len(bad)} erreurs / avertissements")
     if scans:
-        print(f"({len(scans)} balayages de routes inexistantes écartés — mode `http` pour les voir)")
+        print(f"({len(scans)} sondages de robots écartés — mode `http` pour les voir)")
     print()
     grouped = Counter(
         (r.get("context"), str(r.get("message"))[:110], r.get("status")) for r in bad

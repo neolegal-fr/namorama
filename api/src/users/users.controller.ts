@@ -1,6 +1,7 @@
 import { Controller, Delete, Get, HttpCode, Req } from '@nestjs/common';
 import type { Request } from 'express';
 import { UsersService, isKeycloakAdmin } from './users.service';
+import { User } from './entities/user.entity';
 import { AuthenticatedUser } from 'nest-keycloak-connect';
 import { FunnelService, sessionIdDeLaRequete } from '../common/funnel/funnel.service';
 
@@ -15,14 +16,14 @@ export class UsersController {
    * Rattache la visite en cours au compte, et note l'inscription si c'en est une.
    *
    * Appelé depuis les deux points d'entrée que le front passe après une
-   * connexion. Une création de compte n'a pas d'autre signal côté produit :
-   * Keycloak ne prévient de rien, et `createdAt` ne distingue pas « créé par
-   * cet appel » de « créé il y a une minute ».
+   * connexion. Le verdict « inscription » ne se prend plus ici : il se déduit
+   * de `createdAt` comparé au début de la visite, parce que rien ne garantit
+   * que ce soit l'un de ces deux appels qui ait créé le compte — au chargement
+   * de l'application, une dizaine d'appels authentifiés partent ensemble et
+   * n'importe lequel peut gagner. Voir {@link FunnelService.rattacher}.
    */
-  private async rattacherVisite(req: Request, sub: string, cree: boolean): Promise<void> {
-    const sid = sessionIdDeLaRequete(req);
-    if (cree) await this.funnel.marquer(sid, 'compte', sub);
-    else await this.funnel.lier(sid, sub);
+  private async rattacherVisite(req: Request, user: User, cree: boolean): Promise<void> {
+    await this.funnel.rattacher(sessionIdDeLaRequete(req), user.keycloakId, user.createdAt, cree);
   }
 
   @Get('me')
@@ -35,7 +36,7 @@ export class UsersController {
       isAdmin: isKeycloakAdmin(keycloakUser),
     });
 
-    await this.rattacherVisite(req, keycloakUser.sub, cree);
+    await this.rattacherVisite(req, user, cree);
 
     return {
       keycloakId: user.keycloakId,
@@ -70,7 +71,7 @@ export class UsersController {
       locale: keycloakUser.locale,
       isAdmin: isKeycloakAdmin(keycloakUser),
     });
-    await this.rattacherVisite(req, keycloakUser.sub, cree);
+    await this.rattacherVisite(req, user, cree);
     return {
       credits: user.totalCredits,
       freeCredits: user.credits,
