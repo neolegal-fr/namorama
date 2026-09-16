@@ -7,7 +7,7 @@ SaaS pour trouver des noms de marque et domaines disponibles à partir d'une des
 - **Frontend** : Angular 21, PrimeNG 21 (Aura theme), Tailwind CSS 4
 - **Backend** : NestJS, TypeORM, MariaDB 10.6
 - **Auth** : Keycloak SSO (realm `namorama`, auto-importé depuis `infra/keycloak/realm-export.json`)
-- **IA** : OpenAI GPT-3.5 Turbo
+- **IA** : OpenAI GPT-5.6 — voir « Coût des appels au modèle »
 - **Infra** : Docker Compose (`infra/docker-compose.yml`), orchestration via `justfile`
 
 ## Commandes
@@ -57,6 +57,13 @@ api/src/
   liste survolée. `VisibleOnceDirective` déclenche désormais au moment où la carte
   approche de l'écran ; une carte qu'on regarde porte toujours ses étoiles, une carte
   qu'on n'atteint pas ne coûte rien.
+- **Ce qui se déclenche carte par carte s'envoie en un seul appel.** La visibilité a
+  moins mordu qu'espéré — dix résultats tiennent à l'écran, donc 10,3 analyses par
+  recherche avant le correctif et 8,1 après. Les identifiants dus sont regroupés
+  pendant `REGROUPEMENT_MS` (250 ms) puis partent en **un lot** vers `/domain/analyze` :
+  la consigne et le barème ne dépendent pas du nom, un lot de dix les paie une fois au
+  lieu de dix. Un clic explicite sur « Analyser » court-circuite le regroupement — on
+  ne fait pas attendre quelqu'un qui vient de demander.
 - Services utilisent RxJS Observables (convention suffixe `$`)
 - i18n : FR/EN via `@ngx-translate`, fichiers dans `web/public/assets/i18n/`
 - Auth Keycloak avec bearer token via interceptor HTTP
@@ -108,6 +115,51 @@ Ce qui subsiste et reste utile :
 - 1 suggestion de domaine = 1 crédit
 - Crédits initiaux : 100
 - Vérification de disponibilité : **RDAP d'abord, WHOIS en repli**
+
+### Coût des appels au modèle
+
+Un crédit se paie en euros. Relevé sur les 30 jours au 16/09/2026 — 142 recherches,
+37 comptes actifs — la facture OpenAI tenait à **trois postes sur neuf appels** :
+l'analyse des noms (64 %), le repérage du marché (18 %), la génération de noms (17 %).
+Tout le reste pesait 1 %.
+
+**Trois modèles, trois rôles.** Les identifiants sont configurables ; les valeurs par
+défaut sont dans `api/.env.example`.
+
+| variable | usage | tarif (in / out par M) |
+|---|---|---|
+| `OPENAI_MODEL` | reformulation, mots-clés, contraintes, nom de projet | luna — 0,20 $ / 1,20 $ |
+| `OPENAI_MODEL_CREATIVE` | génération de noms, pick-best, repérage du marché | terra — 2,00 $ / 12,00 $ |
+| `OPENAI_MODEL_ANALYSIS` | notation des noms. **Non définie ⇒ `OPENAI_MODEL`** | luna |
+
+Trois règles, chacune tirée d'une dépense qu'on a vraiment payée :
+
+- **Ce qui ne dépend pas de l'entrée se paie une fois.** La consigne de notation pèse
+  ~165 tokens et ne change pas d'un nom à l'autre : la payer par nom, c'était acheter
+  dix fois la même chose. `analyzeNames` groupe, `ANALYSES_PAR_APPEL` borne le lot — et
+  le borne parce que la **sortie** l'est : au-delà du budget, le modèle tronque son
+  JSON, et un JSON tronqué ne rend pas un nom de moins, il ne rend rien.
+- **Le rattachement d'une note à son nom ne se devine jamais.** La réponse est
+  rapprochée par le nom recopié, à la casse près, et rien d'autre. Pas de repli sur la
+  position dans la liste : il donnerait à un nom les qualités d'un autre, le panneau
+  s'afficherait quand même, et l'erreur serait invisible — tout en étant facturée.
+- **Un appel outillé ne se déclenche pas tout seul.** `web_search` coûte **10 $ les
+  mille appels** *en plus* du contenu web facturé au tarif du modèle : ~0,03 $ l'appel,
+  contre 0,0008 $ pour un appel luna ordinaire. Aucun réglage de modèle ne réduit des
+  frais d'outil — le seul levier est de ne pas appeler. Le repérage du marché attend
+  donc son bouton, et son résultat est mis en cache 24 h par description
+  (`COMPETITORS_CACHE_TTL_MS`).
+
+> **`reasoning_effort` est facturé en sortie.** Un raisonnement à `low` sur terra
+> doublait le coût d'une notation à barème fixe. Tous les appels sont à `none`, sauf
+> `pickBestDomain` (il compare dix candidats) et le repérage du marché, à `low` : c'est
+> le modèle qui décide d'appeler `web_search`, et sans raisonnement il s'en dispense —
+> on paierait un appel outillé qui ne cherche rien.
+
+> **Les cinq endpoints de l'étape 1 sont `@Public()`**, sans crédit ni limite de débit.
+> Toute dépense qu'on y branche est une dépense que n'importe qui peut déclencher en
+> boucle. C'est la raison d'être du plafond `ANALYZE_BATCH_MAX` et du bornage du cache
+> marché — et il reste à poser un `@nestjs/throttler` sur ces routes.
 
 ### Disponibilité des domaines
 

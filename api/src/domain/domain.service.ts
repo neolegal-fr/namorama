@@ -102,6 +102,32 @@ export interface NamingConstraints {
 export const KEYWORD_LIMIT = 15;
 
 /**
+ * Noms notés par appel au modèle.
+ *
+ * L'analyse partait par nom : dix noms, dix appels, et donc dix fois le même
+ * prompt et dix surcharges de raisonnement pour une consigne identique.
+ * Relevé sur les 30 jours au 16/09/2026, c'était **64 % de la facture
+ * OpenAI** — 1403 appels pour 142 recherches, dont un seul servi par le cache
+ * (les noms sont neufs à chaque recherche, `suggestion.analysis` ne rattrape
+ * rien).
+ *
+ * Grouper divise le coût par ~6 : l'entrée n'est payée qu'une fois, seule la
+ * sortie reste proportionnelle au nombre de noms. Le lot reste borné parce
+ * que la sortie l'est aussi — au-delà, le modèle tronque son JSON et c'est
+ * tout le lot qui est perdu, pas un seul nom.
+ */
+const ANALYSES_PAR_APPEL = 10;
+
+/** Budget de sortie : une notice complète pèse ~250 tokens, plus l'enveloppe. */
+const TOKENS_PAR_ANALYSE = 320;
+
+/** Validité du repérage du marché. Le paysage concurrentiel ne bouge pas en une journée. */
+const COMPETITORS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Descriptions distinctes retenues. Au-delà, les plus anciennes sortent. */
+const COMPETITORS_CACHE_MAX = 500;
+
+/**
  * Dédoublonne sans tenir compte de la casse ni des espaces, en gardant l'ORDRE
  * du modèle — il les rend du plus au moins pertinent, et c'est le début de
  * liste qu'on conserve.
@@ -132,6 +158,19 @@ const DEFAULT_CONSTRAINTS: NamingConstraints = {
   avoidWords: [],
   referenceBrands: [],
 };
+
+/** Un acteur déjà présent sur le marché décrit. */
+export interface Competitor {
+  name: string;
+  domain: string;
+  note: string;
+}
+
+/** Repérage du marché : les acteurs trouvés, et par quelle voie. */
+export interface CompetitorsResult {
+  competitors: Competitor[];
+  source: 'web' | 'model';
+}
 
 /** Paramètres d'une recherche de domaines disponibles. */
 export interface FindDomainsOptions {
@@ -174,8 +213,32 @@ export class DomainService {
 
   /** Modèle par défaut pour les tâches simples/rapides (reformulation, mots-clés…). */
   private readonly model: string;
-  /** Modèle « qualité » pour les étapes créatives / à jugement (génération de noms, analyse, pick-best). */
+  /** Modèle « qualité » pour les étapes créatives / à jugement (génération de noms, pick-best). */
   private readonly creativeModel: string;
+  /**
+   * Modèle de la notation des noms — le modèle simple par défaut.
+   *
+   * L'analyse tournait sur le modèle créatif, à raisonnement `low` : 0,0075 $
+   * l'appel là où la tâche est une notation sur cinq critères dans un JSON
+   * imposé, pas de la création. Le modèle simple la rend au dixième du prix.
+   * Variable séparée pour que revenir en arrière sur la seule analyse ne
+   * ramène pas aussi la génération de noms — c'est là que la qualité se joue.
+   */
+  private readonly analysisModel: string;
+
+  /**
+   * Repérage du marché déjà payé, par description.
+   *
+   * Un appel coûte ~0,03 $ — 0,01 $ de frais d'outil `web_search`, le reste
+   * en contenu web facturé au tarif du modèle — et met 18 s en médiane. Le
+   * même utilisateur qui revient sur l'étape de cadrage, ou deux personnes
+   * décrivant le même produit, ne doivent pas le repayer.
+   *
+   * En mémoire, donc perdu au redéploiement : c'est un cache d'économie, pas
+   * une source de vérité, et le marché bouge assez peu pour qu'une journée de
+   * validité soit large.
+   */
+  private readonly competitorsCache = new Map<string, { at: number; value: CompetitorsResult }>();
 
   constructor(
     private configService: ConfigService,
@@ -188,7 +251,8 @@ export class DomainService {
     // IDs API GPT-5.6 : gpt-5.6-luna (rapide/éco), gpt-5.6-terra (équilibré), gpt-5.6-sol (max).
     this.model = this.configService.get<string>('OPENAI_MODEL') ?? 'gpt-5.6-luna';
     this.creativeModel = this.configService.get<string>('OPENAI_MODEL_CREATIVE') ?? 'gpt-5.6-terra';
-    this.logger.log(`Modèles OpenAI — simple: "${this.model}" | créatif: "${this.creativeModel}"`);
+    this.analysisModel = this.configService.get<string>('OPENAI_MODEL_ANALYSIS') ?? this.model;
+    this.logger.log(`Modèles OpenAI — simple: "${this.model}" | créatif: "${this.creativeModel}" | analyse: "${this.analysisModel}"`);
   }
 
   async refineDescription(description: string): Promise<string> {
@@ -422,8 +486,8 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
    * sous-domaine type produit.exemple.com) — les autres passent tels quels.
    */
   private async dropUnregisteredDomains(
-    competitors: { name: string; domain: string; note: string }[],
-  ): Promise<{ name: string; domain: string; note: string }[]> {
+    competitors: Competitor[],
+  ): Promise<Competitor[]> {
     const checks = await Promise.all(
       competitors.map(async (c) => {
         if (c.domain.split('.').length !== 2) return true;
@@ -450,7 +514,10 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
   async findSimilarProductDomains(
     description: string,
     locale?: string,
-  ): Promise<{ competitors: { name: string; domain: string; note: string }[]; source: 'web' | 'model' }> {
+  ): Promise<CompetitorsResult> {
+    const cached = this.competitorsFromCache(description, locale);
+    if (cached) return cached;
+
     // 1) Recherche web en direct
     const startedAt = Date.now();
     try {
@@ -459,6 +526,14 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
         tools: [{ type: 'web_search' }],
         input: this.competitorsPrompt(description, locale, true),
         max_output_tokens: 1500,
+        // L'appel le plus cher du produit était le seul à tourner à l'effort
+        // de raisonnement par défaut du modèle. `low` le borne sans le
+        // museler. Pas `none` : c'est le modèle qui décide d'appeler
+        // `web_search`, et sans raisonnement il s'en dispense — on paierait
+        // alors un appel outillé qui ne cherche rien, pour retomber sur le
+        // repli. Le cas s'observe dans les logs : `source: 'model'` là où la
+        // voie web a pourtant été tentée.
+        reasoning: { effort: 'low' },
       });
       const modelMs = Date.now() - startedAt;
       const usedWeb = response.output?.some((o: any) => o.type === 'web_search_call') ?? false;
@@ -471,7 +546,7 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
         // token de réponse), un affichage progressif ne montrerait rien
         // pendant l'essentiel de l'attente.
         this.logger.log(`Concurrents : modèle ${modelMs} ms, vérification ${Date.now() - verifyStartedAt} ms, ${verified.length} retenus (web: ${usedWeb})`);
-        return { competitors: verified, source: usedWeb ? 'web' : 'model' };
+        return this.cacheCompetitors(description, locale, { competitors: verified, source: usedWeb ? 'web' : 'model' });
       }
       this.logger.warn('Recherche web des concurrents sans résultat exploitable — repli sur le modèle');
     } catch (error) {
@@ -488,11 +563,50 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
         response_format: { type: 'json_object' },
       });
       const competitors = this.parseCompetitors(response.choices[0].message.content ?? '');
-      return { competitors: await this.dropUnregisteredDomains(competitors), source: 'model' };
+      return this.cacheCompetitors(description, locale, {
+        competitors: await this.dropUnregisteredDomains(competitors),
+        source: 'model',
+      });
     } catch (error) {
       this.logger.error('Erreur recherche des produits similaires:', error);
+      // Un échec n'est PAS mis en cache : la prochaine tentative doit pouvoir
+      // réussir, sans quoi une panne passagère gèlerait une liste vide pour
+      // vingt-quatre heures.
       return { competitors: [], source: 'model' };
     }
+  }
+
+  /** Clé du cache marché : même description, même langue, même réponse. */
+  private competitorsKey(description: string, locale?: string): string {
+    return `${locale ?? '-'} ${description.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+  }
+
+  private competitorsFromCache(description: string, locale?: string): CompetitorsResult | null {
+    const entry = this.competitorsCache.get(this.competitorsKey(description, locale));
+    if (!entry || Date.now() - entry.at > COMPETITORS_CACHE_TTL_MS) return null;
+    this.logger.log(`Concurrents : servis depuis le cache (${entry.value.competitors.length} retenus)`);
+    return entry.value;
+  }
+
+  /**
+   * Retient le résultat et rend la main dessus, pour se poser en fin de `return`.
+   *
+   * Le cache est borné et purgé par ancienneté : une description est une
+   * chaîne libre, donc une clé que n'importe quel appelant peut multiplier —
+   * et les cinq endpoints de l'étape 1 sont publics.
+   */
+  private cacheCompetitors(description: string, locale: string | undefined, value: CompetitorsResult): CompetitorsResult {
+    const now = Date.now();
+    for (const [k, v] of this.competitorsCache) {
+      if (now - v.at > COMPETITORS_CACHE_TTL_MS) this.competitorsCache.delete(k);
+    }
+    while (this.competitorsCache.size >= COMPETITORS_CACHE_MAX) {
+      const oldest = this.competitorsCache.keys().next().value;
+      if (oldest === undefined) break;
+      this.competitorsCache.delete(oldest);
+    }
+    this.competitorsCache.set(this.competitorsKey(description, locale), { at: now, value });
+    return value;
   }
 
   async generateDomainIdeas(
@@ -682,33 +796,137 @@ Respond ONLY with a JSON object. Example:
     }
   }
 
+  /**
+   * Note un nom sur cinq critères. Enveloppe d'`analyzeNames` à un seul nom,
+   * conservée pour le rapport de marque, qui n'en juge jamais qu'un.
+   *
+   * Lève si le modèle n'a rien rendu d'exploitable : l'appelant attend une
+   * analyse ou une erreur, pas une chaîne vide qui s'afficherait en panneau
+   * blanc.
+   */
   async analyzeNameWithAI(name: string, lang = 'en'): Promise<string> {
-    const prompt = `Analyze the brand/domain name "${name}" across these 5 criteria. Respond in the language with code "${lang}". Return ONLY valid JSON, no text outside it:
+    const analysis = (await this.analyzeNames([name], lang)).get(name);
+    if (!analysis) throw new Error(`Analyse indisponible pour « ${name} »`);
+    return analysis;
+  }
+
+  /**
+   * Note plusieurs noms **en un seul appel**, et rend une analyse par nom.
+   *
+   * La consigne, le barème et le gabarit JSON pèsent ~165 tokens d'entrée et
+   * ne dépendent pas du nom : les payer une fois par nom, c'était acheter dix
+   * fois la même chose. Seule la sortie est vraiment proportionnelle.
+   *
+   * Les noms absents de la réponse sont absents de la Map : aucun repli
+   * fabriqué localement, parce qu'une note inventée se lirait exactement
+   * comme une note du modèle. L'appelant retombe sur son bouton « Analyser ».
+   *
+   * La valeur rendue garde **le format d'un nom seul** (`{lang, scores,
+   * comments, origin, strengths, watchout}`) : c'est ce que le front a en
+   * base sur des milliers de suggestions et ce que `parseAnalysisHtml` sait
+   * lire. Le regroupement est une affaire de transport, pas de stockage.
+   */
+  async analyzeNames(names: string[], lang = 'en'): Promise<Map<string, string>> {
+    const uniques = [...new Set(names.map((n) => n.trim()).filter(Boolean))];
+    if (uniques.length === 0) return new Map();
+
+    // Découpé parce que la SORTIE est bornée, pas l'entrée : un lot trop
+    // grand fait tronquer le JSON, et un JSON tronqué ne rend pas un nom de
+    // moins — il ne rend rien du tout.
+    const lots: string[][] = [];
+    for (let i = 0; i < uniques.length; i += ANALYSES_PAR_APPEL) {
+      lots.push(uniques.slice(i, i + ANALYSES_PAR_APPEL));
+    }
+
+    const resultats = new Map<string, string>();
+    const parLot = await Promise.all(lots.map((lot) => this.analyzeLot(lot, lang)));
+    for (const lot of parLot) for (const [nom, analyse] of lot) resultats.set(nom, analyse);
+    return resultats;
+  }
+
+  /** Un appel au modèle, pour un lot déjà borné. Best-effort : rend une Map vide en cas d'échec. */
+  private async analyzeLot(names: string[], lang: string): Promise<Map<string, string>> {
+    const prompt = `Analyze each brand/domain name below across these 5 criteria. Respond in the language with code "${lang}". Return ONLY valid JSON, no text outside it:
 
 {
-  "lang": "${lang}",
-  "scores": { "memorability": 4, "pronunciation": 3, "international": 5, "seo": 3, "distinctiveness": 4 },
-  "comments": { "memorability": "...", "pronunciation": "...", "international": "...", "seo": "...", "distinctiveness": "..." },
-  "origin": "max 18 words",
-  "strengths": "max 15 words",
-  "watchout": "max 15 words"
+  "analyses": [
+    {
+      "name": "<the name, copied verbatim from the list>",
+      "scores": { "memorability": 4, "pronunciation": 3, "international": 5, "seo": 3, "distinctiveness": 4 },
+      "comments": { "memorability": "...", "pronunciation": "...", "international": "...", "seo": "...", "distinctiveness": "..." },
+      "origin": "max 18 words",
+      "strengths": "max 15 words",
+      "watchout": "max 15 words"
+    }
+  ]
 }
 
 Scores are integers 1-5. Be honest and concise.
-"origin": how the name is built and what it evokes — the roots or words it combines, and the impression it leaves. One sentence, no marketing adjectives.`;
+Judge each name ON ITS OWN MERITS, never relative to the others in the list — the list is a batch, not a ranking.
+Return exactly one object per name, in the same order, with "name" copied character for character.
+"origin": how the name is built and what it evokes — the roots or words it combines, and the impression it leaves. One sentence, no marketing adjectives.
+
+Names:
+${names.map((n) => `- ${n}`).join('\n')}`;
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: this.creativeModel,
+        model: this.analysisModel,
         messages: [{ role: 'user', content: prompt }],
-        max_completion_tokens: 800,
-        reasoning_effort: 'low',
+        max_completion_tokens: 200 + TOKENS_PAR_ANALYSE * names.length,
+        reasoning_effort: 'none',
+        response_format: { type: 'json_object' },
       });
-      return response.choices[0].message.content?.trim() ?? '';
+      return this.parseAnalyses(response.choices[0].message.content ?? '', names, lang);
     } catch (error) {
-      this.logger.error(`Erreur analyse IA pour "${name}":`, error);
-      throw error;
+      this.logger.error(`Erreur analyse IA pour ${names.length} nom(s) :`, error);
+      return new Map();
     }
+  }
+
+  /**
+   * Rattache chaque analyse à son nom, et n'invente jamais le rattachement.
+   *
+   * Le modèle recopie le nom, mais peut changer la casse ou ajouter une
+   * extension. On tolère donc la comparaison sans casse, et RIEN d'autre :
+   * pas de repli sur la position dans la liste, qui donnerait à un nom les
+   * qualités d'un autre — l'erreur la plus coûteuse ici, parce qu'elle est
+   * invisible.
+   */
+  private parseAnalyses(raw: string, names: string[], lang: string): Map<string, string> {
+    const resultats = new Map<string, string>();
+    let parsed: any;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      this.logger.warn(`Analyse groupée : réponse illisible (${raw.length} caractères)`);
+      return resultats;
+    }
+
+    const attendus = new Map(names.map((n) => [n.toLowerCase(), n]));
+    const items: any[] = Array.isArray(parsed?.analyses) ? parsed.analyses : [];
+    for (const item of items) {
+      const nom = attendus.get(String(item?.name ?? '').trim().toLowerCase());
+      if (!nom || resultats.has(nom)) continue;
+      if (!item?.scores || typeof item.scores !== 'object') continue;
+      // `lang` est posé ici, pas demandé au modèle : le front s'en sert pour
+      // décider s'il régénère l'analyse dans une autre langue. Le laisser
+      // produire ce champ, c'est accepter qu'il se trompe sur la seule
+      // information dont on connaît la valeur avec certitude.
+      resultats.set(nom, JSON.stringify({
+        lang,
+        scores: item.scores,
+        comments: item.comments && typeof item.comments === 'object' ? item.comments : undefined,
+        origin: typeof item.origin === 'string' ? item.origin : undefined,
+        strengths: typeof item.strengths === 'string' ? item.strengths : undefined,
+        watchout: typeof item.watchout === 'string' ? item.watchout : undefined,
+      }));
+    }
+
+    if (resultats.size < names.length) {
+      this.logger.warn(`Analyse groupée : ${resultats.size}/${names.length} noms rendus par le modèle`);
+    }
+    return resultats;
   }
 
   async pickBestDomain(

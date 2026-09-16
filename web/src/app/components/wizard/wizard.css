@@ -1099,3 +1099,12 @@
     font-weight: 600;
     color: var(--nm-app-verdict-unknown-fg);
 }
+
+/* Bouton de repérage du marché. Le pointillé le distingue des sections déjà
+   remplies : il annonce un contenu à demander, pas un contenu replié.
+   Hover en CSS et non en style inline — PrimeNG écrase les classes Tailwind
+   dans ses composants, et un :hover ne s'écrit pas en attribut. */
+.wizard-market-trigger:hover {
+    border-color: var(--nm-app-accent);
+    border-style: solid;
+}

@@ -301,6 +301,36 @@
         <div class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.625rem">
           <h4 class="section-label">{{ 'WIZARD.STEP2.INSPIRATION_TITLE' | translate }}</h4>
 
+          <!--
+            Le repérage du marché est une DEMANDE, pas un chargement d'écran.
+            C'est l'appel le plus cher du produit (~0,03 $, recherche web en
+            direct) et le plus lent (18 s en médiane) : le déclencher pour
+            quiconque atteint cet écran facturait tout le monde pour une
+            section que la plupart replient sans la lire.
+          -->
+          <button *ngIf="!competitorsLoading() && !competitorsLoaded()"
+                  type="button"
+                  (click)="loadCompetitors()"
+                  class="wizard-market-trigger"
+                  style="display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; cursor: pointer; background: var(--nm-app-surface-alt); border: 1px dashed var(--nm-app-border); border-radius: 0.625rem; padding: 0.75rem 0.875rem">
+            <i class="pi pi-compass" style="font-size: 0.85rem; color: var(--nm-app-accent); flex-shrink: 0"></i>
+            <span style="display: flex; flex-direction: column; gap: 0.15rem">
+              <span style="font-size: 0.85rem; font-weight: 600; color: var(--nm-app-text)">{{ 'WIZARD.STEP2.MARKET_SHOW' | translate }}</span>
+              <span style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.4">{{ 'WIZARD.STEP2.MARKET_SHOW_HINT' | translate }}</span>
+            </span>
+            <i class="pi pi-arrow-right" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); margin-left: auto"></i>
+          </button>
+
+          <!--
+            Repérage demandé, rien trouvé. Le dire, plutôt que de faire
+            réapparaître le bouton : il a été payé, et le relancer sur la même
+            description rendrait la même liste vide.
+          -->
+          <p *ngIf="competitorsLoaded() && !competitorsLoading() && competitors().length === 0"
+             style="margin: 0; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.45">
+            {{ 'WIZARD.STEP2.MARKET_EMPTY' | translate }}
+          </p>
+
           <!-- Liste du marché, notable ligne par ligne -->
           <div *ngIf="competitorsLoading() || competitors().length > 0"
                style="background: var(--nm-app-surface-alt); border: 1px solid var(--nm-app-border); border-radius: 0.625rem; padding: 0.75rem 0.875rem">

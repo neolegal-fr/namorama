@@ -57,8 +57,16 @@ export class DomainService {
     return this.http.post<CompetitorsResult>(`${this.apiUrl}/competitors`, { description, ...(locale ? { locale } : {}) });
   }
 
-  analyzeName(suggestionId: string, lang?: string): Observable<{ analysis: string }> {
-    return this.http.post<{ analysis: string }>(`${this.apiUrl}/analyze`, { suggestionId, lang });
+  /**
+   * Note plusieurs noms en UNE requête, et donc un seul appel au modèle.
+   *
+   * Un nom absent de `analyses` n'a pas été noté — suggestion inconnue, hors
+   * des droits, ou sautée par le modèle. L'appelant laisse alors la carte sur
+   * son bouton « Analyser » : pas de note inventée côté navigateur, elle se
+   * lirait comme une vraie.
+   */
+  analyzeNames(suggestionIds: string[], lang?: string): Observable<{ analyses: Record<string, string> }> {
+    return this.http.post<{ analyses: Record<string, string> }>(`${this.apiUrl}/analyze`, { suggestionIds, lang });
   }
 
   pickBest(suggestions: { name: string; analysis: string | null; extensions: Record<string, any> }[], lang: string): Observable<{ recommended: string; reason: string }> {
