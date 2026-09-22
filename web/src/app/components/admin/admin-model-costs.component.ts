@@ -1,5 +1,6 @@
 import { Component, Input, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { AdminModelCosts, LigneConsommation } from '../../services/admin.service';
 import { AdminWeeklyChartComponent, ChartPoint } from './admin-weekly-chart.component';
 import { coutAuTarif, libelleOperation, tarifDe, tokens, usd } from './couts-modele';
@@ -25,7 +26,7 @@ interface LigneSimulee {
 @Component({
   selector: 'app-admin-model-costs',
   standalone: true,
-  imports: [CommonModule, AdminWeeklyChartComponent],
+  imports: [CommonModule, RouterLink, AdminWeeklyChartComponent],
   template: `
     <div>
       <div style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem">
@@ -34,6 +35,7 @@ interface LigneSimulee {
           sur la période sélectionnée, en dollars au tarif de chaque appel
           <ng-container *ngIf="couts()?.since as depuis"> — mesuré depuis le {{ dateCourte(depuis) }}</ng-container>
         </span>
+        <a routerLink="/admin/prices" class="nm-sous-titre" style="margin-left: auto">Gérer les tarifs →</a>
       </div>
 
       <div *ngIf="erreur" class="nm-carte nm-muet">
@@ -91,7 +93,7 @@ interface LigneSimulee {
             <i class="pi pi-exclamation-triangle"></i>
             {{ c.period.unpricedCalls }} appel{{ c.period.unpricedCalls > 1 ? 's' : '' }} sur un modèle sans tarif
             ({{ modelesSansTarif() }}) : absent{{ c.period.unpricedCalls > 1 ? 's' : '' }} des totaux.
-            Ajouter une ligne à <code>model_price</code> pour le chiffrer.
+            <a routerLink="/admin/prices">Ajouter son tarif</a> pour le chiffrer.
           </div>
 
           <!-- ─── Relevé par opération, et simulateur ─────────────────── -->

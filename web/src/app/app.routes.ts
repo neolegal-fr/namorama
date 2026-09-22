@@ -6,6 +6,7 @@ import { AdminComponent } from './components/admin/admin.component';
 import { AdminDashboardComponent } from './components/admin/admin-dashboard.component';
 import { AdminUsersComponent } from './components/admin/admin-users.component';
 import { AdminFeedbackComponent } from './components/admin/admin-feedback.component';
+import { AdminModelPricesComponent } from './components/admin/admin-model-prices.component';
 import { LegalComponent } from './components/legal/legal.component';
 import { PrivacyComponent } from './components/privacy/privacy.component';
 import { GuideNomDeMarqueComponent } from './components/content/guide-nom-de-marque';
@@ -80,6 +81,7 @@ export const routes: Routes = [
       { path: 'dashboard', component: AdminDashboardComponent },
       { path: 'users', component: AdminUsersComponent },
       { path: 'feedback', component: AdminFeedbackComponent },
+      { path: 'prices', component: AdminModelPricesComponent },
     ],
   },
   { path: 'legal', component: LegalComponent },
