@@ -6,6 +6,7 @@ import { DomainService } from './domain.service';
 import { RefineDescriptionDto } from './dto/refine-description.dto';
 import { SearchDomainsDto } from './dto/search-domains.dto';
 import { RecheckDomainsDto } from './dto/recheck-domains.dto';
+import { AnalyzeNamesDto } from './dto/analyze-names.dto';
 import { AuthenticatedUser, Public } from 'nest-keycloak-connect';
 import { UsersService } from '../users/users.service';
 import { ProjectsService } from '../projects/projects.service';
@@ -61,39 +62,88 @@ export class DomainController {
     return this.domainService.findSimilarProductDomains(dto.description, dto.locale);
   }
 
+  /**
+   * Note un ou plusieurs noms.
+   *
+   * Un lot part en **un seul appel au modèle** : la consigne et le barème ne
+   * dépendent pas du nom, les payer une fois par nom était le premier poste de
+   * la facture OpenAI (64 % sur les 30 jours au 16/09/2026). Voir
+   * `DomainService.analyzeNames`.
+   *
+   * La réponse porte les deux formes : `analyses` pour le lot, et `analysis`
+   * quand un seul identifiant a été demandé — un onglet ouvert avant le
+   * déploiement continue ainsi de fonctionner.
+   */
   @Post('analyze')
   async analyze(
-    @Body('suggestionId') suggestionId: string,
-    @Body('lang') lang: string | undefined,
+    @Body() dto: AnalyzeNamesDto,
     @AuthenticatedUser() keycloakUser: any,
   ) {
-    // `suggestionId` est un scalaire du corps, donc aucun DTO ne le valide.
-    // Absent, il descendait tel quel jusqu'à `findOne({ where: { id: undefined } })`,
-    // que TypeORM refuse par une exception — une saisie invalide ressortait en
-    // 500. Observé en production le 26/08/2026 sur `/domain/analyze`.
-    if (typeof suggestionId !== 'string' || !suggestionId.trim()) {
-      throw new BadRequestException('Identifiant de suggestion manquant');
-    }
+    const lang = dto.lang;
+    const ids = [...new Set([...(dto.suggestionIds ?? []), ...(dto.suggestionId ? [dto.suggestionId] : [])])];
+    // Un corps sans aucun identifiant descendait jusqu'à
+    // `findOne({ where: { id: undefined } })`, que TypeORM refuse par une
+    // exception — une saisie invalide ressortait en 500. Observé en production
+    // le 26/08/2026 sur `/domain/analyze`.
+    if (ids.length === 0) throw new BadRequestException('Identifiant de suggestion manquant');
 
     const user = await this.usersService.findOrCreate(keycloakUser.sub, { email: keycloakUser.email, firstName: keycloakUser.given_name, lastName: keycloakUser.family_name });
-    const suggestion = await this.projectsService.getSuggestionForUser(suggestionId, user);
-    if (!suggestion) throw new NotFoundException('Suggestion non trouvée');
 
-    // Retourner le cache uniquement si la langue correspond
-    if (suggestion.analysis) {
-      try {
-        const cached = JSON.parse(suggestion.analysis);
-        if (!lang || cached.lang === lang) return { analysis: suggestion.analysis };
-        // Langue différente → régénérer
-      } catch {
-        // Ancien format texte → régénérer si une langue est demandée
-        if (!lang) return { analysis: suggestion.analysis };
-      }
+    // Les droits se contrôlent identifiant par identifiant, AVANT tout appel au
+    // modèle : la liste vient du navigateur et peut porter n'importe quoi.
+    const suggestions = await Promise.all(ids.map((id) => this.projectsService.getSuggestionForUser(id, user)));
+
+    const analyses: Record<string, string> = {};
+    /** Ceux qu'il faut vraiment calculer, par nom — le même nom deux fois ne coûte qu'une note. */
+    const aCalculer = new Map<string, string[]>();
+
+    suggestions.forEach((suggestion, i) => {
+      if (!suggestion) return; // inconnu ou hors des droits : simplement absent de la réponse
+      const cache = this.analyseEnCache(suggestion.analysis, lang);
+      if (cache) { analyses[ids[i]] = cache; return; }
+      const dejaPrevu = aCalculer.get(suggestion.domainName);
+      if (dejaPrevu) dejaPrevu.push(ids[i]);
+      else aCalculer.set(suggestion.domainName, [ids[i]]);
+    });
+
+    // Un seul identifiant demandé, introuvable : c'est une erreur, pas une
+    // réponse vide. En lot, l'absence se lit dans ce qui manque — une carte
+    // supprimée entre-temps ne doit pas faire échouer les dix-neuf autres.
+    if (ids.length === 1 && !analyses[ids[0]] && aCalculer.size === 0) {
+      throw new NotFoundException('Suggestion non trouvée');
     }
 
-    const analysis = await this.domainService.analyzeNameWithAI(suggestion.domainName, lang);
-    await this.projectsService.saveAnalysis(suggestionId, analysis);
-    return { analysis };
+    if (aCalculer.size > 0) {
+      const produites = await this.domainService.analyzeNames([...aCalculer.keys()], lang);
+      await Promise.all(
+        [...aCalculer].flatMap(([nom, idsDuNom]) => {
+          const analyse = produites.get(nom);
+          if (!analyse) return []; // le modèle a sauté ce nom : la carte garde son bouton
+          idsDuNom.forEach((id) => { analyses[id] = analyse; });
+          return idsDuNom.map((id) => this.projectsService.saveAnalysis(id, analyse));
+        }),
+      );
+    }
+
+    return { analyses, analysis: ids.length === 1 ? analyses[ids[0]] : undefined };
+  }
+
+  /**
+   * L'analyse déjà en base, si elle est réutilisable.
+   *
+   * Réutilisable veut dire « dans la langue demandée » : une note rendue en
+   * français ne sert pas un utilisateur passé à l'anglais. L'ancien format
+   * texte n'a pas de langue, et n'est donc conservé que si aucune n'est
+   * demandée.
+   */
+  private analyseEnCache(analysis: string | null | undefined, lang?: string): string | null {
+    if (!analysis) return null;
+    try {
+      const cached = JSON.parse(analysis);
+      return !lang || cached.lang === lang ? analysis : null;
+    } catch {
+      return lang ? null : analysis;
+    }
   }
 
   @Post('pick-best')

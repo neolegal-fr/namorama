@@ -153,7 +153,14 @@ export class WizardComponent implements OnInit, OnDestroy {
   /** 'web' = liste issue d'une recherche web en direct, 'model' = connaissance du modèle. */
   competitorsSource = signal<'web' | 'model'>('model');
   competitorsLoading = signal(false);
-  private competitorsLoaded = signal(false);
+  /**
+   * Le repérage a déjà été demandé sur cette description.
+   *
+   * Public parce que le gabarit s'en sert pour ne PAS reproposer le bouton
+   * après un repérage qui n'a rien trouvé : l'appel a eu lieu, il a été payé,
+   * et le relancer sur la même description rendrait la même liste vide.
+   */
+  readonly competitorsLoaded = signal(false);
   showCompetitors = signal(true);
 
   /**
@@ -1486,8 +1493,10 @@ export class WizardComponent implements OnInit, OnDestroy {
    * une liste déjà payée.
    */
   goToExtensions() {
-    // #4 — repères du marché chargés en tâche de fond, avant le lancement de la recherche
-    this.loadCompetitors();
+    // Le repérage du marché ne part plus d'ici : voir `loadCompetitors`. Les
+    // domaines déjà relevés continuent d'alimenter la génération s'il a été
+    // demandé ; sinon la recherche se passe de ce repère, comme elle le fait
+    // déjà quand la recherche web échoue.
     const premiere = this.domains().length === 0;
     this.nextStep();
     if (premiere && this.selectedExtensions().length > 0) this.findDomains(false);
@@ -1515,6 +1524,14 @@ export class WizardComponent implements OnInit, OnDestroy {
 
   /**
    * #4 — produits/solutions déjà présents sur le marché décrit, avec leur domaine.
+   *
+   * **Déclenché par l'utilisateur uniquement**, depuis le bouton de l'étape de
+   * cadrage. Il partait en tâche de fond pour tout le monde : 18 % de la
+   * facture OpenAI pour une section repliée, que la recherche web rend en 18 s
+   * en médiane. Le prix tient surtout aux frais d'outil — 10 $ les mille
+   * appels — auxquels aucun réglage de modèle ne change rien : le seul levier
+   * est de ne pas appeler.
+   *
    * Résout toujours (jamais de rejet) : un échec de repérage ne doit pas bloquer
    * le passage à l'étape suivante.
    */
@@ -1595,6 +1612,10 @@ export class WizardComponent implements OnInit, OnDestroy {
     // désabonner déclenche l'abandon de la requête côté service.
     this.searchSub?.unsubscribe();
     this.searchSub = null;
+    // Le lot d'analyses en attente de départ n'a plus de grille où s'afficher :
+    // le laisser partir ferait payer un appel au modèle pour un écran quitté.
+    clearTimeout(this.regroupement);
+    this.regroupement = undefined;
   }
 
   /** Ouvre le panneau de partage d'un projet, et charge qui y a déjà accès. */
@@ -2056,9 +2077,26 @@ export class WizardComponent implements OnInit, OnDestroy {
     }
   }
 
-  /** Trois analyses simultanées, pas trente : au-delà, on encombre le
-   * navigateur et le modèle sans rien afficher plus tôt. */
-  private static readonly ANALYSES_PARALLELES = 3;
+  /**
+   * Noms par requête d'analyse.
+   *
+   * Le serveur en accepte vingt ; une grille en affiche dix. Le lot est la
+   * seule chose qui rende le regroupement économique : la consigne et le
+   * barème ne dépendent pas du nom, un lot de dix les paie une fois au lieu
+   * de dix.
+   */
+  private static readonly ANALYSES_PAR_LOT = 10;
+
+  /**
+   * Délai de rassemblement avant d'envoyer un lot.
+   *
+   * Les cartes entrent dans le champ de vision une par une, et leurs
+   * identifiants arrivent au fil du streaming : partir au premier événement
+   * enverrait dix requêtes d'un nom, c'est-à-dire exactement ce qu'on vient
+   * de supprimer. Assez court pour que les étoiles suivent le défilement,
+   * assez long pour qu'un écran de cartes tienne dans un seul appel.
+   */
+  private static readonly REGROUPEMENT_MS = 250;
 
   /** Noms dont la carte a été amenée à l'écran au moins une fois. */
   private readonly nomsVus = new Set<string>();
@@ -2066,12 +2104,17 @@ export class WizardComponent implements OnInit, OnDestroy {
   /** Identifiants déjà envoyés au modèle — un échec ne se réessaie pas tout seul. */
   private readonly analysesLancees = new Set<string>();
 
-  private analysesEnCours = 0;
+  /** Un lot à la fois : le suivant part quand celui-ci revient. */
+  private analyseEnVol = false;
+
+  private regroupement?: ReturnType<typeof setTimeout>;
 
   /** Vide la mémoire de défilement, quand la liste affichée change de contenu. */
   private oublierCeQuiEstVu(): void {
     this.nomsVus.clear();
     this.analysesLancees.clear();
+    clearTimeout(this.regroupement);
+    this.regroupement = undefined;
   }
 
   /**
@@ -2096,7 +2139,7 @@ export class WizardComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Dépile la file des analyses dues.
+   * Dépile la file des analyses dues, **par lots**.
    *
    * Une analyse est due quand les deux conditions sont réunies, et elles
    * n'arrivent pas dans un ordre garanti : la carte a été vue, ET sa suggestion
@@ -2104,66 +2147,111 @@ export class WizardComponent implements OnInit, OnDestroy {
    * précède l'enregistrement ; c'est pourquoi cette méthode est rappelée à
    * chaque fois que des identifiants arrivent, et pas seulement au défilement.
    *
+   * D'où le délai de regroupement : les deux sources déclenchent carte par
+   * carte, et partir au premier événement enverrait dix requêtes d'un nom —
+   * exactement ce que le regroupement supprime.
+   *
    * Best-effort : un échec laisse la carte sur son bouton « Analyser », qui
    * reste cliquable. Rien n'est réessayé automatiquement — un modèle qui refuse
    * deux fois refusera la troisième.
    */
   private analyserCeQuiEstVu(): void {
-    while (this.analysesEnCours < WizardComponent.ANALYSES_PARALLELES) {
-      const cible = this.domains().find(
+    if (this.analyseEnVol || this.regroupement) return;
+    if (!this.analysesDues().length) return;
+    this.regroupement = setTimeout(() => {
+      this.regroupement = undefined;
+      this.envoyerUnLot();
+    }, WizardComponent.REGROUPEMENT_MS);
+  }
+
+  /** Cartes vues, identifiées, pas encore notées ni demandées. */
+  private analysesDues(): string[] {
+    return this.domains()
+      .filter(
         (d) =>
           d.id &&
           !d.analysis &&
           !d.analysisPending &&
           !this.analysesLancees.has(d.id) &&
           this.nomsVus.has(d.name),
-      );
-      if (!cible) return;
+      )
+      .map((d) => d.id as string);
+  }
 
-      const id = cible.id as string;
-      // Marqué AVANT l'appel : `analyseOne` peut rendre la main tout de suite,
-      // et la boucle reprendrait le même identifiant indéfiniment.
-      this.analysesLancees.add(id);
-      this.analysesEnCours++;
-      this.analyseOne(id, () => {
-        this.analysesEnCours--;
-        this.analyserCeQuiEstVu();
-      });
-    }
+  private envoyerUnLot(): void {
+    if (this.analyseEnVol) return;
+    const lot = this.analysesDues().slice(0, WizardComponent.ANALYSES_PAR_LOT);
+    if (!lot.length) return;
+
+    this.analyseEnVol = true;
+    this.analyserLesIds(lot, () => {
+      this.analyseEnVol = false;
+      // Le défilement a pu faire entrer d'autres cartes pendant l'appel.
+      this.analyserCeQuiEstVu();
+    });
   }
 
   /**
-   * Calcule l'analyse d'un nom à la demande.
+   * Calcule l'analyse d'un nom à la demande, depuis son bouton.
    *
    * Elle se déclenchait jusqu'ici au seul « j'aime », ce qui laissait un tiret
    * sur toutes les cartes fraîches — lu comme une panne plutôt que comme un
-   * « pas encore ». Elle reste à la demande : c'est un appel au modèle par
-   * nom, et les faire tous d'office coûterait trente appels par recherche pour
-   * une donnée que personne ne lit toujours.
+   * « pas encore ». Au clic, elle ne passe pas par le regroupement : on ne
+   * fait pas attendre quelqu'un qui vient de demander.
    */
-  analyseOne(id: string, termine?: () => void): void {
+  analyseOne(id: string): void {
     const cible = this.domains().find((d) => d.id === id);
-    if (!cible || cible.analysis || cible.analysisPending) { termine?.(); return; }
+    if (!cible || cible.analysis || cible.analysisPending) return;
+    this.analytics.track('name_analysis_requested');
+    this.analyserLesIds([id], undefined, id);
+  }
 
-    // ⚠ Remplacer l'élément, ne jamais le muter : la grille reçoit `domains`
-    // en entrée SIGNAL et n'observe donc que la référence du tableau. Une
-    // mutation en place ne la réveille pas, `detectChanges()` compris — c'est
-    // ainsi qu'une analyse arrivait sans jamais s'afficher.
-    const remplacer = (champs: Record<string, unknown>) =>
-      this.domains.update((list) => list.map((d) => (d.id === id ? { ...d, ...champs } : d)));
+  /**
+   * Envoie un lot d'identifiants et répartit les notes reçues.
+   *
+   * `deplier` porte l'identifiant que l'utilisateur a demandé explicitement :
+   * son panneau s'ouvre, les autres non — en tâche de fond, ouvrir dix
+   * panneaux derrière son dos serait insupportable.
+   */
+  private analyserLesIds(ids: string[], termine?: () => void, deplier?: string): void {
+    // Marqués AVANT l'appel : les deux déclencheurs (défilement, arrivée des
+    // identifiants) reprendraient sinon le même lot indéfiniment.
+    ids.forEach((id) => this.analysesLancees.add(id));
 
-    if (!termine) this.analytics.track('name_analysis_requested');
-    remplacer({ analysisPending: true });
-    this.domainService.analyzeName(id, this.translate.currentLang() ?? undefined).subscribe({
-      next: (a) => {
-        remplacer({ analysis: a.analysis, analysisPending: false });
-        // Déplié seulement si l'utilisateur l'a DEMANDÉ : en tâche de fond,
-        // ouvrir trente panneaux derrière son dos serait insupportable.
-        if (!termine) this.expandedAnalysisId.set(id);
+    // ⚠ Remplacer les éléments, ne jamais les muter : la grille reçoit
+    // `domains` en entrée SIGNAL et n'observe donc que la référence du
+    // tableau. Une mutation en place ne la réveille pas, `detectChanges()`
+    // compris — c'est ainsi qu'une analyse arrivait sans jamais s'afficher.
+    const remplacer = (champs: (id: string) => Record<string, unknown> | null) =>
+      this.domains.update((list) =>
+        list.map((d) => {
+          const maj = d.id ? champs(d.id) : null;
+          return maj ? { ...d, ...maj } : d;
+        }),
+      );
+
+    const enAttente = new Set(ids);
+    remplacer((id) => (enAttente.has(id) ? { analysisPending: true } : null));
+
+    this.domainService.analyzeNames(ids, this.translate.currentLang() ?? undefined).subscribe({
+      next: (res) => {
+        const analyses = res.analyses ?? {};
+        // Un identifiant absent de la réponse n'a PAS été noté : sa carte
+        // repasse sur son bouton plutôt que de rester en attente indéfinie.
+        remplacer((id) =>
+          enAttente.has(id)
+            ? { analysisPending: false, ...(analyses[id] ? { analysis: analyses[id] } : {}) }
+            : null,
+        );
+        if (deplier && analyses[deplier]) this.expandedAnalysisId.set(deplier);
         this.cdr.detectChanges();
         termine?.();
       },
-      error: () => { remplacer({ analysisPending: false }); this.cdr.detectChanges(); termine?.(); },
+      error: () => {
+        remplacer((id) => (enAttente.has(id) ? { analysisPending: false } : null));
+        this.cdr.detectChanges();
+        termine?.();
+      },
     });
   }
 
@@ -2396,13 +2484,13 @@ export class WizardComponent implements OnInit, OnDestroy {
     // #1 — en parallèle des mots-clés : contraintes de naming déduites du brief
     this.loadNamingConstraints(descToUse);
 
-    // Le repérage du marché part en tâche de fond et n'est pas attendu : il
-    // met 23 s en médiane et jusqu'à 45 s (mesuré en production), contre 3 s
-    // pour les mots-clés. Attendre le plus lent des deux retenait l'écran de
-    // configuration une trentaine de secondes sans rien apporter — la section
-    // « marché » porte son propre indicateur de chargement et se remplit
-    // seule, pendant que l'utilisateur saisit ses mots-clés et ses réglages.
-    this.loadCompetitors();
+    // Le repérage du marché ne part PLUS tout seul : il attend son bouton.
+    // C'est l'appel le plus cher du produit — ~0,03 $, dont 0,01 $ de frais
+    // d'outil `web_search` — et il partait pour quiconque atteignait cet
+    // écran : 101 appels pour 142 recherches sur les 30 jours au 16/09/2026,
+    // soit une facture prélevée sur tout le monde pour une section que
+    // personne n'a demandée. Il met en outre 18 s en médiane et jusqu'à 45 s,
+    // ce qui en faisait aussi l'attente la plus longue de l'étape.
 
     const keywords$ = this.domainService
       .generateKeywords(descToUse, this.effectiveLocale() ?? this.translate.currentLang())
