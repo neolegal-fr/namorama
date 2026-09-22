@@ -5,8 +5,9 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { DatePickerModule } from 'primeng/datepicker';
-import { AdminService, AdminSeries, AdminStats, PeriodMetrics } from '../../services/admin.service';
+import { AdminModelCosts, AdminService, AdminSeries, AdminStats, PeriodMetrics } from '../../services/admin.service';
 import { AdminWeeklyChartComponent, ChartPoint } from './admin-weekly-chart.component';
+import { AdminModelCostsComponent } from './admin-model-costs.component';
 
 interface PeriodOption { label: string; days: number | null; }
 
@@ -68,7 +69,7 @@ const SOCLE_POURCENTAGE = 5;
   imports: [
     CommonModule, FormsModule, TranslatePipe,
     ButtonModule, SelectButtonModule, DatePickerModule,
-    AdminWeeklyChartComponent,
+    AdminWeeklyChartComponent, AdminModelCostsComponent,
   ],
   template: `
     <div style="display: flex; flex-direction: column; gap: 1.5rem; padding-top: 1rem">
@@ -200,6 +201,16 @@ const SOCLE_POURCENTAGE = 5;
           </ng-template>
 
           <div class="nm-kpi-detail" style="margin-top: 0.5rem">{{ noteEntonnoir() }}</div>
+        </div>
+
+        <!-- ─── Coût du modèle : ce que la période a coûté en IA ────────────
+             Chargé à part : son relevé peut échouer sans emporter le reste. -->
+        <div [style.opacity]="loadingStats() ? 0.55 : 1" style="transition: opacity 0.15s">
+          <app-admin-model-costs
+            [donnees]="couts()"
+            [erreur]="erreurCouts()"
+            [creditsConsommes]="s.period.creditsConsumed">
+          </app-admin-model-costs>
         </div>
 
         <!-- ─── Cumul, sans comparaison : un stock n'a pas d'« évolution » ── -->
@@ -358,6 +369,9 @@ export class AdminDashboardComponent implements OnInit {
   stats = signal<AdminStats | null>(null);
   loadingStats = signal(false);
 
+  couts = signal<AdminModelCosts | null>(null);
+  erreurCouts = signal(false);
+
   series = signal<AdminSeries | null>(null);
   loadingSeries = signal(false);
   erreurSeries = signal(false);
@@ -402,6 +416,10 @@ export class AdminDashboardComponent implements OnInit {
     this.adminService.getStats(from, to).subscribe({
       next: s => { this.stats.set(s); this.loadingStats.set(false); },
       error: () => this.loadingStats.set(false),
+    });
+    this.adminService.getModelCosts(from, to, SEMAINES).subscribe({
+      next: c => { this.couts.set(c); this.erreurCouts.set(false); },
+      error: () => this.erreurCouts.set(true),
     });
   }
 

@@ -23,6 +23,7 @@ describe('AdminService — tri de la liste des utilisateurs', () => {
       { count: jest.fn() } as any,             // brand_report_record
       {} as any,                               // dataSource
       { error: jest.fn() } as any,             // journalisation
+      { coutsParCompte: jest.fn().mockResolvedValue(new Map()) } as any, // coûts du modèle
     );
     // Les deux compteurs ne sont pas appelés quand la page est vide.
     return { service, qb };
@@ -38,6 +39,12 @@ describe('AdminService — tri de la liste des utilisateurs', () => {
     const { service, qb } = fabrique();
     await service.getUsers(1, 20, '', 'projectCount', 'ASC');
     expect(qb.orderBy).toHaveBeenCalledWith(expect.stringContaining('SELECT COUNT(*) FROM project'), 'ASC');
+  });
+
+  it('trie par coût du modèle, calculé au tarif de chaque appel', async () => {
+    const { service, qb } = fabrique();
+    await service.getUsers(1, 20, '', 'aiCostUsd', 'DESC');
+    expect(qb.orderBy).toHaveBeenCalledWith(expect.stringContaining('FROM model_usage m'), 'DESC');
   });
 
   it('REFUSE une colonne inconnue et retombe sur la date de création', async () => {

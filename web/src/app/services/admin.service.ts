@@ -22,6 +22,78 @@ export interface AdminUser {
    * les statistiques. Se coche à la main — rien dans les données ne le trahit.
    */
   isInternal: boolean;
+  /**
+   * Coût cumulé des appels au modèle imputés au compte, en dollars, au tarif de
+   * chaque appel. `null` : aucun appel relevé — pas « zéro dollar ».
+   */
+  aiCostUsd: number | null;
+  /** Appels sans tarif connu, absents de `aiCostUsd`. */
+  aiUnpricedCalls: number;
+  /** Crédits consommés depuis la création du compte — le dénominateur du coût par crédit. */
+  creditsConsumed: number;
+}
+
+/** Consommation d'une opération sur un modèle. Voir `LigneConsommation` côté API. */
+export interface LigneConsommation {
+  operation: string;
+  model: string;
+  calls: number;
+  /** Éléments traités (noms d'un lot d'analyse). */
+  items: number;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  webSearchCalls: number;
+  /** `null` : aucun tarif connu pour ce modèle. */
+  costUsd: number | null;
+  unpricedCalls: number;
+}
+
+export interface CoutsPeriode {
+  from: string;
+  to: string;
+  costUsd: number;
+  calls: number;
+  unpricedCalls: number;
+  /** Appels sans compte : visiteurs jamais connectés, comptes supprimés. */
+  unattributedCostUsd: number;
+  accounts: number;
+  byOperation: LigneConsommation[];
+}
+
+export interface SemaineCouts {
+  week: string;
+  /** `null` avant le début du relevé : non mesuré, pas gratuit. */
+  costUsd: number | null;
+  byOperation: Record<string, number>;
+}
+
+export interface TarifCourant {
+  model: string;
+  effectiveFrom: string;
+  inputPerM: number;
+  cachedInputPerM: number | null;
+  outputPerM: number;
+}
+
+export interface AdminModelCosts {
+  since: string | null;
+  period: CoutsPeriode;
+  previous: CoutsPeriode;
+  weeks: SemaineCouts[];
+  prices: TarifCourant[];
+  webSearchPerCall: number | null;
+}
+
+export interface UserModelCosts {
+  keycloakId: string;
+  since: string | null;
+  costUsd: number;
+  calls: number;
+  unpricedCalls: number;
+  byOperation: LigneConsommation[];
+  weeks: SemaineCouts[];
 }
 
 export interface FeedbackItem {
@@ -157,6 +229,22 @@ export class AdminService {
     return this.http.get<AdminSeries>(`${this.base}/series`, {
       params: new HttpParams().set('weeks', weeks),
     });
+  }
+
+  /**
+   * Coût des appels au modèle sur la période, comparé à la précédente, avec la
+   * série hebdomadaire et les tarifs courants. Appel distinct de `getStats` :
+   * il peut échouer seul sans vider le reste du tableau de bord.
+   */
+  getModelCosts(from?: Date, to?: Date, weeks = 26): Observable<AdminModelCosts> {
+    let params = new HttpParams().set('weeks', weeks);
+    if (from) params = params.set('from', from.toISOString());
+    if (to) params = params.set('to', to.toISOString());
+    return this.http.get<AdminModelCosts>(`${this.base}/model-costs`, { params });
+  }
+
+  getUserModelCosts(userId: number): Observable<UserModelCosts> {
+    return this.http.get<UserModelCosts>(`${this.base}/users/${userId}/model-costs`);
   }
 
   getFeedback(): Observable<FeedbackItem[]> {

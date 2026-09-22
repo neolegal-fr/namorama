@@ -7,6 +7,8 @@ import { DomainSuggestion } from '../projects/entities/domain-suggestion.entity'
 import { CreditAdjustment } from './entities/credit-adjustment.entity';
 import { BrandReportRecord } from '../brand-report/entities/brand-report-record.entity';
 import { AppLoggerService } from '../common/logging/app-logger.service';
+import { comptesMesures, jourISO, lundiDe, semaineSql } from './predicats';
+import { ModelCostsService } from './model-costs.service';
 
 export interface AdminUserRow {
   id: number;
@@ -31,6 +33,18 @@ export interface AdminUserRow {
    * statistiques. Se coche à la main — rien dans les données ne le trahit.
    */
   isInternal: boolean;
+  /**
+   * Coût cumulé des appels au modèle imputés à ce compte, en dollars, au tarif
+   * de chaque appel. `null` : aucun appel relevé — pas « zéro dollar ».
+   */
+  aiCostUsd: number | null;
+  /** Appels sans tarif connu, absents de `aiCostUsd`. */
+  aiUnpricedCalls: number;
+  /**
+   * Crédits consommés depuis la création du compte : suggestions + coût réel
+   * des rapports. Le dénominateur du coût par crédit.
+   */
+  creditsConsumed: number;
 }
 
 /**
@@ -163,6 +177,7 @@ export class AdminService {
     @InjectRepository(BrandReportRecord) private brandReportRepo: Repository<BrandReportRecord>,
     private dataSource: DataSource,
     private readonly logger: AppLoggerService,
+    private readonly modelCosts: ModelCostsService,
   ) {}
 
   /**
@@ -216,7 +231,7 @@ export class AdminService {
    * test (cf. la migration du 23/08/2026).
    */
   private static comptesMesures(alias = 'u'): string {
-    return `${alias}.isAdmin = false AND ${alias}.isInternal = false`;
+    return comptesMesures(alias);
   }
 
   /**
@@ -239,6 +254,7 @@ export class AdminService {
     lastLogin: 'u.lastLogin',
     projectCount: '(SELECT COUNT(*) FROM project p WHERE p.userId = u.id)',
     brandReportCount: '(SELECT COUNT(*) FROM brand_report_record b WHERE b.keycloakId = u.keycloakId)',
+    aiCostUsd: ModelCostsService.TRI_COUT,
   };
 
   async getUsers(
@@ -265,29 +281,71 @@ export class AdminService {
     }
 
     const [users, total] = await qb.getManyAndCount();
-    const [reportCounts, projCounts] = await Promise.all([
+    return { data: await this.lignes(users), total };
+  }
+
+  /**
+   * Crédits consommés par compte : suggestions (1 crédit) + coût réel des
+   * rapports. Même reconstitution que `metriquesPeriode`, sur tout l'historique.
+   */
+  private async creditsConsommes(users: User[]): Promise<Map<number, number>> {
+    if (!users.length) return new Map();
+    const [sugg, rapports] = await Promise.all([
+      this.dataSource.query(
+        `SELECT p.userId AS userId, COUNT(*) AS n
+           FROM domain_suggestion ds INNER JOIN project p ON p.id = ds.projectId
+          WHERE p.userId IN (?) GROUP BY p.userId`,
+        [users.map((u) => u.id)],
+      ),
+      this.dataSource.query(
+        `SELECT r.keycloakId AS keycloakId, COALESCE(SUM(r.costCredits), 0) AS n
+           FROM brand_report_record r
+          WHERE r.keycloakId IN (?) GROUP BY r.keycloakId`,
+        [users.map((u) => u.keycloakId)],
+      ),
+    ]);
+    const parSub = new Map<string, number>(rapports.map((r: any) => [String(r.keycloakId), Number(r.n)]));
+    const parId = new Map<number, number>(sugg.map((r: any) => [Number(r.userId), Number(r.n)]));
+    return new Map(users.map((u) => [u.id, (parId.get(u.id) ?? 0) + (parSub.get(u.keycloakId) ?? 0)]));
+  }
+
+  /** Les lignes du tableau des utilisateurs, compteurs compris, en requêtes groupées. */
+  private async lignes(users: User[]): Promise<AdminUserRow[]> {
+    const [reportCounts, projCounts, couts, credits] = await Promise.all([
       this.brandReportCounts(users.map((u) => u.keycloakId)),
       this.projectCounts(users.map((u) => u.id)),
+      // Le coût vit dans une table récente, jointe à deux autres : son échec ne
+      // doit pas vider la liste des comptes. Colonne vide, pas page blanche.
+      this.modelCosts.coutsParCompte(users.map((u) => u.keycloakId)).catch((e) => {
+        this.logger.error(`Coûts IA par compte non calculés : ${e}`, undefined, AdminService.name);
+        return new Map();
+      }),
+      this.creditsConsommes(users),
     ]);
 
-    const data: AdminUserRow[] = users.map((u: any) => ({
-      id: u.id,
-      keycloakId: u.keycloakId,
-      email: u.email,
-      firstName: u.firstName,
-      lastName: u.lastName,
-      credits: u.credits,
-      extraCredits: u.extraCredits,
-      totalCredits: u.credits + u.extraCredits,
-      createdAt: u.createdAt,
-      lastLogin: u.lastLogin,
-      projectCount: projCounts.get(u.id) ?? 0,
-      brandReportCount: reportCounts.get(u.keycloakId) ?? 0,
-      isInternal: u.isInternal,
-    }));
-
-    return { data, total };
+    return users.map((u: any) => {
+      const cout = couts.get(u.keycloakId);
+      return {
+        id: u.id,
+        keycloakId: u.keycloakId,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        credits: u.credits,
+        extraCredits: u.extraCredits,
+        totalCredits: u.credits + u.extraCredits,
+        createdAt: u.createdAt,
+        lastLogin: u.lastLogin,
+        projectCount: projCounts.get(u.id) ?? 0,
+        brandReportCount: reportCounts.get(u.keycloakId) ?? 0,
+        isInternal: u.isInternal,
+        aiCostUsd: cout ? cout.costUsd : null,
+        aiUnpricedCalls: cout?.unpricedCalls ?? 0,
+        creditsConsumed: credits.get(u.id) ?? 0,
+      };
+    });
   }
+
 
   async adjustCredits(userId: number, delta: number, reason: string, adminSub: string): Promise<AdminUserRow> {
     const user = await this.userRepo.findOne({ where: { id: userId } });
@@ -301,21 +359,7 @@ export class AdminService {
     const adjustment = this.adjustmentRepo.create({ userId, delta, reason, adminSub });
     await this.adjustmentRepo.save(adjustment);
 
-    return {
-      id: user.id,
-      keycloakId: user.keycloakId,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      credits: user.credits,
-      extraCredits: user.extraCredits,
-      totalCredits: user.credits + user.extraCredits,
-      createdAt: user.createdAt,
-      lastLogin: user.lastLogin,
-      projectCount: await this.projectRepo.count({ where: { user: { id: userId } } }),
-      brandReportCount: await this.brandReportRepo.count({ where: { keycloakId: user.keycloakId } }),
-      isInternal: user.isInternal,
-    };
+    return (await this.lignes([user]))[0];
   }
 
   /**
@@ -332,29 +376,13 @@ export class AdminService {
     user.isInternal = internal;
     await this.userRepo.save(user);
 
-    return {
-      id: user.id,
-      keycloakId: user.keycloakId,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      credits: user.credits,
-      extraCredits: user.extraCredits,
-      totalCredits: user.credits + user.extraCredits,
-      createdAt: user.createdAt,
-      lastLogin: user.lastLogin,
-      projectCount: await this.projectRepo.count({ where: { user: { id: userId } } }),
-      brandReportCount: await this.brandReportRepo.count({ where: { keycloakId: user.keycloakId } }),
-      isInternal: user.isInternal,
-    };
+    return (await this.lignes([user]))[0];
   }
 
   // ─── Repères de temps ──────────────────────────────────────────────────────
 
-  /** `AAAA-MM-JJ` dans le fuseau du serveur — celui où les dates sont stockées. */
-  private static jourISO(d: Date): string {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
+  /** Voir `jourISO`. */
+  private static jourISO = jourISO;
 
   /**
    * Minuit le plus PROCHE, avant ou après.
@@ -371,13 +399,8 @@ export class AdminService {
     return j;
   }
 
-  /** Lundi de la semaine contenant `d` (semaine ISO, comme `WEEKDAY()` en SQL). */
-  private static lundiDe(d: Date): Date {
-    const j = new Date(d);
-    j.setHours(0, 0, 0, 0);
-    j.setDate(j.getDate() - ((j.getDay() + 6) % 7));
-    return j;
-  }
+  /** Voir `lundiDe`. */
+  private static lundiDe = lundiDe;
 
   /** Tolérance sur « la fenêtre se termine maintenant » : le temps d'un aller-retour. */
   private static readonly MAINTENANT_MS = 5 * 60 * 1000;
@@ -715,13 +738,8 @@ export class AdminService {
 
   // ─── Série hebdomadaire ────────────────────────────────────────────────────
 
-  /**
-   * Semaine ISO en SQL : `WEEKDAY()` vaut 0 le lundi, on recule d'autant.
-   * `DATE_FORMAT` plutôt que le type DATE brut — le pilote rendrait sinon un
-   * objet Date dont le fuseau dépend de la connexion, là où on veut une clé.
-   */
-  private static readonly SEMAINE = (col: string) =>
-    `DATE_FORMAT(DATE_SUB(DATE(${col}), INTERVAL WEEKDAY(${col}) DAY), '%Y-%m-%d')`;
+  /** Semaine ISO en SQL. Voir `semaineSql`. */
+  private static readonly SEMAINE = semaineSql;
 
   private static parSemaine(rows: any[]): Map<string, number> {
     return new Map(rows.map((r) => [String(r.semaine), Number(r.n)]));

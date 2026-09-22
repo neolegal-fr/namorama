@@ -13,6 +13,7 @@ import { ProjectsService } from '../projects/projects.service';
 import { Project } from '../projects/entities/project.entity';
 import { AppLoggerService } from '../common/logging/app-logger.service';
 import { FunnelService, sessionIdDeLaRequete } from '../common/funnel/funnel.service';
+import { imputer } from '../common/model-usage/contexte-appel';
 
 @Controller('domain')
 export class DomainController {
@@ -201,6 +202,8 @@ export class DomainController {
       res.status(e?.getStatus?.() ?? 403).json({ message: e?.message ?? 'Accès refusé' });
       return;
     }
+    // Les appels au modèle de cette recherche sont ceux que ses crédits paient.
+    imputer(user.keycloakId, dto.projectId);
 
     if (user.totalCredits <= 0) {
       this.events.event('search_blocked_no_credits', { userId: keycloakUser.sub, payeur: user.keycloakId });
@@ -339,6 +342,7 @@ export class DomainController {
     await this.funnel.marquer(sessionIdDeLaRequete(req), 'recherche', keycloakUser.sub);
     const demandeur = await this.usersService.findOrCreate(keycloakUser.sub, { email: keycloakUser.email, firstName: keycloakUser.given_name, lastName: keycloakUser.family_name });
     const user = await this.payeurDuProjet(dto.projectId, demandeur);
+    imputer(user.keycloakId, dto.projectId);
 
     if (user.totalCredits <= 0) {
       throw new ForbiddenException('Crédits insuffisants');

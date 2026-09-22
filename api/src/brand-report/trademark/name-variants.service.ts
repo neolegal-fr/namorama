@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
+import { ModelUsageService } from '../../common/model-usage/model-usage.service';
 
 /**
  * Orthographes d'un même nom que l'index de l'INPI ne rapproche pas tout seul.
@@ -40,7 +41,11 @@ export class NameVariantsService {
    */
   private static readonly MIN_LENGTH_FOR_SPLIT = 6;
 
-  constructor(config: ConfigService) {
+  constructor(
+    config: ConfigService,
+    // Facultatif pour les tests unitaires, qui construisent le service à la main.
+    @Optional() private readonly usage?: ModelUsageService,
+  ) {
     const apiKey = config.get<string>('OPENAI_API_KEY');
     this.openai = apiKey ? new OpenAI({ apiKey }) : undefined;
     this.model = config.get<string>('OPENAI_MODEL') ?? 'gpt-5.6-luna';
@@ -92,7 +97,7 @@ export class NameVariantsService {
   private async splitWithModel(name: string): Promise<string[]> {
     if (!this.openai) return [];
     try {
-      const res = await this.openai.chat.completions.create({
+      const appel = this.openai.chat.completions.create({
         model: this.model,
         messages: [
           {
@@ -109,6 +114,7 @@ export class NameVariantsService {
         max_completion_tokens: 120,
         reasoning_effort: 'none',
       });
+      const res = this.usage ? await this.usage.mesurer('name_variants', appel) : await appel;
       const raw = JSON.parse(res.choices[0]?.message?.content ?? '{}') as { decoupages?: unknown };
       const proposals = Array.isArray(raw.decoupages) ? raw.decoupages : [];
       const kept = proposals
