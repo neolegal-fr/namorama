@@ -21,6 +21,7 @@ import { FeedbackModule } from './feedback/feedback.module';
 import { BrandReportModule } from './brand-report/brand-report.module';
 import { LoggingModule } from './common/logging/logging.module';
 import { FunnelModule } from './common/funnel/funnel.module';
+import { ModelUsageModule } from './common/model-usage/model-usage.module';
 import { EventsController } from './events/events.controller';
 
 @Module({
@@ -63,6 +64,7 @@ import { EventsController } from './events/events.controller';
     }),
     LoggingModule,
     FunnelModule,
+    ModelUsageModule,
     DomainModule,
     UsersModule,
     ProjectsModule,

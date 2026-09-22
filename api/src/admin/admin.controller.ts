@@ -2,6 +2,7 @@ import { Controller, Get, Patch, Post, Delete, Param, Body, Query, ParseIntPipe,
 import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Roles, AuthenticatedUser } from 'nest-keycloak-connect';
 import { AdminService } from './admin.service';
+import { ModelCostsService } from './model-costs.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import { UsersService } from '../users/users.service';
 
@@ -26,6 +27,7 @@ export class AdminController {
     private readonly adminService: AdminService,
     private readonly feedbackService: FeedbackService,
     private readonly usersService: UsersService,
+    private readonly modelCosts: ModelCostsService,
   ) {}
 
   @Get('users')
@@ -99,6 +101,32 @@ export class AdminController {
     @Query('weeks', new DefaultValuePipe(26), ParseIntPipe) weeks: number,
   ) {
     return this.adminService.getSeries(weeks);
+  }
+
+  /**
+   * Ce qu'ont coûté les appels au modèle : période, période précédente, série
+   * hebdomadaire et tarifs courants.
+   *
+   * Séparé de `/stats` pour échouer seul : le relevé joint trois tables
+   * récentes, et une carte en panne ne doit pas emporter les quinze autres.
+   */
+  @Get('model-costs')
+  async getModelCosts(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('weeks', new DefaultValuePipe(26), ParseIntPipe) weeks = 26,
+  ) {
+    return this.modelCosts.getCosts(
+      from ? new Date(from) : undefined,
+      to ? new Date(to) : undefined,
+      weeks,
+    );
+  }
+
+  /** Détail des coûts du modèle pour un compte : par opération, et semaine par semaine. */
+  @Get('users/:id/model-costs')
+  async getUserModelCosts(@Param('id', ParseIntPipe) id: number) {
+    return this.modelCosts.getUserCosts(id);
   }
 
   @Get('feedback')

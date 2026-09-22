@@ -20,6 +20,7 @@ import { BrandReportRequestDto } from './dto/brand-report.dto';
 import { UsersService } from '../users/users.service';
 import { AppLoggerService } from '../common/logging/app-logger.service';
 import { FunnelService, sessionIdDeLaRequete } from '../common/funnel/funnel.service';
+import { imputer } from '../common/model-usage/contexte-appel';
 
 @Controller('brand-report')
 export class BrandReportController {
@@ -209,6 +210,8 @@ export class BrandReportController {
         payeurSub = acces.owner.keycloakId;
       }
     }
+    // Même compte que les crédits : c'est lui que le rapport a coûté.
+    imputer(payeurSub, dto.projectId);
 
     // Déjà généré → on le renvoie tel quel, sans refacturer (sauf régénération forcée).
     // Protégé : un souci de cache ne doit jamais faire échouer la génération.

@@ -156,6 +156,34 @@ Trois règles, chacune tirée d'une dépense qu'on a vraiment payée :
 > le modèle qui décide d'appeler `web_search`, et sans raisonnement il s'en dispense —
 > on paierait un appel outillé qui ne cherche rien.
 
+#### Relevé de consommation : des tokens, jamais des montants
+
+Chaque appel au modèle écrit une ligne dans `model_usage` (depuis le 22/09/2026) :
+entrée, part en cache, sortie, part de raisonnement, appels `web_search`, opération,
+modèle, compte, session. Le **coût n'est jamais stocké** : il se calcule à la lecture,
+tokens × tarif de `model_price` **en vigueur à la date de l'appel** (`cout-sql.ts`).
+
+- **Changer un tarif = insérer une ligne** datée dans `model_price`, jamais un `UPDATE` :
+  le passé garde son prix. Le modèle d'un tarif est un **préfixe** (`gpt-5.6-luna` couvre
+  l'instantané daté que l'API renvoie). Un modèle sans tarif est « non chiffré » —
+  signalé au tableau de bord, jamais compté à zéro.
+- **Tout appel passe par `ModelUsageService.mesurer(operation, appel)`**. Un appel OpenAI
+  ajouté sans cette enveloppe est une dépense invisible. Un appel servi par un cache n'en
+  écrit pas : il n'a rien coûté.
+- **Imputation** : le compte du jeton, ou le **payeur** désigné par `imputer()` (le
+  propriétaire d'un projet partagé, comme pour les crédits). Le contexte suit la requête
+  par `AsyncLocalStorage`, ouvert par un **intercepteur** et non un middleware — posé
+  avant `body-parser`, un middleware perd le contexte dès la lecture du corps.
+- Les routes `@Public()` n'ont pas de compte : l'appel porte la session, rattachée au
+  compte par `visitor_session.keycloakId`. Ce qui n'est jamais rattaché s'affiche à part,
+  « visiteurs sans compte ».
+- **Projection** : le simulateur du tableau de bord applique le tarif courant d'un autre
+  modèle aux mêmes tokens. Juste à `reasoning_effort: none` ; ordre de grandeur pour
+  `pick_best` et `competitors`, dont le raisonnement dépend du modèle.
+
+> Contrôle de complétude : une fois par mois, comparer le total du tableau de bord à la
+> facture OpenAI. Un écart de plus de quelques pour cent signale un appel non enveloppé.
+
 > **Les cinq endpoints de l'étape 1 sont `@Public()`**, sans crédit ni limite de débit.
 > Toute dépense qu'on y branche est une dépense que n'importe qui peut déclencher en
 > boucle. C'est la raison d'être du plafond `ANALYZE_BATCH_MAX` et du bornage du cache
@@ -443,17 +471,18 @@ Deux drapeaux, qui ne se recouvrent pas :
 Le défaut est « mesuré » : oublier de cocher gonfle les chiffres, ce qui se remarque ;
 l'inverse les viderait en silence.
 
-> Le prédicat vit à **un seul endroit** — `AdminService.comptesMesures()`. Il apparaît
+> Le prédicat vit à **un seul endroit** — `comptesMesures()` dans `admin/predicats.ts`. Il apparaît
 > dix-neuf fois dans le fichier, une par agrégat : écrit à la main partout, il suffisait
 > d'en oublier un pour qu'un indicateur compte les comptes de test sans que rien ne le
 > signale. Le chiffre reste plausible, il est simplement faux.
 
-> Cinq migrations à appliquer **avant** de déployer l'image :
+> Six migrations à appliquer **avant** de déployer l'image :
 > `2026-08-23-journal-d-activite-quotidienne.sql`,
 > `2026-08-23-date-de-creation-des-suggestions.sql`,
 > `2026-08-23-comptes-internes.sql`,
-> `2026-08-24-journal-des-visites.sql` et
-> `2026-09-12-inscriptions-manquees.sql`.
+> `2026-08-24-journal-des-visites.sql`,
+> `2026-09-12-inscriptions-manquees.sql` et
+> `2026-09-22-consommation-du-modele.sql` (relevé des coûts du modèle).
 
 #### Entonnoir de conversion : le dénominateur qui manquait
 
