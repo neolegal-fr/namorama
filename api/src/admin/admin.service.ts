@@ -321,7 +321,7 @@ export class AdminService {
 
   /** Les lignes du tableau des utilisateurs, compteurs compris, en requêtes groupées. */
   private async lignes(users: User[]): Promise<AdminUserRow[]> {
-    const [reportCounts, projCounts, couts, credits] = await Promise.all([
+    const [reportCounts, projCounts, couts, consommes] = await Promise.all([
       this.brandReportCounts(users.map((u) => u.keycloakId)),
       this.projectCounts(users.map((u) => u.id)),
       // Le coût vit dans une table récente, jointe à deux autres : son échec ne
@@ -333,7 +333,11 @@ export class AdminService {
       this.creditsConsommes(users),
     ]);
 
-    return users.map((u: any) => {
+    // `User`, pas `any` : typée `any`, cette ligne a laissé passer le 22/09/2026
+    // une variable locale `credits` (un nombre) qui masquait la Map des crédits
+    // consommés — `credits.get` a mis toute la liste en 500, sans erreur de
+    // compilation.
+    return users.map((u: User) => {
       const cout = couts.get(u.keycloakId);
       const enAttente = renouvellementDu(u.lastFreeReset);
       const credits = enAttente ? FREE_MONTHLY_QUOTA : u.credits;
@@ -354,7 +358,7 @@ export class AdminService {
         isInternal: u.isInternal,
         aiCostUsd: cout ? cout.costUsd : null,
         aiUnpricedCalls: cout?.unpricedCalls ?? 0,
-        creditsConsumed: credits.get(u.id) ?? 0,
+        creditsConsumed: consommes.get(u.id) ?? 0,
       };
     });
   }
