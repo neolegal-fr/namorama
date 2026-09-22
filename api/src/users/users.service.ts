@@ -7,7 +7,21 @@ import { UserActivityDay } from './entities/user-activity-day.entity';
 import { Project } from '../projects/entities/project.entity';
 
 /** Quota mensuel de crédits gratuits */
-const FREE_MONTHLY_QUOTA = 100;
+export const FREE_MONTHLY_QUOTA = 100;
+
+/**
+ * Les crédits gratuits de ce compte sont-ils dus pour le mois en cours ?
+ *
+ * Le renouvellement est PARESSEUX : il s'écrit au premier appel authentifié du
+ * mois, pas le 1er à minuit. Un compte qui n'est pas revenu garde donc en base
+ * le solde de son dernier passage — c'est juste pour lui (il retrouvera ses
+ * 100 crédits en revenant), trompeur pour qui lit la base. L'administration
+ * passe par `creditsGratuitsSql` pour afficher le solde réellement disponible.
+ */
+export function renouvellementDu(lastFreeReset: Date | null, now: Date = new Date()): boolean {
+  const debutDuMois = new Date(now.getFullYear(), now.getMonth(), 1);
+  return !lastFreeReset || lastFreeReset < debutDuMois;
+}
 
 /** Mois calendaire courant au format « AAAA-MM » — clé du rapport offert. */
 export function currentPeriod(now: Date = new Date()): string {
@@ -95,11 +109,9 @@ export class UsersService {
    * Appelé de façon transparente avant toute lecture/écriture de crédits.
    */
   private async maybeFreeReset(user: User, repo: Repository<User>): Promise<void> {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    if (!user.lastFreeReset || user.lastFreeReset < startOfMonth) {
+    if (renouvellementDu(user.lastFreeReset)) {
       user.credits = FREE_MONTHLY_QUOTA;
-      user.lastFreeReset = now;
+      user.lastFreeReset = new Date();
       await repo.save(user);
     }
   }
@@ -198,11 +210,9 @@ export class UsersService {
     if (!user) return -1;
 
     // Lazy reset dans le contexte de la transaction
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    if (!user.lastFreeReset || user.lastFreeReset < startOfMonth) {
+    if (renouvellementDu(user.lastFreeReset)) {
       user.credits = FREE_MONTHLY_QUOTA;
-      user.lastFreeReset = now;
+      user.lastFreeReset = new Date();
     }
 
     if (user.totalCredits < amount) return -1;

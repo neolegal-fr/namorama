@@ -1,3 +1,5 @@
+import { FREE_MONTHLY_QUOTA } from '../users/users.service';
+
 /**
  * Fragments SQL partagés par les services du tableau de bord.
  *
@@ -13,6 +15,24 @@
  */
 export function comptesMesures(alias = 'u'): string {
   return `${alias}.isAdmin = false AND ${alias}.isInternal = false`;
+}
+
+/**
+ * Crédits gratuits RÉELLEMENT disponibles pour un compte, en SQL.
+ *
+ * `user.credits` n'est renouvelé qu'au premier passage du mois
+ * (`renouvellementDu`) : un compte absent depuis le mois dernier y affiche
+ * encore son solde d'alors, alors qu'il retrouvera 100 crédits en revenant.
+ * Même règle qu'en TypeScript — solde renouvelé si la dernière remise à zéro
+ * précède le 1er du mois courant — pour que l'administration montre ce que
+ * l'utilisateur verra, et non ce que la base a retenu.
+ *
+ * Le 1er du mois est pris dans le fuseau de la BASE (`NOW()`), qui est aussi
+ * celui de l'API depuis le 22/09/2026 (`TZ=Europe/Paris`).
+ */
+export function creditsGratuitsSql(alias = 'u'): string {
+  return `(CASE WHEN ${alias}.lastFreeReset IS NULL OR ${alias}.lastFreeReset < DATE_FORMAT(NOW(), '%Y-%m-01')`
+    + ` THEN ${FREE_MONTHLY_QUOTA} ELSE ${alias}.credits END)`;
 }
 
 /**

@@ -95,6 +95,12 @@ import { KeycloakService } from 'keycloak-angular';
               <td class="text-center">
                 <span class="font-bold" [style.color]="user.totalCredits > 0 ? '#16a34a' : '#ef4444'">{{ user.totalCredits }}</span>
                 <span class="text-400 text-xs" style="margin-left: 0.25rem">({{ user.credits }}+{{ user.extraCredits }})</span>
+                <!-- Le renouvellement mensuel s'écrit au premier passage du mois :
+                     sans ce repère, le solde en base (celui du mois dernier) se
+                     lirait comme un compte à court de crédits. -->
+                <i *ngIf="user.freeCreditsRenewalPending" class="pi pi-refresh text-400"
+                   style="font-size: 0.65rem; margin-left: 0.25rem"
+                   pTooltip="Quota du mois dû, enregistré à sa prochaine visite (pas revenu depuis le 1er)" tooltipPosition="top"></i>
               </td>
               <td class="text-center text-sm">{{ user.projectCount }}</td>
               <td class="text-center text-sm" [class.text-400]="!user.brandReportCount">{{ user.brandReportCount }}</td>

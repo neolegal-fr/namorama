@@ -12,6 +12,11 @@ export interface AdminUser {
   credits: number;
   extraCredits: number;
   totalCredits: number;
+  /**
+   * Quota du mois dû mais pas encore écrit : le compte n'est pas revenu depuis
+   * le 1er. `credits` affiche déjà le quota, que l'utilisateur retrouvera.
+   */
+  freeCreditsRenewalPending: boolean;
   createdAt: string;
   lastLogin: string | null;
   projectCount: number;

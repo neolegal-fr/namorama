@@ -133,6 +133,12 @@ Ce qui subsiste et reste utile :
 ### Système de crédits
 - 1 suggestion de domaine = 1 crédit
 - Crédits initiaux : 100
+- **Renouvellement mensuel paresseux** : le quota de 100 s'écrit au **premier appel
+  authentifié du mois** (`renouvellementDu`), pas le 1er à minuit. Un compte absent
+  depuis le mois dernier garde en base son solde d'alors — relevé le 22/09/2026 : 46
+  comptes sur 79 sous 100, tous absents en septembre. L'utilisateur n'y perd rien ;
+  l'administration, elle, lit le solde **disponible** (`creditsGratuitsSql`) et marque
+  d'un ↻ les comptes dont le renouvellement reste à écrire.
 - Vérification de disponibilité : **RDAP d'abord, WHOIS en repli**
 
 ### Coût des appels au modèle

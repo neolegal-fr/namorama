@@ -203,16 +203,6 @@ const SOCLE_POURCENTAGE = 5;
           <div class="nm-kpi-detail" style="margin-top: 0.5rem">{{ noteEntonnoir() }}</div>
         </div>
 
-        <!-- ─── Coût du modèle : ce que la période a coûté en IA ────────────
-             Chargé à part : son relevé peut échouer sans emporter le reste. -->
-        <div [style.opacity]="loadingStats() ? 0.55 : 1" style="transition: opacity 0.15s">
-          <app-admin-model-costs
-            [donnees]="couts()"
-            [erreur]="erreurCouts()"
-            [creditsConsommes]="s.period.creditsConsumed">
-          </app-admin-model-costs>
-        </div>
-
         <!-- ─── Cumul, sans comparaison : un stock n'a pas d'« évolution » ── -->
         <div [style.opacity]="loadingStats() ? 0.55 : 1" style="transition: opacity 0.15s">
           <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--nm-text-light-3, #6a7470); margin-bottom: 0.5rem">Total cumulé</div>
@@ -294,6 +284,18 @@ const SOCLE_POURCENTAGE = 5;
           <div *ngIf="erreurSeries()" style="font-size: 0.75rem; color: var(--nm-verdict-taken-light-fg, #a33b3b)">
             L'historique n'a pas pu être chargé.
           </div>
+        </div>
+
+        <!-- ─── Coût du modèle : en dernier, ce n'est pas la première question
+             qu'on pose au tableau de bord. Cadré par la période choisie en
+             haut, comme les indicateurs. Chargé à part : son relevé peut
+             échouer sans emporter le reste. -->
+        <div [style.opacity]="loadingStats() ? 0.55 : 1" style="transition: opacity 0.15s">
+          <app-admin-model-costs
+            [donnees]="couts()"
+            [erreur]="erreurCouts()"
+            [creditsConsommes]="s.period.creditsConsumed">
+          </app-admin-model-costs>
         </div>
       </ng-container>
 
