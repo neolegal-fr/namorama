@@ -486,6 +486,29 @@ Le **taux d'activation** (inscrits de la période ayant créé au moins un proje
 calcule rétroactivement sur tout l'historique : c'est le seul indicateur de fond qui
 n'attendait aucune nouvelle colonne.
 
+#### Fidélité : qui revient, et combien de temps on reste
+
+Section du tableau de bord **indépendante de la période** (`GET /admin/retention`) : à
+quelques inscriptions par semaine, une fenêtre de sept jours ne contient presque jamais
+d'inscrit assez ancien pour avoir un J+7.
+
+- **« Revenir » = une activité un autre jour que l'inscription** (`user_activity_day`).
+  Ouvrir l'application avec une session ouverte suffit : la mesure dit « est revenu »,
+  pas « s'en est resservi ».
+- **Un taux à J+N ne compte que les inscrits dont le J+N est passé.** Un compte d'hier
+  n'a pas échoué à revenir, il n'en a pas eu le temps ; le compter ferait baisser le
+  taux à chaque inscription. Avant le premier J+N, l'interface dit « pas encore
+  mesurable » avec la date, pas 0 %.
+- Retours et jours d'activité ne portent que sur les comptes nés **après le début du
+  journal** (23/08/2026) : un compte plus ancien a pu revenir avant, sans trace.
+- La **durée de vie** (création → dernière activité, via `lastLogin`) couvre tout
+  l'historique, mais ne connaît que la dernière activité. Médiane rendue en minutes :
+  relevée à ~3 min le 22/09/2026, « 0,0 jour » aurait effacé l'information.
+- Cohortes **au mois**, pas à la semaine : chaque case vaudrait sinon 0, 20 ou 50 %.
+
+> Relevé du 22/09/2026 : 70 comptes sur 75 sans aucune activité après leur premier
+> jour ; 3 retours sous 7 jours sur 23 inscrits éligibles.
+
 #### Comptes écartés des statistiques
 
 Deux drapeaux, qui ne se recouvrent pas :
