@@ -68,6 +68,25 @@ api/src/
 - i18n : FR/EN via `@ngx-translate`, fichiers dans `web/public/assets/i18n/`
 - Auth Keycloak avec bearer token via interceptor HTTP
 
+### Une seule horloge : l'heure de Paris
+
+La base date elle-même, à l'heure de Paris, tout ce qui passe par `CURRENT_TIMESTAMP`
+ou `NOW()` (`createdAt` des comptes, projets, rapports ; visites). L'API date le reste
+avec `new Date()`, que le pilote sérialise **dans le fuseau du processus**. Jusqu'au
+22/09/2026, le conteneur n'avait pas de `TZ` : ces dates-là étaient en UTC, et 66
+comptes sur 79 avaient une dernière activité antérieure à leur création. La fenêtre
+« 24h » du tableau de bord perdait aussi ses deux dernières heures.
+
+- L'image de l'API pose `ENV TZ=Europe/Paris`. Node embarque les fuseaux (ICU), pas
+  besoin de `tzdata`.
+- `HorlogeService` compare les deux horloges au démarrage et journalise une erreur si
+  elles divergent : une date fausse reste plausible, rien d'autre ne le signalerait.
+- En développement, le processus hérite du fuseau du poste : il doit être celui de la
+  base locale.
+- Les valeurs écrites en UTC avant la bascule ont été ramenées à l'heure de Paris par
+  `2026-09-22-une-seule-horloge.sql`, sauf `user_activity_day`, qui ne garde que le
+  jour : une activité de 0 h à 2 h avant cette date peut y figurer la veille.
+
 ### Schéma de base de données
 
 `synchronize` est un **opt-in explicite** (`DB_SYNCHRONIZE=true`), pas un défaut. Non
