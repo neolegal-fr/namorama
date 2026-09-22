@@ -96,6 +96,32 @@ export interface UserModelCosts {
   weeks: SemaineCouts[];
 }
 
+/** Un tarif du modèle. Voir `TarifDto` côté API. */
+export interface TarifModele {
+  id: number;
+  model: string;
+  /** `AAAA-MM-JJ`. */
+  effectiveFrom: string;
+  inputPerM: number;
+  cachedInputPerM: number | null;
+  outputPerM: number;
+  /** Pour un outil (`web_search`) : $ par appel. */
+  perCall: number | null;
+  note: string | null;
+  /** Tarif appliqué aujourd'hui à ce modèle. */
+  current: boolean;
+}
+
+export interface NouveauTarif {
+  model: string;
+  effectiveFrom: string;
+  inputPerM: number;
+  cachedInputPerM: number | null;
+  outputPerM: number;
+  perCall: number | null;
+  note: string;
+}
+
 export interface FeedbackItem {
   id: string;
   keycloakId: string | null;
@@ -245,6 +271,18 @@ export class AdminService {
 
   getUserModelCosts(userId: number): Observable<UserModelCosts> {
     return this.http.get<UserModelCosts>(`${this.base}/users/${userId}/model-costs`);
+  }
+
+  getModelPrices(): Observable<TarifModele[]> {
+    return this.http.get<TarifModele[]>(`${this.base}/model-prices`);
+  }
+
+  addModelPrice(t: NouveauTarif): Observable<TarifModele> {
+    return this.http.post<TarifModele>(`${this.base}/model-prices`, t);
+  }
+
+  deleteModelPrice(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/model-prices/${id}`);
   }
 
   getFeedback(): Observable<FeedbackItem[]> {

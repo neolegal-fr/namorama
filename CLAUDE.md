@@ -163,8 +163,12 @@ entrée, part en cache, sortie, part de raisonnement, appels `web_search`, opér
 modèle, compte, session. Le **coût n'est jamais stocké** : il se calcule à la lecture,
 tokens × tarif de `model_price` **en vigueur à la date de l'appel** (`cout-sql.ts`).
 
-- **Changer un tarif = insérer une ligne** datée dans `model_price`, jamais un `UPDATE` :
-  le passé garde son prix. Le modèle d'un tarif est un **préfixe** (`gpt-5.6-luna` couvre
+- **Changer un tarif = ajouter un tarif daté**, depuis l'écran **Administration → Tarifs
+  IA** (`/admin/prices`), jamais modifier l'existant : le passé garde son prix. Une date
+  d'effet passée recalcule les appels qu'elle couvre (l'écran le signale). La
+  suppression ne sert qu'à corriger une saisie. Tarifs vérifiés le 22/09/2026 sur
+  [la page tarifs d'OpenAI](https://developers.openai.com/api/docs/pricing) ; le tarif
+  « long contexte » (> 272k tokens d'entrée) n'est pas modélisé, nos appels en sont loin. Le modèle d'un tarif est un **préfixe** (`gpt-5.6-luna` couvre
   l'instantané daté que l'API renvoie). Un modèle sans tarif est « non chiffré » —
   signalé au tableau de bord, jamais compté à zéro.
 - **Tout appel passe par `ModelUsageService.mesurer(operation, appel)`**. Un appel OpenAI

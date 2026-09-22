@@ -497,6 +497,7 @@ export class AppComponent implements OnInit {
     { label: 'Dashboard',    icon: 'pi pi-chart-bar', command: () => this.router.navigate(['/admin/dashboard']) },
     { label: 'Utilisateurs', icon: 'pi pi-users',     command: () => this.router.navigate(['/admin/users']) },
     { label: 'Feedbacks',    icon: 'pi pi-comment',   command: () => this.router.navigate(['/admin/feedback']) },
+    { label: 'Tarifs IA',    icon: 'pi pi-dollar',    command: () => this.router.navigate(['/admin/prices']) },
   ];
 
   /** Panneau de compte mobile (bottom sheet). */

@@ -1,8 +1,9 @@
 import { Controller, Get, Patch, Post, Delete, Param, Body, Query, ParseIntPipe, DefaultValuePipe, HttpCode, ForbiddenException } from '@nestjs/common';
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
 import { Roles, AuthenticatedUser } from 'nest-keycloak-connect';
 import { AdminService } from './admin.service';
 import { ModelCostsService } from './model-costs.service';
+import { ModelPricesService } from './model-prices.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import { UsersService } from '../users/users.service';
 
@@ -13,6 +14,44 @@ class AdjustCreditsDto {
   @IsOptional()
   @IsString()
   reason?: string;
+}
+
+/**
+ * Un nouveau tarif. Montants en dollars par million de tokens ; `perCall`
+ * pour un outil (`web_search`), à l'appel.
+ */
+class NouveauTarifDto {
+  /** Préfixe du modèle tel que l'API le renvoie : `gpt-5.6-luna` couvre ses instantanés datés. */
+  @IsString()
+  @MaxLength(64)
+  @Matches(/^[A-Za-z0-9._:-]+$/, { message: 'Identifiant de modèle invalide' })
+  model: string;
+
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Date attendue au format AAAA-MM-JJ' })
+  effectiveFrom: string;
+
+  @IsNumber()
+  @Min(0)
+  inputPerM: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  cachedInputPerM?: number | null;
+
+  @IsNumber()
+  @Min(0)
+  outputPerM: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  perCall?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  note?: string;
 }
 
 class SetInternalDto {
@@ -28,6 +67,7 @@ export class AdminController {
     private readonly feedbackService: FeedbackService,
     private readonly usersService: UsersService,
     private readonly modelCosts: ModelCostsService,
+    private readonly modelPrices: ModelPricesService,
   ) {}
 
   @Get('users')
@@ -127,6 +167,24 @@ export class AdminController {
   @Get('users/:id/model-costs')
   async getUserModelCosts(@Param('id', ParseIntPipe) id: number) {
     return this.modelCosts.getUserCosts(id);
+  }
+
+  /** Tous les tarifs, historique compris : un tarif ne se modifie pas, il se remplace à une date. */
+  @Get('model-prices')
+  async getModelPrices() {
+    return this.modelPrices.lister();
+  }
+
+  @Post('model-prices')
+  async addModelPrice(@Body() body: NouveauTarifDto) {
+    return this.modelPrices.ajouter(body);
+  }
+
+  /** Pour corriger une saisie erronée : recalcule tous les appels que ce tarif couvrait. */
+  @Delete('model-prices/:id')
+  @HttpCode(204)
+  async deleteModelPrice(@Param('id', ParseIntPipe) id: number) {
+    await this.modelPrices.supprimer(id);
   }
 
   @Get('feedback')
