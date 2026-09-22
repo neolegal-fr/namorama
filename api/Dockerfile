@@ -14,6 +14,14 @@ RUN npm run build
 
 FROM node:26-alpine AS production
 RUN apk add --no-cache whois
+# L'heure de la BASE, et non UTC. MariaDB date elle-même la moitié des colonnes
+# (`CURRENT_TIMESTAMP`, `NOW()`) à l'heure de Paris ; l'API datait l'autre
+# moitié (`new Date()`, sérialisé dans le fuseau du processus) en UTC. Deux
+# horloges dans une même table : 66 comptes sur 79 avaient une dernière activité
+# antérieure à leur création, et la fenêtre « 24h » du tableau de bord perdait
+# ses deux dernières heures. Node embarque les données de fuseau (ICU) : pas
+# besoin de `tzdata`. Voir `HorlogeService`, qui vérifie l'accord au démarrage.
+ENV TZ=Europe/Paris
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev --omit=optional --legacy-peer-deps

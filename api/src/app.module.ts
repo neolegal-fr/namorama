@@ -23,6 +23,7 @@ import { LoggingModule } from './common/logging/logging.module';
 import { FunnelModule } from './common/funnel/funnel.module';
 import { ModelUsageModule } from './common/model-usage/model-usage.module';
 import { EventsController } from './events/events.controller';
+import { HorlogeService } from './common/horloge.service';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { EventsController } from './events/events.controller';
   controllers: [AppController, EventsController],
   providers: [
     AppService,
+    HorlogeService,
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
