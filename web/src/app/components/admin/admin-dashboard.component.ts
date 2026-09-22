@@ -5,9 +5,10 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { DatePickerModule } from 'primeng/datepicker';
-import { AdminModelCosts, AdminService, AdminSeries, AdminStats, PeriodMetrics } from '../../services/admin.service';
+import { AdminModelCosts, AdminRetention, AdminService, AdminSeries, AdminStats, PeriodMetrics } from '../../services/admin.service';
 import { AdminWeeklyChartComponent, ChartPoint } from './admin-weekly-chart.component';
 import { AdminModelCostsComponent } from './admin-model-costs.component';
+import { AdminRetentionComponent } from './admin-retention.component';
 
 interface PeriodOption { label: string; days: number | null; }
 
@@ -69,7 +70,7 @@ const SOCLE_POURCENTAGE = 5;
   imports: [
     CommonModule, FormsModule, TranslatePipe,
     ButtonModule, SelectButtonModule, DatePickerModule,
-    AdminWeeklyChartComponent, AdminModelCostsComponent,
+    AdminWeeklyChartComponent, AdminModelCostsComponent, AdminRetentionComponent,
   ],
   template: `
     <div style="display: flex; flex-direction: column; gap: 1.5rem; padding-top: 1rem">
@@ -202,6 +203,11 @@ const SOCLE_POURCENTAGE = 5;
 
           <div class="nm-kpi-detail" style="margin-top: 0.5rem">{{ noteEntonnoir() }}</div>
         </div>
+
+        <!-- ─── Fidélité : qui revient, et combien de temps on reste ─────────
+             Hors période : à ce volume, une fenêtre de sept jours ne contient
+             presque jamais d'inscrit assez ancien pour avoir un J+7. -->
+        <app-admin-retention [retention]="retention()" [erreur]="erreurRetention()"></app-admin-retention>
 
         <!-- ─── Cumul, sans comparaison : un stock n'a pas d'« évolution » ── -->
         <div [style.opacity]="loadingStats() ? 0.55 : 1" style="transition: opacity 0.15s">
@@ -372,6 +378,8 @@ export class AdminDashboardComponent implements OnInit {
   loadingStats = signal(false);
 
   couts = signal<AdminModelCosts | null>(null);
+  retention = signal<AdminRetention | null>(null);
+  erreurRetention = signal(false);
   erreurCouts = signal(false);
 
   series = signal<AdminSeries | null>(null);
@@ -401,6 +409,11 @@ export class AdminDashboardComponent implements OnInit {
   ngOnInit() {
     this.loadStats();
     this.loadSeries();
+    // Comme la série : indépendante de la période, chargée une fois.
+    this.adminService.getRetention().subscribe({
+      next: r => this.retention.set(r),
+      error: () => this.erreurRetention.set(true),
+    });
   }
 
   private getPeriodDates(): { from?: Date; to?: Date } {

@@ -127,6 +127,27 @@ export interface NouveauTarif {
   note: string;
 }
 
+/** Des inscrits qui ont eu le temps de revenir (J+N passé), et ceux qui l'ont fait. */
+export interface TauxDeRetour {
+  eligibles: number;
+  revenus: number;
+}
+
+export interface Tranche {
+  libelle: string;
+  comptes: number;
+}
+
+/** Qui revient, et combien de temps on reste. Voir `AdminRetention` côté API. */
+export interface AdminRetention {
+  journalDepuis: string | null;
+  sous7Jours: TauxDeRetour;
+  sous30Jours: TauxDeRetour;
+  joursActifs: Tranche[];
+  dureeDeVie: { comptes: number; medianeMinutes: number | null; tranches: Tranche[] };
+  cohortes: { mois: string; inscrits: number; sous7Jours: TauxDeRetour; sous30Jours: TauxDeRetour }[];
+}
+
 export interface FeedbackItem {
   id: string;
   keycloakId: string | null;
@@ -288,6 +309,11 @@ export class AdminService {
 
   deleteModelPrice(id: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/model-prices/${id}`);
+  }
+
+  /** Indépendant de la période choisie : chargé une fois, comme l'historique. */
+  getRetention(): Observable<AdminRetention> {
+    return this.http.get<AdminRetention>(`${this.base}/retention`);
   }
 
   getFeedback(): Observable<FeedbackItem[]> {

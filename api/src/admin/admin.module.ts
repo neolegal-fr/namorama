@@ -4,6 +4,7 @@ import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { ModelCostsService } from './model-costs.service';
 import { ModelPricesService } from './model-prices.service';
+import { RetentionService } from './retention.service';
 import { ModelPrice } from '../common/model-usage/model-price.entity';
 import { CreditAdjustment } from './entities/credit-adjustment.entity';
 import { User } from '../users/entities/user.entity';
@@ -20,6 +21,6 @@ import { UsersModule } from '../users/users.module';
     UsersModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService, ModelCostsService, ModelPricesService],
+  providers: [AdminService, ModelCostsService, ModelPricesService, RetentionService],
 })
 export class AdminModule {}

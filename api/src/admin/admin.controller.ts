@@ -4,6 +4,7 @@ import { Roles, AuthenticatedUser } from 'nest-keycloak-connect';
 import { AdminService } from './admin.service';
 import { ModelCostsService } from './model-costs.service';
 import { ModelPricesService } from './model-prices.service';
+import { RetentionService } from './retention.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import { UsersService } from '../users/users.service';
 
@@ -68,6 +69,7 @@ export class AdminController {
     private readonly usersService: UsersService,
     private readonly modelCosts: ModelCostsService,
     private readonly modelPrices: ModelPricesService,
+    private readonly retention: RetentionService,
   ) {}
 
   @Get('users')
@@ -185,6 +187,16 @@ export class AdminController {
   @HttpCode(204)
   async deleteModelPrice(@Param('id', ParseIntPipe) id: number) {
     await this.modelPrices.supprimer(id);
+  }
+
+  /**
+   * Qui revient, et combien de temps on reste. Indépendant de la période
+   * choisie : à ce volume, une fenêtre de sept jours ne contiendrait presque
+   * aucun inscrit assez ancien pour avoir un J+7.
+   */
+  @Get('retention')
+  async getRetention() {
+    return this.retention.getRetention();
   }
 
   @Get('feedback')
