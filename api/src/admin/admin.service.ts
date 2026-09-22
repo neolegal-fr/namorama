@@ -7,7 +7,8 @@ import { DomainSuggestion } from '../projects/entities/domain-suggestion.entity'
 import { CreditAdjustment } from './entities/credit-adjustment.entity';
 import { BrandReportRecord } from '../brand-report/entities/brand-report-record.entity';
 import { AppLoggerService } from '../common/logging/app-logger.service';
-import { comptesMesures, jourISO, lundiDe, semaineSql } from './predicats';
+import { comptesMesures, creditsGratuitsSql, jourISO, lundiDe, semaineSql } from './predicats';
+import { FREE_MONTHLY_QUOTA, renouvellementDu } from '../users/users.service';
 import { ModelCostsService } from './model-costs.service';
 
 export interface AdminUserRow {
@@ -16,9 +17,18 @@ export interface AdminUserRow {
   email: string;
   firstName: string;
   lastName: string;
+  /**
+   * Crédits gratuits DISPONIBLES : ceux de la base, ou le quota mensuel si le
+   * renouvellement du mois n'a pas encore été écrit (compte pas revenu depuis).
+   */
   credits: number;
   extraCredits: number;
   totalCredits: number;
+  /**
+   * Le quota du mois est dû mais pas encore écrit en base : il le sera au
+   * prochain passage du compte. `credits` affiche déjà le quota.
+   */
+  freeCreditsRenewalPending: boolean;
   createdAt: Date;
   lastLogin: Date | null;
   projectCount: number;
@@ -249,7 +259,7 @@ export class AdminService {
   private static readonly TRIS: Record<string, string> = {
     name: 'u.firstName',
     email: 'u.email',
-    totalCredits: '(u.credits + u.extraCredits)',
+    totalCredits: `(${creditsGratuitsSql()} + u.extraCredits)`,
     createdAt: 'u.createdAt',
     lastLogin: 'u.lastLogin',
     projectCount: '(SELECT COUNT(*) FROM project p WHERE p.userId = u.id)',
@@ -325,15 +335,18 @@ export class AdminService {
 
     return users.map((u: any) => {
       const cout = couts.get(u.keycloakId);
+      const enAttente = renouvellementDu(u.lastFreeReset);
+      const credits = enAttente ? FREE_MONTHLY_QUOTA : u.credits;
       return {
         id: u.id,
         keycloakId: u.keycloakId,
         email: u.email,
         firstName: u.firstName,
         lastName: u.lastName,
-        credits: u.credits,
+        credits,
         extraCredits: u.extraCredits,
-        totalCredits: u.credits + u.extraCredits,
+        totalCredits: credits + u.extraCredits,
+        freeCreditsRenewalPending: enAttente,
         createdAt: u.createdAt,
         lastLogin: u.lastLogin,
         projectCount: projCounts.get(u.id) ?? 0,
@@ -717,7 +730,9 @@ export class AdminService {
     );
 
     const creditsResult = await this.dataSource.query(
-      `SELECT SUM(u.credits) as free, SUM(u.extraCredits) as pack FROM user u WHERE ${AdminService.comptesMesures()}`
+      // Solde disponible, pas solde en base : sans cela, les comptes absents
+      // depuis le mois dernier tireraient le total vers le bas.
+      `SELECT SUM(${creditsGratuitsSql()}) as free, SUM(u.extraCredits) as pack FROM user u WHERE ${AdminService.comptesMesures()}`
     );
 
     return {
