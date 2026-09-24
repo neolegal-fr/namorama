@@ -58,6 +58,19 @@ export class VisitorSession {
   reportRequested: boolean;
 
   /**
+   * A ouvert le dialogue des packs de crédits — la seule « page tarifs » du
+   * produit. Marqué depuis `POST /events` (`credits_dialog_opened`) : c'est
+   * une balise du navigateur, donc une intention déclarée, pas une preuve.
+   * Suffisant pour la question posée : l'offre est-elle seulement vue ?
+   */
+  @Column({ type: 'boolean', default: false })
+  pricingViewed: boolean;
+
+  /** A lancé un paiement Stripe (session Checkout créée côté serveur), abouti ou non. */
+  @Column({ type: 'boolean', default: false })
+  checkoutStarted: boolean;
+
+  /**
    * Compte rattaché à la visite, dès qu'un appel authentifié la relie.
    *
    * Sert uniquement à ÉCARTER les visites des comptes admin et internes des

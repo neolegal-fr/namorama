@@ -13,7 +13,7 @@ import { DialogModule } from 'primeng/dialog';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { AdminService, AdminUser, UserModelCosts } from '../../services/admin.service';
 import { AdminWeeklyChartComponent, ChartPoint } from './admin-weekly-chart.component';
-import { libelleOperation, parOperation, tokens, usd } from './couts-modele';
+import { libelleOperation, parOperation, tokens, usd, usdUnitaire } from './couts-modele';
 import { UserService } from '../../services/user';
 import { KeycloakService } from 'keycloak-angular';
 
@@ -61,6 +61,11 @@ import { KeycloakService } from 'keycloak-angular';
               <th pSortableColumn="brandReportCount" class="text-center" style="background: var(--p-surface-50); white-space: nowrap">
                 {{ 'ADMIN.COL_REPORTS' | translate }} <p-sortIcon field="brandReportCount"></p-sortIcon>
               </th>
+              <!-- Noms notés 👍 / 👎 dans ses projets. Tri sur les 👍 : la question
+                   est « qui trouve son bonheur », les 👎 se lisent à côté. -->
+              <th pSortableColumn="likes" class="text-center" style="background: var(--p-surface-50); white-space: nowrap">
+                {{ 'ADMIN.COL_RATINGS' | translate }} <p-sortIcon field="likes"></p-sortIcon>
+              </th>
               <!-- Coût du modèle depuis l'ouverture du compte, au tarif de chaque
                    appel. Le clic ouvre le détail par opération et par semaine. -->
               <th pSortableColumn="aiCostUsd" class="text-center" style="background: var(--p-surface-50); white-space: nowrap">
@@ -104,11 +109,19 @@ import { KeycloakService } from 'keycloak-angular';
               </td>
               <td class="text-center text-sm">{{ user.projectCount }}</td>
               <td class="text-center text-sm" [class.text-400]="!user.brandReportCount">{{ user.brandReportCount }}</td>
+              <td class="text-center text-sm" style="white-space: nowrap"
+                  [pTooltip]="user.likes + ' nom(s) aimé(s), ' + user.dislikes + ' écarté(s)'" tooltipPosition="top">
+                <ng-container *ngIf="user.likes || user.dislikes; else sansAvis">
+                  <span class="nm-avis" [class.text-400]="!user.likes"><i class="pi pi-thumbs-up"></i>{{ user.likes }}</span>
+                  <span class="nm-avis" [class.text-400]="!user.dislikes"><i class="pi pi-thumbs-down"></i>{{ user.dislikes }}</span>
+                </ng-container>
+                <ng-template #sansAvis><span class="text-400">—</span></ng-template>
+              </td>
               <td class="text-center text-sm" style="white-space: nowrap">
                 <button *ngIf="user.aiCostUsd !== null || user.aiUnpricedCalls; else sansAppel" type="button" class="nm-cout"
                         [pTooltip]="infoCout(user)" tooltipPosition="top" (click)="ouvrirCouts(user)">
                   {{ usd(user.aiCostUsd) }}
-                  <span *ngIf="coutParCredit(user) !== null" class="nm-cout-credit">{{ usd(coutParCredit(user)) }}/cr.</span>
+                  <span *ngIf="coutParCredit(user) !== null" class="nm-cout-credit">{{ usdUnitaire(coutParCredit(user)) }}/cr.</span>
                 </button>
                 <ng-template #sansAppel><span class="text-400">—</span></ng-template>
               </td>
@@ -202,7 +215,7 @@ import { KeycloakService } from 'keycloak-angular';
           </div>
           <div *ngIf="coutsDe() && coutParCredit(coutsDe()!) !== null">
             <div class="nm-d-label">Par crédit</div>
-            <div class="nm-d-valeur">{{ usd(coutParCredit(coutsDe()!)) }}</div>
+            <div class="nm-d-valeur">{{ usdUnitaire(coutParCredit(coutsDe()!)) }}</div>
           </div>
         </div>
 
@@ -231,6 +244,7 @@ import { KeycloakService } from 'keycloak-angular';
         <app-admin-weekly-chart
           title="Coût par semaine"
           unite="$"
+          [decimales]="2"
           [points]="pointsCouts()"
           [note]="d.since ? 'Relevé depuis le ' + (d.since | date:'dd/MM/yyyy') + ' : les semaines antérieures sont hachurées.' : ''">
         </app-admin-weekly-chart>
@@ -238,6 +252,8 @@ import { KeycloakService } from 'keycloak-angular';
     </p-dialog>
   `,
   styles: [`
+    .nm-avis { display: inline-flex; align-items: center; gap: 0.2rem; margin: 0 0.25rem; }
+    .nm-avis .pi { font-size: 0.7rem; }
     .nm-cout {
       background: none; border: none; cursor: pointer; padding: 0.1rem 0.25rem; border-radius: 4px;
       font: inherit; font-weight: 600; color: var(--nm-text-light, #0b0e10);
@@ -289,6 +305,7 @@ export class AdminUsersComponent implements OnInit {
   erreurCouts = signal(false);
 
   readonly usd = usd;
+  readonly usdUnitaire = usdUnitaire;
   readonly tokens = tokens;
   readonly libelle = libelleOperation;
 
@@ -394,7 +411,7 @@ export class AdminUsersComponent implements OnInit {
   pointsCouts(): ChartPoint[] {
     return (this.detailCouts()?.weeks ?? []).map((w) => ({
       week: w.week,
-      value: w.costUsd === null ? null : Math.round(w.costUsd * 1000) / 1000,
+      value: w.costUsd === null ? null : Math.round(w.costUsd * 100) / 100,
     }));
   }
 

@@ -36,6 +36,9 @@ export interface AdminUser {
   aiUnpricedCalls: number;
   /** Crédits consommés depuis la création du compte — le dénominateur du coût par crédit. */
   creditsConsumed: number;
+  /** Suggestions de ses projets notées 👍 / 👎. */
+  likes: number;
+  dislikes: number;
 }
 
 /** Consommation d'une opération sur un modèle. Voir `LigneConsommation` côté API. */
@@ -177,6 +180,10 @@ export interface FunnelMetrics {
   visitsIdentified: number;
   /** Parmi elles, celles dont le compte existait déjà au début de la fenêtre. */
   visitsReturning: number;
+  /** Visites ayant ouvert le dialogue des packs — la « page tarifs ». */
+  pricingViewed: number;
+  /** Visites ayant lancé un paiement Stripe, abouti ou non. */
+  checkoutStarted: number;
 }
 
 /** Ce qu'on mesure sur une fenêtre. Voir `PeriodMetrics` côté API. */
@@ -193,6 +200,11 @@ export interface PeriodMetrics {
   activatedUsers: number;
   /** En %, ou `null` si personne ne s'est inscrit sur la fenêtre. */
   activationRate: number | null;
+  /** 👍 / 👎 sur les suggestions générées dans la fenêtre. Voir `PeriodMetrics` côté API. */
+  likes: number;
+  dislikes: number;
+  /** Comptes dont les projets portent ces notes — un seul compte peut faire le taux. */
+  ratingAccounts: number;
   /** `null` = calcul en échec (pas « zéro visiteur »). Voir `PeriodMetrics` côté API. */
   funnel: FunnelMetrics | null;
 }
@@ -217,6 +229,8 @@ export interface AdminStats {
    * a pas de mesure, et l'entonnoir ne doit pas afficher 0 %.
    */
   visitTrackingSince: string | null;
+  /** `AAAA-MM-JJ` : avant ce jour, les ouvertures du dialogue des packs ne sont pas connues. */
+  pricingTrackingSince: string;
 }
 
 /** Un point hebdomadaire. `week` est le lundi, au format `AAAA-MM-JJ`. */
@@ -229,12 +243,18 @@ export interface WeeklyPoint {
   creditsConsumed: number;
   /** Visites de la semaine. `null` avant le démarrage du journal des visites. */
   visits: number | null;
+  /** Suggestions de la semaine notées 👍 / 👎. */
+  likes: number;
+  dislikes: number;
+  /** Visites ayant ouvert le dialogue des packs. `null` : semaine non mesurée. */
+  pricingViewed: number | null;
 }
 
 export interface AdminSeries {
   weeks: WeeklyPoint[];
   activityTrackingSince: string | null;
   visitTrackingSince: string | null;
+  pricingTrackingSince: string;
 }
 
 @Injectable({ providedIn: 'root' })

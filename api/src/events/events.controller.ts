@@ -27,6 +27,14 @@ export class EventsController {
    */
   private static readonly VISITE = 'page_viewed';
 
+  /**
+   * L'ouverture du dialogue des packs, seule « page tarifs » du produit.
+   * Marquée sur la visite plutôt que laissée aux seuls logs : ceux-ci tournent
+   * sur 30 jours, et la question « l'offre est-elle vue ? » se pose sur des
+   * mois — personne n'a encore rien acheté.
+   */
+  private static readonly TARIFS = 'credits_dialog_opened';
+
   constructor(
     private readonly logger: AppLoggerService,
     private readonly funnel: FunnelService,
@@ -41,6 +49,11 @@ export class EventsController {
       // sans lui, Nest clôt la requête pendant l'écriture, et une erreur de
       // base partirait dans le vide au lieu d'être journalisée.
       await this.funnel.visite(dto.sessionId, dto.meta?.['connecte'] === true);
+    } else if (dto.name === EventsController.TARIFS) {
+      // Sans `sub` : la balise part sans jeton, et le navigateur ne doit pas
+      // pouvoir s'attribuer un compte. Le rattachement viendra des appels
+      // authentifiés de la même session.
+      await this.funnel.marquer(dto.sessionId, 'tarifs');
     }
 
     this.logger.event(dto.name, {

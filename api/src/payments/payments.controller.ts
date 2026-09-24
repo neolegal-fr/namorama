@@ -15,6 +15,7 @@ import { AuthenticatedUser, Public } from 'nest-keycloak-connect';
 import { PaymentsService } from './payments.service';
 import type { PackType } from './payments.service';
 import { UsersService } from '../users/users.service';
+import { FunnelService, sessionIdDeLaRequete } from '../common/funnel/funnel.service';
 
 @Controller('payments')
 export class PaymentsController {
@@ -23,6 +24,7 @@ export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
     private readonly usersService: UsersService,
+    private readonly funnel: FunnelService,
   ) {}
 
   /** Crée une session Checkout pour un pack de crédits (decouverte | pro | max) */
@@ -30,6 +32,7 @@ export class PaymentsController {
   async checkoutPack(
     @Body('packType') packType: PackType,
     @AuthenticatedUser() keycloakUser: any,
+    @Req() req: Request,
   ) {
     const validTypes: PackType[] = ['decouverte', 'pro', 'max'];
     if (!validTypes.includes(packType)) {
@@ -37,6 +40,9 @@ export class PaymentsController {
     }
     const user = await this.usersService.findOrCreate(keycloakUser.sub, { email: keycloakUser.email });
     const url = await this.paymentsService.createPackCheckout(user, packType);
+    // Après la création de la session Stripe : un échec de Checkout n'est pas
+    // un paiement lancé. Le `sub` vient du jeton, pas du navigateur.
+    await this.funnel.marquer(sessionIdDeLaRequete(req), 'paiement', keycloakUser.sub);
     return { url };
   }
 

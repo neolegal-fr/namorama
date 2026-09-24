@@ -55,6 +55,9 @@ export interface AdminUserRow {
    * des rapports. Le dénominateur du coût par crédit.
    */
   creditsConsumed: number;
+  /** Suggestions de ses projets notées 👍 / 👎 — par lui ou un collaborateur en écriture. */
+  likes: number;
+  dislikes: number;
 }
 
 /**
@@ -93,6 +96,10 @@ export interface FunnelMetrics {
    * gonflent l'usage sans rien dire de la rétention.
    */
   visitsReturning: number;
+  /** Visites ayant ouvert le dialogue des packs de crédits — la « page tarifs ». */
+  pricingViewed: number;
+  /** Visites ayant lancé un paiement Stripe, abouti ou non. */
+  checkoutStarted: number;
 }
 
 /**
@@ -122,6 +129,19 @@ export interface PeriodMetrics {
   activatedUsers: number;
   /** `activatedUsers / newUsers` en %, ou `null` si personne ne s'est inscrit. */
   activationRate: number | null;
+  /**
+   * Notes posées sur les suggestions GÉNÉRÉES dans la fenêtre — pas sur les
+   * notes posées dans la fenêtre : la question est « les noms de cette période
+   * plaisent-ils ? », et c'est la date de la suggestion qui la situe. Une note
+   * tardive sur un nom ancien rejoint donc la période de ce nom.
+   */
+  likes: number;
+  dislikes: number;
+  /**
+   * Comptes dont les projets portent ces notes. À ce volume, un seul compte
+   * qui écarte cent noms suffit à faire le taux : ce chiffre le dit.
+   */
+  ratingAccounts: number;
   /**
    * L'entonnoir de la fenêtre, ou `null` si son calcul a échoué.
    *
@@ -156,6 +176,8 @@ export interface AdminStats {
    * a pas de mesure, et l'interface doit le dire plutôt que d'afficher 0 %.
    */
   visitTrackingSince: string | null;
+  /** Voir {@link TARIFS_MESURES_DEPUIS}. */
+  pricingTrackingSince: string;
 }
 
 /** Un point de la série hebdomadaire. `week` est le LUNDI de la semaine. */
@@ -169,13 +191,29 @@ export interface WeeklyPoint {
   creditsConsumed: number;
   /** Visites de la semaine. `null` avant le démarrage du journal des visites. */
   visits: number | null;
+  /** Suggestions de la semaine notées 👍 / 👎 (voir `PeriodMetrics.likes`). */
+  likes: number;
+  dislikes: number;
+  /** Visites de la semaine ayant ouvert le dialogue des packs. `null` : pas mesuré. */
+  pricingViewed: number | null;
 }
 
 export interface AdminSeries {
   weeks: WeeklyPoint[];
   activityTrackingSince: string | null;
   visitTrackingSince: string | null;
+  pricingTrackingSince: string;
 }
+
+/**
+ * Premier jour où l'ouverture du dialogue des packs est connue.
+ *
+ * L'événement `credits_dialog_opened` existe depuis le 12/09/2026 ; les visites
+ * antérieures au marquage en base ont été rattrapées depuis les logs
+ * (`2026-09-24-tarifs-consultes.sql`). Avant cette date, rien : « 0 » y serait
+ * un chiffre inventé.
+ */
+export const TARIFS_MESURES_DEPUIS = '2026-09-12';
 
 @Injectable()
 export class AdminService {
@@ -265,6 +303,8 @@ export class AdminService {
     projectCount: '(SELECT COUNT(*) FROM project p WHERE p.userId = u.id)',
     brandReportCount: '(SELECT COUNT(*) FROM brand_report_record b WHERE b.keycloakId = u.keycloakId)',
     aiCostUsd: ModelCostsService.TRI_COUT,
+    likes: `(SELECT COUNT(*) FROM domain_suggestion ds INNER JOIN project p ON p.id = ds.projectId
+              WHERE p.userId = u.id AND ds.rating = 'liked')`,
   };
 
   async getUsers(
@@ -319,9 +359,30 @@ export class AdminService {
     return new Map(users.map((u) => [u.id, (parId.get(u.id) ?? 0) + (parSub.get(u.keycloakId) ?? 0)]));
   }
 
+  /**
+   * 👍 / 👎 par compte, sur les suggestions de SES projets.
+   *
+   * Le compte du projet, pas celui qui a cliqué : la note n'est ni horodatée
+   * ni signée, et c'est de toute façon au propriétaire que la recherche a été
+   * facturée.
+   */
+  private async notations(users: User[]): Promise<Map<number, { likes: number; dislikes: number }>> {
+    if (!users.length) return new Map();
+    const rows = await this.dataSource.query(
+      `SELECT p.userId AS userId,
+              COALESCE(SUM(ds.rating = 'liked'), 0)    AS likes,
+              COALESCE(SUM(ds.rating = 'disliked'), 0) AS dislikes
+         FROM domain_suggestion ds INNER JOIN project p ON p.id = ds.projectId
+        WHERE p.userId IN (?) AND ds.rating <> 'neutral'
+        GROUP BY p.userId`,
+      [users.map((u) => u.id)],
+    );
+    return new Map(rows.map((r: any) => [Number(r.userId), { likes: Number(r.likes), dislikes: Number(r.dislikes) }]));
+  }
+
   /** Les lignes du tableau des utilisateurs, compteurs compris, en requêtes groupées. */
   private async lignes(users: User[]): Promise<AdminUserRow[]> {
-    const [reportCounts, projCounts, couts, consommes] = await Promise.all([
+    const [reportCounts, projCounts, couts, consommes, notes] = await Promise.all([
       this.brandReportCounts(users.map((u) => u.keycloakId)),
       this.projectCounts(users.map((u) => u.id)),
       // Le coût vit dans une table récente, jointe à deux autres : son échec ne
@@ -331,6 +392,7 @@ export class AdminService {
         return new Map();
       }),
       this.creditsConsommes(users),
+      this.notations(users),
     ]);
 
     // `User`, pas `any` : typée `any`, cette ligne a laissé passer le 22/09/2026
@@ -359,6 +421,8 @@ export class AdminService {
         aiCostUsd: cout ? cout.costUsd : null,
         aiUnpricedCalls: cout?.unpricedCalls ?? 0,
         creditsConsumed: consommes.get(u.id) ?? 0,
+        likes: notes.get(u.id)?.likes ?? 0,
+        dislikes: notes.get(u.id)?.dislikes ?? 0,
       };
     });
   }
@@ -502,6 +566,8 @@ export class AdminService {
               COALESCE(SUM(v.searched), 0)            AS recherches,
               COALESCE(SUM(v.accountCreated), 0)      AS comptes,
               COALESCE(SUM(v.reportRequested), 0)     AS rapports,
+              COALESCE(SUM(v.pricingViewed), 0)       AS tarifs,
+              COALESCE(SUM(v.checkoutStarted), 0)     AS paiements,
               COALESCE(SUM(u.keycloakId IS NOT NULL), 0)                     AS identifiees,
               COALESCE(SUM(u.keycloakId IS NOT NULL AND u.createdAt < ?), 0) AS revenants
          FROM visitor_session v
@@ -519,6 +585,8 @@ export class AdminService {
       reportsRequested: Number(r.rapports ?? 0),
       visitsIdentified: Number(r.identifiees ?? 0),
       visitsReturning: Number(r.revenants ?? 0),
+      pricingViewed: Number(r.tarifs ?? 0),
+      checkoutStarted: Number(r.paiements ?? 0),
     };
   }
 
@@ -531,7 +599,8 @@ export class AdminService {
   private async visitesParSemaine(depuis: string): Promise<any[] | null> {
     try {
       return await this.dataSource.query(
-        `SELECT ${AdminService.SEMAINE('v.firstSeenAt')} AS semaine, COUNT(*) AS n
+        `SELECT ${AdminService.SEMAINE('v.firstSeenAt')} AS semaine, COUNT(*) AS n,
+                COALESCE(SUM(v.pricingViewed), 0) AS tarifs
            FROM visitor_session v
            LEFT JOIN user u ON u.keycloakId = v.keycloakId
           WHERE ${AdminService.VISITES_MESUREES} AND v.firstSeenAt >= ?
@@ -637,8 +706,29 @@ export class AdminService {
               FROM brand_report_record r
               INNER JOIN user u ON u.keycloakId = r.keycloakId
              WHERE ${AdminService.comptesMesures()}
-               AND r.createdAt >= ? AND r.createdAt <= ?) AS creditsRapports`,
-        [debut, fin, debut, fin],
+               AND r.createdAt >= ? AND r.createdAt <= ?) AS creditsRapports,
+           (SELECT COALESCE(SUM(ds.rating = 'liked'), 0) AS likes
+              FROM domain_suggestion ds
+              INNER JOIN project p ON p.id = ds.projectId
+              INNER JOIN user u ON u.id = p.userId
+             WHERE ${AdminService.comptesMesures()} AND ds.rating <> 'neutral'
+               AND COALESCE(ds.createdAt, p.createdAt) >= ?
+               AND COALESCE(ds.createdAt, p.createdAt) <= ?) AS likes,
+           (SELECT COALESCE(SUM(ds.rating = 'disliked'), 0)
+              FROM domain_suggestion ds
+              INNER JOIN project p ON p.id = ds.projectId
+              INNER JOIN user u ON u.id = p.userId
+             WHERE ${AdminService.comptesMesures()} AND ds.rating <> 'neutral'
+               AND COALESCE(ds.createdAt, p.createdAt) >= ?
+               AND COALESCE(ds.createdAt, p.createdAt) <= ?) AS dislikes,
+           (SELECT COUNT(DISTINCT p.userId)
+              FROM domain_suggestion ds
+              INNER JOIN project p ON p.id = ds.projectId
+              INNER JOIN user u ON u.id = p.userId
+             WHERE ${AdminService.comptesMesures()} AND ds.rating <> 'neutral'
+               AND COALESCE(ds.createdAt, p.createdAt) >= ?
+               AND COALESCE(ds.createdAt, p.createdAt) <= ?) AS comptesNotant`,
+        [debut, fin, debut, fin, debut, fin, debut, fin, debut, fin],
       ),
 
       // Taux d'activation : parmi les comptes créés dans la fenêtre, ceux qui
@@ -671,6 +761,9 @@ export class AdminService {
       creditsConsumed: suggestions + creditsRapports,
       activatedUsers,
       activationRate: newUsers > 0 ? Math.round((activatedUsers / newUsers) * 1000) / 10 : null,
+      likes: Number(credits[0]?.likes ?? 0),
+      dislikes: Number(credits[0]?.dislikes ?? 0),
+      ratingAccounts: Number(credits[0]?.comptesNotant ?? 0),
       funnel,
     };
   }
@@ -752,6 +845,7 @@ export class AdminService {
       totalPackCredits: Number(creditsResult[0]?.pack ?? 0),
       activityTrackingSince: debutJournal,
       visitTrackingSince: debutVisites,
+      pricingTrackingSince: TARIFS_MESURES_DEPUIS,
     };
   }
 
@@ -787,7 +881,7 @@ export class AdminService {
     }
     const depuis = lundis[0];
 
-    const [debutJournal, debutVisites, inscrits, projets, suggestions, creditsRapports, actifs, visites] = await Promise.all([
+    const [debutJournal, debutVisites, inscrits, projets, suggestions, creditsRapports, actifs, visites, notes] = await Promise.all([
       this.debutDuJournal(),
       this.debutDesVisites(),
 
@@ -837,6 +931,20 @@ export class AdminService {
       ),
 
       this.visitesParSemaine(depuis),
+
+      // Même date que les suggestions : la semaine où le nom a été produit.
+      this.dataSource.query(
+        `SELECT ${AdminService.SEMAINE('COALESCE(ds.createdAt, p.createdAt)')} AS semaine,
+                COALESCE(SUM(ds.rating = 'liked'), 0)    AS likes,
+                COALESCE(SUM(ds.rating = 'disliked'), 0) AS dislikes
+           FROM domain_suggestion ds
+           INNER JOIN project p ON p.id = ds.projectId
+           INNER JOIN user u ON u.id = p.userId
+          WHERE ${AdminService.comptesMesures()} AND ds.rating <> 'neutral'
+            AND COALESCE(ds.createdAt, p.createdAt) >= ?
+          GROUP BY semaine`,
+        [depuis],
+      ),
     ]);
 
     const mInscrits = AdminService.parSemaine(inscrits);
@@ -845,6 +953,10 @@ export class AdminService {
     const mRapports = AdminService.parSemaine(creditsRapports);
     const mActifs = AdminService.parSemaine(actifs);
     const mVisites = visites === null ? null : AdminService.parSemaine(visites);
+    const mTarifs = visites === null ? null : new Map<string, number>(visites.map((r: any) => [String(r.semaine), Number(r.tarifs)]));
+    const mNotes = new Map<string, { likes: number; dislikes: number }>(
+      notes.map((r: any) => [String(r.semaine), { likes: Number(r.likes), dislikes: Number(r.dislikes) }]),
+    );
 
     // Le journal ne couvre une semaine que si son premier jour la précède. Une
     // semaine à cheval sur son démarrage compterait les seuls jours mesurés et
@@ -863,9 +975,12 @@ export class AdminService {
     const visitesCouvertes = (lundi: string) =>
       mVisites !== null && premiereSemaineVisitee !== null && lundi > premiereSemaineVisitee;
 
+    const premiereSemaineTarifs = AdminService.jourISO(AdminService.lundiDe(new Date(`${TARIFS_MESURES_DEPUIS}T00:00:00`)));
+
     return {
       activityTrackingSince: debutJournal,
       visitTrackingSince: debutVisites,
+      pricingTrackingSince: TARIFS_MESURES_DEPUIS,
       weeks: lundis.map((lundi) => ({
         week: lundi,
         newUsers: mInscrits.get(lundi) ?? 0,
@@ -873,6 +988,10 @@ export class AdminService {
         projects: mProjets.get(lundi) ?? 0,
         creditsConsumed: (mSugg.get(lundi) ?? 0) + (mRapports.get(lundi) ?? 0),
         visits: visitesCouvertes(lundi) ? (mVisites!.get(lundi) ?? 0) : null,
+        likes: mNotes.get(lundi)?.likes ?? 0,
+        dislikes: mNotes.get(lundi)?.dislikes ?? 0,
+        // Avant TARIFS_MESURES_DEPUIS, les semaines vaudraient zéro sans l'être.
+        pricingViewed: visitesCouvertes(lundi) && lundi > premiereSemaineTarifs ? (mTarifs!.get(lundi) ?? 0) : null,
       })),
     };
   }

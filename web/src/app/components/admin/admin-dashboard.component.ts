@@ -280,6 +280,22 @@ const SOCLE_POURCENTAGE = 5;
             </app-admin-weekly-chart>
 
             <app-admin-weekly-chart
+              title="Satisfaction"
+              unite="% de 👍"
+              forme="ligne"
+              agregat="dernier"
+              [points]="pointsSatisfaction()"
+              [note]="noteSatisfaction">
+            </app-admin-weekly-chart>
+
+            <app-admin-weekly-chart
+              title="Tarifs consultés"
+              unite="visites"
+              [points]="pointsTarifs()"
+              [note]="noteTarifs()">
+            </app-admin-weekly-chart>
+
+            <app-admin-weekly-chart
               title="Crédits consommés"
               unite="crédits"
               [points]="pointsCredits()"
@@ -500,9 +516,56 @@ export class AdminDashboardComponent implements OnInit {
       },
       { label: 'Recherches', value: p.newProjects, previous: q.newProjects },
       { label: 'Suggestions générées', value: p.suggestions, previous: q.suggestions },
+      {
+        label: 'Satisfaction',
+        value: this.satisfaction(p),
+        previous: this.satisfaction(q),
+        unit: 'pct',
+        detail: p.likes + p.dislikes >= SOCLE_POURCENTAGE
+          ? `${p.likes} 👍 · ${p.dislikes} 👎 sur les noms de la période, par ${p.ratingAccounts} compte${p.ratingAccounts > 1 ? 's' : ''}`
+          : undefined,
+        indispo: p.likes + p.dislikes === 0
+          ? 'aucun nom noté sur la période'
+          : `${p.likes + p.dislikes} nom${p.likes + p.dislikes > 1 ? 's' : ''} noté${p.likes + p.dislikes > 1 ? 's' : ''} — trop peu pour un taux`,
+      },
+      {
+        label: 'Tarifs consultés',
+        value: this.tarifsMesures(p) ? p.funnel!.pricingViewed : null,
+        previous: this.tarifsMesures(q) ? q.funnel!.pricingViewed : null,
+        detail: this.tarifsMesures(p)
+          ? `visites ayant ouvert les packs — ${p.funnel!.checkoutStarted} paiement${p.funnel!.checkoutStarted > 1 ? 's' : ''} lancé${p.funnel!.checkoutStarted > 1 ? 's' : ''}`
+          : undefined,
+        indispo: p.funnel
+          ? `mesuré depuis le ${this.dateCourte(s.pricingTrackingSince)}`
+          : 'entonnoir indisponible',
+      },
       { label: 'Rapports de marque', value: p.brandReports, previous: q.brandReports },
       { label: 'Crédits consommés', value: p.creditsConsumed, previous: q.creditsConsumed },
     ];
+  }
+
+  // ─── Satisfaction et tarifs ───────────────────────────────────────────────
+
+  /**
+   * Part des noms aimés parmi les noms NOTÉS, en %.
+   *
+   * Le dénominateur ne compte pas les noms laissés neutres : ne pas noter n'est
+   * pas désapprouver, et la grande majorité des suggestions ne sont jamais
+   * notées. Sous {@link SOCLE_POURCENTAGE} notes, pas de taux — à 2 sur 3, une
+   * note de plus déplacerait le chiffre de 17 points.
+   */
+  private satisfaction(p: PeriodMetrics): number | null {
+    const notes = p.likes + p.dislikes;
+    return notes < SOCLE_POURCENTAGE ? null : Math.round((p.likes / notes) * 1000) / 10;
+  }
+
+  /**
+   * La fenêtre est-elle entièrement couverte par la mesure des tarifs ?
+   * Commencée avant, elle afficherait un zéro là où il n'y a pas de mesure.
+   */
+  private tarifsMesures(p: PeriodMetrics): boolean {
+    const depuis = this.stats()?.pricingTrackingSince;
+    return !!p.funnel && !!depuis && new Date(p.from) >= new Date(`${depuis}T00:00:00`);
   }
 
   // ─── Fidélité : la part des identifiés qui n'étaient pas nouveaux ─────────
@@ -617,6 +680,13 @@ export class AdminDashboardComponent implements OnInit {
         pourcentage: this.part(f.reportsRequested, f.visits),
         detail: `${this.formate(f.reportsRequested)} sur ${this.formate(f.visits)} visites`
           + ' — demandes, refus faute de crédits compris',
+      },
+      {
+        // Le dialogue des packs est la seule « page tarifs » du produit.
+        label: 'Consultent les tarifs',
+        pourcentage: this.part(f.pricingViewed, f.visits),
+        detail: `${this.formate(f.pricingViewed)} sur ${this.formate(f.visits)} visites ont ouvert les packs de crédits`
+          + ` — ${this.formate(f.checkoutStarted)} paiement${f.checkoutStarted > 1 ? 's' : ''} lancé${f.checkoutStarted > 1 ? 's' : ''}`,
       },
     ];
   }
@@ -757,6 +827,32 @@ export class AdminDashboardComponent implements OnInit {
   pointsCredits = computed<ChartPoint[]>(() =>
     (this.series()?.weeks ?? []).map(w => ({ week: w.week, value: w.creditsConsumed })),
   );
+
+  /**
+   * Part de 👍 parmi les noms notés, semaine de GÉNÉRATION des noms.
+   * Une semaine sous le socle est un trou, pas un point : trois notes ne font
+   * pas une tendance.
+   */
+  pointsSatisfaction = computed<ChartPoint[]>(() =>
+    (this.series()?.weeks ?? []).map(w => {
+      const notes = w.likes + w.dislikes;
+      return { week: w.week, value: notes < SOCLE_POURCENTAGE ? null : Math.round((w.likes / notes) * 100) };
+    }),
+  );
+
+  readonly noteSatisfaction = 'Part des noms notés 👍 parmi les noms notés (👍 ou 👎), rangés à la semaine où ils ont été générés.'
+    + ` Les noms jamais notés sont hors du calcul ; une semaine de moins de ${SOCLE_POURCENTAGE} notes reste vide.`
+    + ' Une note posée plus tard rejoint la semaine du nom : les dernières semaines peuvent encore bouger.';
+
+  pointsTarifs = computed<ChartPoint[]>(() =>
+    (this.series()?.weeks ?? []).map(w => ({ week: w.week, value: w.pricingViewed })),
+  );
+
+  noteTarifs = computed(() => {
+    const depuis = this.series()?.pricingTrackingSince;
+    return 'Visites ayant ouvert le dialogue des packs de crédits, la seule page de tarifs du produit.'
+      + (depuis ? ` Mesuré depuis le ${this.dateCourte(depuis)} : les semaines antérieures sont hachurées.` : '');
+  });
 
   noteActifs = computed(() => {
     const depuis = this.series()?.activityTrackingSince;

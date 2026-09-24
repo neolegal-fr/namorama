@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AdminModelCosts, LigneConsommation } from '../../services/admin.service';
 import { AdminWeeklyChartComponent, ChartPoint } from './admin-weekly-chart.component';
-import { coutAuTarif, libelleOperation, tarifDe, tokens, usd } from './couts-modele';
+import { coutAuTarif, libelleOperation, tarifDe, tokens, usd, usdUnitaire } from './couts-modele';
 
 /** Une ligne du relevé, et ce qu'elle deviendrait sur le modèle choisi. */
 interface LigneSimulee {
@@ -66,7 +66,7 @@ interface LigneSimulee {
 
             <div class="nm-carte nm-accent">
               <div class="nm-label">Par crédit consommé</div>
-              <div class="nm-valeur" [class.nm-vide]="parCredit() === null">{{ usd(parCredit()) }}</div>
+              <div class="nm-valeur" [class.nm-vide]="parCredit() === null">{{ usdUnitaire(parCredit()) }}</div>
               <div class="nm-detail">
                 {{ creditsConsommes === null ? 'crédits de la période indisponibles'
                    : (creditsConsommes.toLocaleString('fr-FR') + ' crédits consommés') }}
@@ -119,7 +119,7 @@ interface LigneSimulee {
                   <td style="text-align: left; font-weight: 600">
                     {{ libelle(s.ligne.operation) }}
                     <div class="nm-dont" *ngIf="s.ligne.items > s.ligne.calls">
-                      {{ s.ligne.items }} noms — {{ usd(parElement(s.ligne)) }} / nom
+                      {{ s.ligne.items }} noms — {{ usdUnitaire(parElement(s.ligne)) }} / nom
                     </div>
                   </td>
                   <td style="text-align: left; font-family: monospace; font-size: 0.72rem">{{ s.ligne.model }}</td>
@@ -180,6 +180,7 @@ interface LigneSimulee {
             <app-admin-weekly-chart
               title="Coût du modèle"
               unite="$"
+              [decimales]="2"
               [points]="pointsSemaines()"
               [note]="'Six derniers mois, indépendamment de la période choisie. Semaines antérieures au relevé hachurées : non mesurées, pas gratuites.'">
             </app-admin-weekly-chart>
@@ -246,6 +247,7 @@ export class AdminModelCostsComponent {
   private readonly choix = signal<Record<string, string>>({});
 
   readonly usd = usd;
+  readonly usdUnitaire = usdUnitaire;
   readonly tokens = tokens;
   readonly libelle = libelleOperation;
 
@@ -351,7 +353,7 @@ export class AdminModelCostsComponent {
   pointsSemaines = computed<ChartPoint[]>(() =>
     (this.couts()?.weeks ?? []).map((w) => ({
       week: w.week,
-      value: w.costUsd === null ? null : Math.round(w.costUsd * 1000) / 1000,
+      value: w.costUsd === null ? null : Math.round(w.costUsd * 100) / 100,
     })),
   );
 

@@ -10,12 +10,14 @@ import type { Request } from 'express';
  * plutôt que sur l'appel qui se trouve passer là. Voir le commentaire de cette
  * méthode pour ce que l'ancienne approche coûtait.
  */
-export type EtapeVisite = 'recherche' | 'rapport';
+export type EtapeVisite = 'recherche' | 'rapport' | 'tarifs' | 'paiement';
 
 /** Colonne portant chaque étape. Une seule table de correspondance, pour éviter le SQL en chaîne. */
 const COLONNE: Record<EtapeVisite, string> = {
   recherche: 'searched',
   rapport: 'reportRequested',
+  tarifs: 'pricingViewed',
+  paiement: 'checkoutStarted',
 };
 
 /**
