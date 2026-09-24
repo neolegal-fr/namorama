@@ -54,6 +54,7 @@
     "COL_PROJECTS": "Projects",
     "COL_REPORTS": "Reports",
     "COL_AI_COST": "AI cost",
+    "COL_RATINGS": "Ratings",
     "COL_CREATED": "Created",
     "COL_LAST_LOGIN": "Last activity",
     "ADJUST_CREDITS": "Adjust credits",

@@ -18,13 +18,26 @@ export function libelleOperation(op: string): string {
 }
 
 /**
- * Un montant en dollars, avec la précision qu'il mérite.
+ * Un montant en dollars, au centime.
  *
- * Un appel luna coûte moins d'un millième de dollar : arrondi au centime, tout
- * le relevé s'afficherait « 0,00 $ ». Sous un dollar, quatre décimales ; au-dessus,
- * deux suffisent.
+ * Le coût d'un compte ou d'une période se lit au centime, pas au dix-millième.
+ * Un montant non nul qui s'arrondirait à zéro s'affiche « < 0,01 $ » : « 0,00 $ »
+ * le ferait passer pour gratuit, comme un appel non chiffré.
  */
 export function usd(n: number | null | undefined): string {
+  if (n === null || n === undefined) return '—';
+  if (n !== 0 && Math.abs(n) < 0.005) return `${n < 0 ? '> −' : '< '}0,01 $`;
+  return `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+}
+
+/**
+ * Un coût UNITAIRE — par crédit, par nom analysé.
+ *
+ * Ce n'est pas un montant qu'on paie mais un ratio qu'on compare : un appel
+ * luna coûte moins d'un millième de dollar, et au centime tous les ratios
+ * vaudraient « < 0,01 $ ». Quatre décimales, donc, et seulement ici.
+ */
+export function usdUnitaire(n: number | null | undefined): string {
   if (n === null || n === undefined) return '—';
   const decimales = Math.abs(n) < 1 ? 4 : 2;
   return `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: decimales })} $`;

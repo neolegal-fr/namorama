@@ -169,8 +169,10 @@ Trois règles, chacune tirée d'une dépense qu'on a vraiment payée :
   position dans la liste : il donnerait à un nom les qualités d'un autre, le panneau
   s'afficherait quand même, et l'erreur serait invisible — tout en étant facturée.
 - **Un appel outillé ne se déclenche pas tout seul.** `web_search` coûte **10 $ les
-  mille appels** *en plus* du contenu web facturé au tarif du modèle : ~0,03 $ l'appel,
-  contre 0,0008 $ pour un appel luna ordinaire. Aucun réglage de modèle ne réduit des
+  mille appels** *en plus* du contenu web facturé au tarif du modèle. Mesuré le
+  24/09/2026 : un repérage fait ~3 recherches et ramène **~25 000 tokens d'entrée**,
+  soit **~0,09 $ l'appel** sur terra — ce sont les tokens, plus que les frais d'outil,
+  qui pèsent — contre 0,0008 $ pour un appel luna ordinaire. Aucun réglage de modèle ne réduit des
   frais d'outil — le seul levier est de ne pas appeler. Le repérage du marché attend
   donc son bouton, et son résultat est mis en cache 24 h par description
   (`COMPETITORS_CACHE_TTL_MS`).
@@ -352,6 +354,11 @@ Trois événements le couvrent depuis le 12/09/2026 : `credits_dialog_opened` (a
 `origine` — pastille, solde, rapport, recherche refusée — et le `solde` au moment de
 l'ouverture), `pack_checkout_started` et `pack_checkout_failed`.
 
+Le dialogue des packs est la **seule page de tarifs** du produit. Son ouverture est aussi
+marquée sur la visite (`visitor_session.pricingViewed`, et `checkoutStarted` côté
+serveur à la création de la session Stripe) : le tableau de bord la compte au-delà des
+30 jours de logs. Relevé du 24/09/2026 : **une seule ouverture** du 12 au 24/09.
+
 `name_analysis_opened` répond à une question que `name_analysis_requested` ne pouvait pas
 poser : ce dernier ne part qu'au clic sur « Analyser », donc uniquement quand l'analyse
 n'a PAS été pré-calculée. Un seul exemplaire en sept jours pour 409 analyses produites —
@@ -528,13 +535,25 @@ l'inverse les viderait en silence.
 > d'en oublier un pour qu'un indicateur compte les comptes de test sans que rien ne le
 > signale. Le chiffre reste plausible, il est simplement faux.
 
-> Six migrations à appliquer **avant** de déployer l'image :
+> Sept migrations à appliquer **avant** de déployer l'image :
 > `2026-08-23-journal-d-activite-quotidienne.sql`,
 > `2026-08-23-date-de-creation-des-suggestions.sql`,
 > `2026-08-23-comptes-internes.sql`,
 > `2026-08-24-journal-des-visites.sql`,
-> `2026-09-12-inscriptions-manquees.sql` et
-> `2026-09-22-consommation-du-modele.sql` (relevé des coûts du modèle).
+> `2026-09-12-inscriptions-manquees.sql`,
+> `2026-09-22-consommation-du-modele.sql` (relevé des coûts du modèle) et
+> `2026-09-24-tarifs-consultes.sql` (suivi de `scripts/rattraper-tarifs-consultes.py`
+> pour rattraper les ouvertures depuis les logs).
+
+La **satisfaction** est la part de 👍 parmi les noms notés (👍 ou 👎), rangés à la
+**date de génération du nom** — la note n'est pas horodatée, et la question est « les
+noms de cette période plaisent-ils ». Les noms laissés neutres sont hors du calcul, et
+sous 5 notes il n'y a pas de taux. La carte dit par combien de comptes : sur les 30
+jours au 24/09/2026, les 117 👎 venaient d'un seul.
+
+Les coûts IA s'affichent **au centime** (`usd()`) ; seuls les coûts unitaires — par
+crédit, par nom — gardent quatre décimales (`usdUnitaire()`), faute de quoi ils
+vaudraient tous « < 0,01 $ ».
 
 #### Entonnoir de conversion : le dénominateur qui manquait
 

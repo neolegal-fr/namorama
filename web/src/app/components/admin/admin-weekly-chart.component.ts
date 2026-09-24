@@ -113,7 +113,7 @@ interface Troncon {
              [style.left.%]="positionTip()">
           <div class="nm-tip-week">{{ b.libelle }}</div>
           <div class="nm-tip-val" *ngIf="b.point.value !== null">
-            {{ b.point.value }} <span>{{ unite }}</span>
+            {{ valeur(b.point.value) }} <span>{{ unite }}</span>
           </div>
           <div class="nm-tip-null" *ngIf="b.point.value === null">non mesuré</div>
           <div class="nm-tip-encours" *ngIf="b.enCours">semaine en cours</div>
@@ -136,7 +136,7 @@ interface Troncon {
             <tr *ngFor="let b of barresRecentes()">
               <td>{{ b.libelle }}</td>
               <td>
-                <span *ngIf="b.point.value !== null">{{ b.point.value }}</span>
+                <span *ngIf="b.point.value !== null">{{ valeur(b.point.value) }}</span>
                 <span class="nm-td-null" *ngIf="b.point.value === null">non mesuré</span>
                 <span class="nm-td-note" *ngIf="b.enCours"> · en cours</span>
               </td>
@@ -280,6 +280,11 @@ export class AdminWeeklyChartComponent {
 
   /** Unité affichée dans l'infobulle et le sous-titre (« comptes », « crédits »…). */
   @Input() unite = '';
+  /**
+   * Décimales fixes des valeurs affichées — `2` pour des dollars, lus au
+   * centime. Non renseigné : la valeur telle quelle, moyenne au dixième.
+   */
+  @Input() decimales: number | null = null;
   @Input() note = '';
 
   private _points = signal<ChartPoint[]>([]);
@@ -300,10 +305,10 @@ export class AdminWeeklyChartComponent {
 
     if (this.agregat === 'dernier') {
       const fin = revolues[revolues.length - 1];
-      return `${fin.value} ${this.unite} au ${AdminWeeklyChartComponent.libelleSemaine(fin.week)}`;
+      return `${this.valeur(fin.value)} ${this.unite} au ${AdminWeeklyChartComponent.libelleSemaine(fin.week)}`;
     }
     const total = revolues.reduce((s, p) => s + (p.value ?? 0), 0);
-    const moyenne = Math.round((total / revolues.length) * 10) / 10;
+    const moyenne = total / revolues.length;
     // La base de la moyenne quand elle n'est PAS la fenêtre entière : sans
     // cela, « 7,5 par semaine » calculé sur deux semaines mesurées se lirait
     // comme une moyenne sur six mois.
@@ -311,8 +316,18 @@ export class AdminWeeklyChartComponent {
     const base = revolues.length < attendues
       ? ` (${revolues.length} semaine${revolues.length > 1 ? 's' : ''} mesurée${revolues.length > 1 ? 's' : ''})`
       : '';
-    return `${moyenne.toLocaleString('fr-FR')} / semaine en moyenne${base}`;
+    const texte = this.decimales === null
+      ? (Math.round(moyenne * 10) / 10).toLocaleString('fr-FR')
+      : this.valeur(moyenne);
+    return `${texte} / semaine en moyenne${base}`;
   });
+
+  valeur(v: number | null): string {
+    if (v === null) return '';
+    return this.decimales === null
+      ? v.toLocaleString('fr-FR')
+      : v.toLocaleString('fr-FR', { minimumFractionDigits: this.decimales, maximumFractionDigits: this.decimales });
+  }
 
   barres = computed<Barre[]>(() => {
     const pts = this._points();
