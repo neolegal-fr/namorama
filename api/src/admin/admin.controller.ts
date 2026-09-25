@@ -1,10 +1,11 @@
 import { Controller, Get, Patch, Post, Delete, Param, Body, Query, ParseIntPipe, DefaultValuePipe, HttpCode, ForbiddenException } from '@nestjs/common';
-import { IsBoolean, IsNumber, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString, Matches, MaxLength, Min, MinLength } from 'class-validator';
 import { Roles, AuthenticatedUser } from 'nest-keycloak-connect';
 import { AdminService } from './admin.service';
 import { ModelCostsService } from './model-costs.service';
 import { ModelPricesService } from './model-prices.service';
 import { RetentionService } from './retention.service';
+import { AdminMailService } from './admin-mail.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import { UsersService } from '../users/users.service';
 
@@ -55,6 +56,39 @@ class NouveauTarifDto {
   note?: string;
 }
 
+/** Consigne facultative : un angle, un fait à citer. Le but du message, lui, est fixe. */
+class BrouillonDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  note?: string;
+}
+
+class CourrielDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  subject: string;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(10000)
+  body: string;
+
+  /** Version des consignes du brouillon de départ ; `null` pour un texte écrit à la main. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  promptVersion?: string | null;
+}
+
+class ReponseDto {
+  @IsString()
+  @MinLength(10)
+  @MaxLength(5000)
+  message: string;
+}
+
 class SetInternalDto {
   @IsBoolean()
   internal: boolean;
@@ -70,6 +104,7 @@ export class AdminController {
     private readonly modelCosts: ModelCostsService,
     private readonly modelPrices: ModelPricesService,
     private readonly retention: RetentionService,
+    private readonly adminMail: AdminMailService,
   ) {}
 
   @Get('users')
@@ -105,6 +140,51 @@ export class AdminController {
     @Body() body: SetInternalDto,
   ) {
     return this.adminService.setInternal(id, body.internal);
+  }
+
+  // ─── Écrire à un utilisateur ──────────────────────────────────────────────
+
+  /** Les envois déjà faits à ce compte. */
+  @Get('users/:id/mails')
+  async getMails(@Param('id', ParseIntPipe) id: number) {
+    return this.adminMail.historique(id);
+  }
+
+  /** Un brouillon rédigé par le modèle — rien n'est envoyé. */
+  @Post('users/:id/mails/draft')
+  async draftMail(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: BrouillonDto,
+    @AuthenticatedUser() admin: any,
+  ) {
+    return this.adminMail.rediger(id, AdminController.signataire(admin), body.note?.trim() || undefined);
+  }
+
+  @Post('users/:id/mails')
+  async sendMail(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CourrielDto,
+    @AuthenticatedUser() admin: any,
+  ) {
+    return this.adminMail.envoyer(id, { sub: admin.sub, nom: AdminController.signataire(admin) }, {
+      subject: body.subject,
+      body: body.body,
+      promptVersion: body.promptVersion ?? null,
+    });
+  }
+
+  /** La réponse reçue par courriel, recopiée : elle devient un feedback à valider. */
+  @Post('mails/:mailId/reply')
+  async recordMailReply(
+    @Param('mailId', ParseIntPipe) mailId: number,
+    @Body() body: ReponseDto,
+  ) {
+    return this.adminMail.enregistrerReponse(mailId, body.message);
+  }
+
+  /** Le prénom de l'administrateur connecté : il signe, et nomme l'expéditeur. */
+  private static signataire(admin: any): string {
+    return String(admin?.given_name || admin?.name || 'Namorama').replace(/[\r\n"<>]/g, '').slice(0, 60);
   }
 
   @Delete('users/:id')

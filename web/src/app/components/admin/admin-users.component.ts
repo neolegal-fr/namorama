@@ -10,8 +10,9 @@ import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
+import { Textarea } from 'primeng/textarea';
 import { MessageService, ConfirmationService } from 'primeng/api';
-import { AdminService, AdminUser, UserModelCosts } from '../../services/admin.service';
+import { AdminService, AdminMail, AdminUser, UserModelCosts } from '../../services/admin.service';
 import { AdminWeeklyChartComponent, ChartPoint } from './admin-weekly-chart.component';
 import { libelleOperation, parOperation, tokens, usd, usdUnitaire } from './couts-modele';
 import { UserService } from '../../services/user';
@@ -24,7 +25,7 @@ import { KeycloakService } from 'keycloak-angular';
     CommonModule, FormsModule, TranslatePipe,
     TableModule, ButtonModule, InputTextModule,
     InputNumberModule, ToastModule, TooltipModule,
-    ConfirmDialog, DialogModule, AdminWeeklyChartComponent,
+    ConfirmDialog, DialogModule, Textarea, AdminWeeklyChartComponent,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -82,6 +83,11 @@ import { KeycloakService } from 'keycloak-angular';
               <th pSortableColumn="lastLogin" class="text-center" style="background: var(--p-surface-50); white-space: nowrap">
                 {{ 'ADMIN.COL_LAST_LOGIN' | translate }} <p-sortIcon field="lastLogin"></p-sortIcon>
               </th>
+              <!-- Dernière demande de retour envoyée : pour choisir à qui écrire,
+                   et ne pas écrire deux fois sans le savoir. -->
+              <th pSortableColumn="lastMailAt" class="text-center" style="background: var(--p-surface-50); white-space: nowrap">
+                Courriel <p-sortIcon field="lastMailAt"></p-sortIcon>
+              </th>
               <th style="background: var(--p-surface-50); width: 1px"></th>
             </tr>
           </ng-template>
@@ -127,6 +133,15 @@ import { KeycloakService } from 'keycloak-angular';
               </td>
               <td class="text-center text-xs text-500">{{ user.createdAt | date:'dd/MM/yy' }}</td>
               <td class="text-center text-xs text-500">{{ user.lastLogin ? (user.lastLogin | date:'dd/MM/yy') : '—' }}</td>
+              <td class="text-center text-xs text-500" style="white-space: nowrap">
+                <button *ngIf="user.lastMailAt; else jamaisEcrit" type="button" class="nm-m-dernier"
+                        [pTooltip]="'« ' + user.lastMailSubject + ' »' + (user.lastMailReplied ? ' — a répondu' : '')" tooltipPosition="top"
+                        (click)="ouvrirMail(user)">
+                  {{ user.lastMailAt | date:'dd/MM/yy' }}
+                  <i *ngIf="user.lastMailReplied" class="pi pi-reply" style="font-size: 0.65rem; color: var(--nm-accent-text-light, #0d7a4e)"></i>
+                </button>
+                <ng-template #jamaisEcrit><span class="text-400">—</span></ng-template>
+              </td>
               <td style="white-space: nowrap; padding: 0.25rem 0.5rem">
                 <ng-container *ngIf="editingUserId() === user.id; else showEditBtn">
                   <div style="display: flex; gap: 0.375rem; align-items: center; flex-wrap: wrap">
@@ -146,6 +161,11 @@ import { KeycloakService } from 'keycloak-angular';
                   </div>
                 </ng-container>
                 <ng-template #showEditBtn>
+                  <p-button icon="pi pi-envelope" size="small" [text]="true" severity="secondary"
+                            [disabled]="!user.email"
+                            [pTooltip]="user.email ? 'Lui demander un retour' : 'Aucune adresse e-mail'" tooltipPosition="top"
+                            (onClick)="ouvrirMail(user)">
+                  </p-button>
                   <p-button icon="pi pi-wallet" size="small" [text]="true" severity="secondary"
                             [pTooltip]="'ADMIN.ADJUST_CREDITS' | translate" tooltipPosition="top"
                             (onClick)="startEdit(user)">
@@ -171,7 +191,7 @@ import { KeycloakService } from 'keycloak-angular';
             </tr>
           </ng-template>
           <ng-template pTemplate="emptymessage">
-            <tr><td colspan="9" class="text-center text-500 py-4">{{ 'ADMIN.NO_USERS' | translate }}</td></tr>
+            <tr><td colspan="11" class="text-center text-500 py-4">{{ 'ADMIN.NO_USERS' | translate }}</td></tr>
           </ng-template>
         </p-table>
 
@@ -250,8 +270,111 @@ import { KeycloakService } from 'keycloak-angular';
         </app-admin-weekly-chart>
       </ng-container>
     </p-dialog>
+
+    <!-- Demander un retour à un utilisateur. Le brouillon est rédigé à
+         l'ouverture à partir de son activité ; rien ne part sans relecture
+         ni confirmation. -->
+    <p-dialog [visible]="!!mailPour()" (visibleChange)="!$event && fermerMail()" [modal]="true"
+              [header]="'Demander un retour à ' + (mailPour()?.email || '')"
+              [style]="{ width: '44rem', maxWidth: '95vw' }">
+      <div style="display: flex; flex-direction: column; gap: 0.9rem">
+
+        <div *ngIf="historiqueMails().length" class="nm-m-historique">
+          <div class="nm-d-label" style="margin-bottom: 0.35rem">Déjà écrit</div>
+          <div *ngFor="let m of historiqueMails()" class="nm-m-envoi">
+            <span class="text-500" style="white-space: nowrap">{{ m.createdAt | date:'dd/MM/yy HH:mm' }}</span>
+            <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"
+                  [class.text-400]="!m.delivered" [style.text-decoration]="m.delivered ? null : 'line-through'"
+                  [pTooltip]="m.delivered ? m.body : 'Non remis par le serveur SMTP'" tooltipPosition="top">{{ m.subject }}</span>
+            <span *ngIf="m.promptVersion && m.promptVersion !== versionCourante()" class="nm-m-puce"
+                  pTooltip="Rédigé avec d'anciennes consignes" tooltipPosition="top">consignes du {{ m.promptVersion }}</span>
+            <span *ngIf="m.feedbackId" class="nm-m-puce nm-m-puce-ok">a répondu</span>
+            <p-button icon="pi pi-replay" size="small" [text]="true" severity="secondary"
+                      pTooltip="Reprendre ce texte" tooltipPosition="top" (onClick)="reprendre(m)"></p-button>
+            <p-button *ngIf="m.delivered && !m.feedbackId" icon="pi pi-reply" size="small" [text]="true" severity="secondary"
+                      pTooltip="Il a répondu par courriel : saisir sa réponse" tooltipPosition="top"
+                      (onClick)="ouvrirReponse(m)"></p-button>
+          </div>
+          <div *ngIf="reponseA() as m" style="display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.5rem">
+            <label class="nm-d-label" for="nm-reponse">Sa réponse à « {{ m.subject }} »</label>
+            <textarea id="nm-reponse" pInputTextarea rows="4" [(ngModel)]="texteReponse" maxlength="5000"
+                      placeholder="Collez ici sa réponse : elle rejoint les feedbacks, où les crédits se valident."
+                      style="width: 100%; resize: vertical"></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 0.5rem">
+              <p-button label="Annuler" size="small" severity="secondary" [text]="true" (onClick)="reponseA.set(null)"></p-button>
+              <p-button label="Enregistrer comme feedback" size="small" icon="pi pi-check"
+                        [loading]="enregistrementReponse()" [disabled]="texteReponse.trim().length < 10"
+                        (onClick)="enregistrerReponse(m)"></p-button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.35rem">
+          <label class="nm-d-label" for="nm-note">Consigne pour ce message (facultatif)</label>
+          <div style="display: flex; gap: 0.5rem; align-items: flex-start">
+            <textarea id="nm-note" pInputTextarea rows="1" [(ngModel)]="note" maxlength="1000"
+                      placeholder="Ex. : insister sur le rapport qu'il a acheté ; plus court."
+                      style="flex: 1; resize: vertical"></textarea>
+            <p-button [label]="corps.trim() ? 'Régénérer' : 'Rédiger'" icon="pi pi-sparkles"
+                      size="small" severity="secondary"
+                      [loading]="redaction()" [disabled]="envoi()"
+                      (onClick)="rediger()">
+            </p-button>
+          </div>
+        </div>
+
+        <div *ngIf="redaction() && !corps" class="text-sm text-500" style="display: flex; gap: 0.5rem; align-items: center">
+          <i class="pi pi-spin pi-spinner"></i> Rédaction à partir de son activité…
+        </div>
+
+        <div *ngIf="avertissements().length" class="nm-m-alertes">
+          <div *ngFor="let a of avertissements()"><i class="pi pi-exclamation-triangle"></i> {{ a }}</div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.35rem">
+          <label class="nm-d-label" for="nm-objet">Objet</label>
+          <input id="nm-objet" pInputText [(ngModel)]="objet" maxlength="200" style="width: 100%">
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.35rem">
+          <label class="nm-d-label" for="nm-corps">Message</label>
+          <textarea id="nm-corps" pInputTextarea rows="12" [(ngModel)]="corps" maxlength="10000"
+                    style="width: 100%; resize: vertical; font-family: inherit"></textarea>
+          <span class="text-xs text-500">
+            Part de support&#64;namorama.com sous votre prénom ; les réponses arrivent sur votre adresse.
+            Texte brut : une ligne vide sépare deux paragraphes, les liens https deviennent cliquables.
+          </span>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem">
+          <p-button label="Annuler" severity="secondary" [text]="true" (onClick)="fermerMail()"></p-button>
+          <p-button label="Envoyer" icon="pi pi-send"
+                    [loading]="envoi()" [disabled]="!objet.trim() || !corps.trim() || redaction()"
+                    (onClick)="confirmerEnvoi()">
+          </p-button>
+        </div>
+      </div>
+    </p-dialog>
   `,
   styles: [`
+    .nm-m-historique {
+      padding: 0.6rem 0.75rem; border-radius: 6px;
+      background: var(--p-surface-50); border: 1px solid var(--p-surface-200);
+      max-height: 16rem; overflow-y: auto;
+    }
+    .nm-m-envoi { display: flex; gap: 0.5rem; align-items: center; font-size: 0.75rem; }
+    .nm-m-puce {
+      font-size: 0.62rem; font-weight: 600; padding: 0.05rem 0.35rem; border-radius: 4px; white-space: nowrap;
+      color: var(--nm-verdict-watch-light-fg, #9a6a12); background: var(--nm-verdict-watch-light-bg, #fdf3e3);
+    }
+    .nm-m-puce-ok { color: var(--nm-accent-text-light, #0d7a4e); background: var(--p-green-50, #f0fdf4); }
+    .nm-m-alertes {
+      display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.78rem;
+      padding: 0.5rem 0.75rem; border-radius: 6px;
+      color: var(--nm-verdict-watch-light-fg, #9a6a12); background: var(--nm-verdict-watch-light-bg, #fdf3e3);
+    }
+    .nm-m-dernier { background: none; border: none; padding: 0; font: inherit; cursor: pointer; color: inherit; }
+    .nm-m-dernier:hover { text-decoration: underline; }
     .nm-avis { display: inline-flex; align-items: center; gap: 0.2rem; margin: 0 0.25rem; }
     .nm-avis .pi { font-size: 0.7rem; }
     .nm-cout {
@@ -308,6 +431,25 @@ export class AdminUsersComponent implements OnInit {
   readonly usdUnitaire = usdUnitaire;
   readonly tokens = tokens;
   readonly libelle = libelleOperation;
+
+  /** Compte auquel on écrit. */
+  mailPour = signal<AdminUser | null>(null);
+  historiqueMails = signal<AdminMail[]>([]);
+  redaction = signal(false);
+  envoi = signal(false);
+  avertissements = signal<string[]>([]);
+  /** Version des consignes du dernier brouillon reçu : les envois plus anciens s'en distinguent. */
+  versionCourante = signal<string | null>(null);
+  reponseA = signal<AdminMail | null>(null);
+  enregistrementReponse = signal(false);
+  note = '';
+  objet = '';
+  corps = '';
+  texteReponse = '';
+  /** Consignes du brouillon de départ ; `null` si le texte a été écrit ou repris à la main. */
+  private promptVersion: string | null = null;
+  /** Destinataire du brouillon en cours, gardé après fermeture du dialogue. */
+  private dernierDestinataire: number | null = null;
 
   adjustNewValue = 0;
   adjustReason = '';
@@ -413,6 +555,141 @@ export class AdminUsersComponent implements OnInit {
       week: w.week,
       value: w.costUsd === null ? null : Math.round(w.costUsd * 100) / 100,
     }));
+  }
+
+  // ─── Demander un retour ───────────────────────────────────────────────────
+
+  /**
+   * Ouvre le dialogue et, à un compte jamais contacté, lance la rédaction :
+   * cliquer sur l'enveloppe, c'est demander un brouillon. À un compte déjà
+   * contacté, on vient plus souvent relire l'historique ou saisir sa réponse :
+   * la rédaction attend le bouton, plutôt que de payer un brouillon inutile.
+   * Rouvrir le même compte retrouve le texte en cours — fermer par mégarde ne
+   * doit pas coûter un message relu à moitié.
+   */
+  ouvrirMail(u: AdminUser) {
+    const reprise = this.dernierDestinataire === u.id && !!this.corps.trim();
+    if (!reprise) {
+      this.note = '';
+      this.objet = '';
+      this.corps = '';
+      this.promptVersion = null;
+      this.avertissements.set([]);
+    }
+    this.dernierDestinataire = u.id;
+    this.reponseA.set(null);
+    this.mailPour.set(u);
+    this.historiqueMails.set([]);
+    this.adminService.getUserMails(u.id).subscribe({
+      next: (m) => this.historiqueMails.set(m),
+      error: () => this.historiqueMails.set([]),
+    });
+    if (!reprise && !u.lastMailAt) this.rediger();
+  }
+
+  fermerMail() {
+    this.mailPour.set(null);
+    this.reponseA.set(null);
+  }
+
+  rediger() {
+    const u = this.mailPour();
+    if (!u) return;
+    this.redaction.set(true);
+    this.adminService.draftUserMail(u.id, this.note.trim() || undefined).subscribe({
+      next: (b) => {
+        // Le dialogue a pu changer de destinataire pendant la rédaction.
+        if (this.mailPour()?.id !== u.id) return;
+        this.objet = b.subject;
+        this.corps = b.body;
+        this.promptVersion = b.promptVersion;
+        this.versionCourante.set(b.promptVersion);
+        this.avertissements.set(b.avertissements);
+        this.redaction.set(false);
+      },
+      error: () => {
+        this.redaction.set(false);
+        this.messageService.add({ severity: 'error', summary: 'Brouillon indisponible', detail: 'Le modèle n\'a pas rendu de brouillon. Réessayer, ou écrire à la main.' });
+      },
+    });
+  }
+
+  /** Reprend un envoi passé, pour le renvoyer tel quel ou le retoucher. */
+  reprendre(m: AdminMail) {
+    this.objet = m.subject;
+    this.corps = m.body;
+    this.promptVersion = m.promptVersion;
+    this.avertissements.set([]);
+  }
+
+  ouvrirReponse(m: AdminMail) {
+    this.texteReponse = '';
+    this.reponseA.set(m);
+  }
+
+  enregistrerReponse(m: AdminMail) {
+    this.enregistrementReponse.set(true);
+    this.adminService.recordMailReply(m.id, this.texteReponse.trim()).subscribe({
+      next: (maj) => {
+        this.enregistrementReponse.set(false);
+        this.reponseA.set(null);
+        this.historiqueMails.update((l) => l.map((x) => (x.id === maj.id ? maj : x)));
+        this.users.update((l) => l.map((u) => (u.id === maj.userId ? { ...u, lastMailReplied: u.lastMailReplied || this.estLeDernier(maj) } : u)));
+        this.messageService.add({ severity: 'success', summary: 'Réponse enregistrée', detail: 'Elle attend votre validation dans l\'onglet Feedbacks, avec les crédits promis.' });
+      },
+      error: () => this.enregistrementReponse.set(false),
+    });
+  }
+
+  private estLeDernier(m: AdminMail): boolean {
+    return this.historiqueMails().find((x) => x.delivered)?.id === m.id;
+  }
+
+  /** Un courriel ne se rappelle pas : on confirme le destinataire avant de l'envoyer. */
+  confirmerEnvoi() {
+    const u = this.mailPour();
+    if (!u) return;
+    const deja = this.historiqueMails().find((m) => m.delivered);
+    const rappel = deja
+      ? `<br><br>Vous lui avez déjà écrit le ${new Date(deja.createdAt).toLocaleDateString('fr-FR')} : « ${this.echapper(deja.subject)} ».`
+      : '';
+    this.confirmationService.confirm({
+      message: `Envoyer « <strong>${this.echapper(this.objet.trim())}</strong> » à <strong>${this.echapper(u.email)}</strong> ?${rappel}`,
+      header: 'Envoyer le courriel',
+      icon: 'pi pi-send',
+      acceptLabel: 'Envoyer',
+      rejectLabel: 'Annuler',
+      accept: () => this.envoyer(u),
+    });
+  }
+
+  private envoyer(u: AdminUser) {
+    this.envoi.set(true);
+    this.adminService.sendUserMail(u.id, { subject: this.objet.trim(), body: this.corps.trim(), promptVersion: this.promptVersion }).subscribe({
+      next: (m) => {
+        this.envoi.set(false);
+        this.historiqueMails.update((l) => [m, ...l]);
+        if (!m.delivered) {
+          this.messageService.add({ severity: 'error', summary: 'Courriel non remis', detail: 'Le serveur SMTP a refusé le message. Le texte est conservé : réessayer plus tard.' });
+          return;
+        }
+        this.users.update((l) => l.map((x) => (x.id === u.id ? { ...x, lastMailAt: m.createdAt, lastMailSubject: m.subject, lastMailReplied: false } : x)));
+        this.note = '';
+        this.objet = '';
+        this.corps = '';
+        this.promptVersion = null;
+        this.avertissements.set([]);
+        this.dernierDestinataire = null;
+        this.mailPour.set(null);
+        this.messageService.add({ severity: 'success', summary: 'Courriel envoyé', detail: u.email });
+      },
+      error: () => this.envoi.set(false),
+    });
+  }
+
+  /** Le message de confirmation est du HTML : objet et adresse n'y entrent qu'échappés. */
+  private echapper(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   totalPages() {

@@ -616,6 +616,25 @@ export class AppComponent implements OnInit {
     });
 
     this.feedbackService.openDialog$.subscribe(() => this.openFeedback());
+    this.ouvrirLeFeedbackDemande();
+  }
+
+  /**
+   * `?avis=1` : le lien des courriels de demande de retour ouvre directement
+   * le formulaire. Connexion d'abord — les crédits promis vont au compte qui
+   * écrit, et un retour anonyme n'en rapporte pas. Le paramètre est retiré
+   * ensuite, pour qu'un rechargement ne rouvre pas le dialogue.
+   */
+  private ouvrirLeFeedbackDemande() {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('avis') !== '1') return;
+    if (!this.isLoggedIn()) {
+      this.keycloak.login({ locale: this.selectedLang, redirectUri: url.toString() });
+      return;
+    }
+    url.searchParams.delete('avis');
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+    this.openFeedback();
   }
 
   /**

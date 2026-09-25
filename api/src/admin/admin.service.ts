@@ -58,6 +58,14 @@ export interface AdminUserRow {
   /** Suggestions de ses projets notées 👍 / 👎 — par lui ou un collaborateur en écriture. */
   likes: number;
   dislikes: number;
+  /**
+   * Dernier courriel écrit depuis l'admin et accepté par le SMTP : pour ne pas
+   * écrire deux fois à la même personne sans le savoir.
+   */
+  lastMailAt: Date | null;
+  lastMailSubject: string | null;
+  /** Ce courriel a reçu une réponse, saisie depuis l'admin. */
+  lastMailReplied: boolean;
 }
 
 /**
@@ -305,6 +313,7 @@ export class AdminService {
     aiCostUsd: ModelCostsService.TRI_COUT,
     likes: `(SELECT COUNT(*) FROM domain_suggestion ds INNER JOIN project p ON p.id = ds.projectId
               WHERE p.userId = u.id AND ds.rating = 'liked')`,
+    lastMailAt: '(SELECT MAX(m.createdAt) FROM admin_mail m WHERE m.userId = u.id AND m.delivered = 1)',
   };
 
   async getUsers(
@@ -380,9 +389,22 @@ export class AdminService {
     return new Map(rows.map((r: any) => [Number(r.userId), { likes: Number(r.likes), dislikes: Number(r.dislikes) }]));
   }
 
+  /** Dernier courriel remis à chaque compte. */
+  private async derniersCourriels(users: User[]): Promise<Map<number, { at: Date; subject: string; replied: boolean }>> {
+    if (!users.length) return new Map();
+    const rows = await this.dataSource.query(
+      `SELECT m.userId AS userId, m.createdAt AS at, m.subject AS subject, m.feedbackId IS NOT NULL AS replied
+         FROM admin_mail m
+         INNER JOIN (SELECT userId, MAX(id) AS id FROM admin_mail
+                      WHERE delivered = 1 AND userId IN (?) GROUP BY userId) d ON d.id = m.id`,
+      [users.map((u) => u.id)],
+    );
+    return new Map(rows.map((r: any) => [Number(r.userId), { at: r.at, subject: String(r.subject), replied: !!Number(r.replied) }]));
+  }
+
   /** Les lignes du tableau des utilisateurs, compteurs compris, en requêtes groupées. */
   private async lignes(users: User[]): Promise<AdminUserRow[]> {
-    const [reportCounts, projCounts, couts, consommes, notes] = await Promise.all([
+    const [reportCounts, projCounts, couts, consommes, notes, courriels] = await Promise.all([
       this.brandReportCounts(users.map((u) => u.keycloakId)),
       this.projectCounts(users.map((u) => u.id)),
       // Le coût vit dans une table récente, jointe à deux autres : son échec ne
@@ -393,6 +415,11 @@ export class AdminService {
       }),
       this.creditsConsommes(users),
       this.notations(users),
+      // Table récente, comme les coûts : son absence ne vide pas la liste.
+      this.derniersCourriels(users).catch((e) => {
+        this.logger.error(`Derniers courriels non lus : ${e}`, undefined, AdminService.name);
+        return new Map();
+      }),
     ]);
 
     // `User`, pas `any` : typée `any`, cette ligne a laissé passer le 22/09/2026
@@ -423,6 +450,9 @@ export class AdminService {
         creditsConsumed: consommes.get(u.id) ?? 0,
         likes: notes.get(u.id)?.likes ?? 0,
         dislikes: notes.get(u.id)?.dislikes ?? 0,
+        lastMailAt: courriels.get(u.id)?.at ?? null,
+        lastMailSubject: courriels.get(u.id)?.subject ?? null,
+        lastMailReplied: courriels.get(u.id)?.replied ?? false,
       };
     });
   }
