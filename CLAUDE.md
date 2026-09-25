@@ -637,25 +637,26 @@ envoi ; **rien ne part automatiquement**, et c'est voulu.
   deux faits concrets du compte et des questions adaptées à l'endroit où il s'est
   arrêté. HTML nu, sans logo ni pied de page, avec une version texte. Un envoi
   groupé demanderait, lui, un consentement et un lien de désinscription.
-- **On demande de l'aide** : message court (50 à 100 mots) qui rappelle ce qu'est
-  Namorama — la personne y a passé quelques minutes. **Jamais le nom du projet** : il
-  est généré par `suggest_name`, l'utilisateur ne l'a pas choisi ; il n'est d'ailleurs
-  pas transmis au modèle.
-- **Des signaux, pas des chiffres bruts** (`signaux()`) : le code traduit l'activité
-  en constats interprétés — aucun projet, description sans recherche, **projets à
-  la description identique** (n'a pas su retrouver le sien ?), **reparti sous 10
-  crédits** (bloqué ?), favoris sans assez de crédits pour un rapport, noms proposés
-  sans favori, rapport acheté, compte engagé (≥ 100 crédits consommés), venu un seul
-  jour. Le modèle choisit le plus révélateur et bâtit sa question dessus, en
-  hypothèse. Le solde lu est celui **en base** : le renouvellement étant paresseux,
-  c'est celui avec lequel la personne est repartie.
+- **Un gabarit fixe, une phrase personnalisée.** Le message est le texte de Nicolas,
+  traduit (`GABARITS`, sept langues) : présentation en une ligne, demande explicite
+  — ce que la personne a aimé, ce qui l'a bloquée, ce qui mérite d'être amélioré —,
+  les deux façons de répondre et les 500 crédits. Le modèle n'écrit qu'**une phrase**
+  de 30 mots au plus, « J'ai vu que vous… », qui rappelle le sujet de sa recherche
+  et au plus un nom (rapport acheté, sinon favori). Des faits, aucune hypothèse.
+  **Jamais le nom du projet** : il est généré par `suggest_name`, l'utilisateur ne
+  l'a pas choisi ; il n'est d'ailleurs pas transmis au modèle.
+- **Signaux** (`signaux()`) : le code traduit l'activité en constats — aucun projet,
+  projets à la description identique, reparti sous 10 crédits, favoris sans crédits
+  pour un rapport, noms sans favori, rapport acheté, compte engagé, venu un seul
+  jour. Ils servent au modèle à choisir ce qu'il rappelle (un inscrit sans projet
+  n'a pas « fait des recherches ») ; le solde lu est celui **en base**, celui avec
+  lequel la personne est repartie, le renouvellement étant paresseux.
 - **Langue** : celle du compte Keycloak, absente pour la plupart (64 sur 79). Le
   modèle la déduit alors en croisant descriptions, prénom et extension de l'adresse
   — une description en anglais ne suffit pas, beaucoup de francophones décrivent
   ainsi un produit international — et la renvoie : objet et signature la suivent.
 - **Objet fixe**, traduit : « Une question rapide sur Namorama » (`OBJET`) — ce
-  qu'écrirait une personne. Le modèle n'écrit que le corps, sans le vocabulaire des
-  campagnes (« offert », « gratuit »…).
+  qu'écrirait une personne.
 - **Expéditeur : « Namorama » <`SMTP_FROM`>**, réponses à la même adresse. Un nom de
   personne sur une adresse générique ressemble à une usurpation : c'est ce qu'a
   montré un test Gmail le 25/09/2026 (SPF, DKIM et DMARC pourtant à « pass »). La
@@ -663,8 +664,8 @@ envoi ; **rien ne part automatiquement**, et c'est voulu.
   Créateur de Namorama », titre traduit.
 - **Liens** : `[texte](https://…)` devient un lien porté par le texte (« ce court
   formulaire », « Namorama ») ; la version texte l'écrit « texte (url) ».
-- **La promesse est celle du site, mot pour mot** : « jusqu'à 500 crédits », ajoutés
-  après lecture. Deux voies : répondre au courriel, ou `/app?avis=1`, qui ouvre le
+- **La promesse** : « je serai ravi de vous offrir 500 crédits gratuits » — choix du
+  25/09/2026, plus engageant que le « jusqu'à 500 » du site. Deux voies : répondre au courriel, ou `/app?avis=1`, qui ouvre le
   formulaire après connexion — les crédits vont au compte qui écrit.
 - Une réponse reçue par courriel se **recopie depuis l'historique** du dialogue : elle
   devient un feedback ordinaire, et les crédits se valident dans l'onglet Feedbacks,
@@ -674,12 +675,12 @@ envoi ; **rien ne part automatiquement**, et c'est voulu.
   et de ne solliciter que les clients satisfaits : la phrase vaut « quelle que soit
   votre expérience », et figure dans chaque message.
 - **`CONSIGNES_VERSION`** (`admin-mail.service.ts`) est gardée sur chaque envoi : à
-  changer à chaque retouche du prompt. L'historique signale les messages écrits avec
+  changer à chaque retouche du prompt ou du gabarit. L'historique signale les messages écrits avec
   d'anciennes consignes — ceux à qui il peut valoir la peine de réécrire.
 - `verifierBrouillon` contrôle mécaniquement le brouillon (lien du formulaire, mention
   des 500 crédits, lien d'avis, **aucun lien inventé**) ; les alertes s'affichent au-dessus
   du texte, qui reste modifiable.
-- Un brouillon coûte ~1 000 tokens en entrée et ~250 en sortie (`admin_mail_draft`,
+- Un brouillon coûte ~1 000 tokens en entrée et ~40 en sortie (`admin_mail_draft`,
   imputé à l'administrateur). Le dialogue ne rédige d'office que pour un compte jamais
   contacté ; sinon il attend le bouton.
 

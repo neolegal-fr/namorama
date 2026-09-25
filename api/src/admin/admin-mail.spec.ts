@@ -1,4 +1,4 @@
-import { construireContexte, consignes, langueDe, prenomLisible, lireBrouillon, mettreEnPage, signature, verifierBrouillon, versionTexte } from './admin-mail.service';
+import { composer, construireContexte, consignes, langueDe, prenomLisible, lireBrouillon, mettreEnPage, signature, verifierBrouillon, versionTexte } from './admin-mail.service';
 
 const qui = { prenom: 'Nicolas', nomComplet: 'Nicolas Riousset' };
 const liens = { site: 'https://namorama.com', formulaire: 'https://namorama.com/app?avis=1', avis: 'https://fr.trustpilot.com/review/namorama.com' };
@@ -38,19 +38,19 @@ describe('mettreEnPage', () => {
 });
 
 describe('lireBrouillon', () => {
-  it('lit le corps et la langue employée', () => {
-    expect(lireBrouillon('{"langue":"EN","corps":" Hello "}')).toEqual({ langue: 'en', corps: 'Hello' });
+  it('lit la phrase de contexte et la langue employée', () => {
+    expect(lireBrouillon('{"langue":"EN","contexte":" I saw that\\nyou searched "}')).toEqual({ langue: 'en', contexte: 'I saw that you searched' });
   });
 
   it("retombe sur le français si la langue rendue n'en est pas une qu'on signe", () => {
-    expect(lireBrouillon('{"langue":"ja","corps":"x"}')?.langue).toBe('fr');
-    expect(lireBrouillon('{"corps":"x"}')?.langue).toBe('fr');
+    expect(lireBrouillon('{"langue":"ja","contexte":"x"}')?.langue).toBe('fr');
+    expect(lireBrouillon('{"contexte":"x"}')?.langue).toBe('fr');
   });
 
-  it('refuse un brouillon vide ou illisible plutôt que de pré-remplir un champ vide', () => {
-    expect(lireBrouillon('{"objet":"x"}')).toBeNull();
-    expect(lireBrouillon('{"corps":"  "}')).toBeNull();
-    expect(lireBrouillon('{"corps":')).toBeNull();
+  it('refuse une réponse sans phrase : le gabarit nu partirait à l’identique à tout le monde', () => {
+    expect(lireBrouillon('{"corps":"x"}')).toBeNull();
+    expect(lireBrouillon('{"contexte":"  "}')).toBeNull();
+    expect(lireBrouillon('{"contexte":')).toBeNull();
     expect(lireBrouillon(null)).toBeNull();
   });
 });
@@ -83,22 +83,37 @@ describe('verifierBrouillon', () => {
 });
 
 describe('consignes', () => {
-  it("ne parlent de la page d'avis que si elle est configurée, et la séparent des crédits", () => {
-    expect(consignes('fr', qui, liens)).toContain(liens.avis);
-    expect(consignes('fr', qui, liens)).toMatch(/Ne la relie pas aux crédits/);
-    expect(consignes('fr', qui, { ...liens, avis: null })).not.toMatch(/publiquement/);
+  it("ne demandent qu'une phrase de faits, sans nom de projet", () => {
+    expect(consignes('fr')).toMatch(/UNE phrase/);
+    expect(consignes('fr')).toMatch(/JAMAIS le nom du projet/);
+    expect(consignes('en')).toMatch(/LANGUE : anglais/);
+    expect(consignes(null)).toMatch(/Une description en anglais NE SUFFIT PAS/);
+  });
+});
+
+describe('composer', () => {
+  const ctx = "J'ai vu que vous aviez cherché un nom pour une boulangerie bio à Nantes.";
+
+  it('assemble le gabarit, la phrase du modèle et la signature', () => {
+    const m = composer('fr', 'Léa', ctx, qui, liens);
+    expect(m.startsWith('Bonjour Léa,\n\nJe suis Nicolas, le créateur de [namorama.com](https://namorama.com)')).toBe(true);
+    expect(m).toContain(`${ctx} Pourriez-vous me dire ce que vous avez aimé`);
+    expect(m).toContain('500 crédits gratuits');
+    expect(m).toContain(`[ce court formulaire](${liens.formulaire})`);
+    expect(m.endsWith("Merci d'avance,\n\nNicolas Riousset\nCréateur de Namorama")).toBe(true);
+    expect(verifierBrouillon(m, liens)).toEqual([]);
   });
 
-  it("n'exposent aucun nom de projet : il est généré, l'utilisateur ne l'a pas choisi", () => {
-    expect(consignes('fr', qui, liens)).toMatch(/Les projets n'ont pas de nom/);
-    expect(consignes('fr', qui, liens)).toMatch(/n’écris que le corps/);
-    expect(consignes('fr', qui, liens)).toMatch(/NE SIGNE PAS/);
+  it("n'ajoute la phrase Trustpilot que si une page d'avis est configurée", () => {
+    expect(composer('fr', null, ctx, qui, liens)).toContain('Trustpilot');
+    expect(composer('fr', null, ctx, qui, { ...liens, avis: null })).not.toContain('Trustpilot');
+    expect(composer('fr', null, ctx, qui, liens).startsWith('Bonjour,\n\n')).toBe(true);
   });
 
-  it('reprennent la promesse du site telle quelle : « jusqu’à » 500 crédits', () => {
-    expect(consignes('en', qui, liens)).toMatch(/jusqu’à 500 crédits/);
-    expect(consignes('en', qui, liens)).toMatch(/En anglais/);
-    expect(consignes(null, qui, liens)).toMatch(/Une description en anglais NE SUFFIT PAS/);
+  it('existe dans chaque langue qu’on sait signer, liens et promesse compris', () => {
+    for (const l of ['fr', 'en', 'de', 'es', 'pt', 'it', 'nl']) {
+      expect(verifierBrouillon(composer(l, 'Kim', 'X.', qui, liens), liens)).toEqual([]);
+    }
   });
 });
 
@@ -116,11 +131,12 @@ describe('signature', () => {
 });
 
 describe('prenomLisible', () => {
-  it('remet en casse un prénom saisi en capitales, et seulement celui-là', () => {
+  it('remet en casse un prénom saisi tout en capitales ou tout en minuscules, et seulement celui-là', () => {
     expect(prenomLisible('ADEM')).toBe('Adem');
     expect(prenomLisible('JEAN-LUC')).toBe('Jean-Luc');
     expect(prenomLisible('ÉLODIE')).toBe('Élodie');
     expect(prenomLisible('McKay')).toBe('McKay');
+    expect(prenomLisible('stéphane')).toBe('Stéphane');
     expect(prenomLisible('  ')).toBeNull();
     expect(prenomLisible('Support')).toBeNull();
   });

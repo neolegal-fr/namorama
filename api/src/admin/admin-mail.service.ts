@@ -18,7 +18,7 @@ import { FREE_MONTHLY_QUOTA } from '../users/users.service';
  * prompt : chaque envoi la garde, et c'est ce qui dit, après coup, à qui
  * l'ancienne version a écrit.
  */
-export const CONSIGNES_VERSION = '2026-09-25.4';
+export const CONSIGNES_VERSION = '2026-09-25.5';
 
 /** Ce que le modèle sait du destinataire — et rien de plus. */
 export interface ContexteDestinataire {
@@ -189,14 +189,16 @@ export function mettreEnPage(texte: string): string {
 }
 
 /**
- * Lit la réponse du modèle. Un brouillon sans corps n'est pas un brouillon :
- * on le refuse plutôt que de pré-remplir un champ vide.
+ * Lit la réponse du modèle : la langue employée et la phrase de contexte.
+ * Sans phrase, rien à personnaliser : on le refuse plutôt que d'envoyer le
+ * gabarit nu, qui partirait à l'identique à tout le monde.
  */
-export function lireBrouillon(contenu: string | null | undefined): { langue: string; corps: string } | null {
+export function lireBrouillon(contenu: string | null | undefined): { langue: string; contexte: string } | null {
   try {
-    const brut = JSON.parse(contenu ?? '') as { langue?: unknown; corps?: unknown };
-    const corps = typeof brut.corps === 'string' ? brut.corps.trim() : '';
-    return corps ? { langue: langueRendue(brut.langue), corps } : null;
+    const brut = JSON.parse(contenu ?? '') as { langue?: unknown; contexte?: unknown };
+    // Une phrase : un saut de ligne n'y a pas sa place.
+    const contexte = typeof brut.contexte === 'string' ? brut.contexte.replace(/\s+/g, ' ').trim() : '';
+    return contexte ? { langue: langueRendue(brut.langue), contexte } : null;
   } catch {
     return null;
   }
@@ -218,78 +220,158 @@ export function verifierBrouillon(body: string, liens: Liens): string[] {
   return alertes;
 }
 
+interface Gabarit {
+  bonjour: (prenom: string | null) => string;
+  presentation: (prenom: string, site: string) => string;
+  question: string;
+  reponse: (formulaire: string) => string;
+  avis: (url: string) => string;
+  merci: string;
+}
+
 /**
- * Les consignes. Le but est fixe — obtenir un retour sur un point à
- * améliorer — et la personnalisation n'est pas un ornement : un message qui
- * pourrait partir tel quel à quelqu'un d'autre est un publipostage.
+ * Le message, écrit par Nicolas et traduit. Le modèle n'en rédige qu'UNE
+ * phrase, celle qui rappelle à la personne ce qu'elle a fait : le reste dit
+ * exactement ce qu'on demande, et ne doit pas varier d'un tirage à l'autre.
  */
-export function consignes(langue: string | null, qui: Signataire, liens: Liens): string {
+export const GABARITS: Record<string, Gabarit> = {
+  fr: {
+    bonjour: (p) => (p ? `Bonjour ${p},` : 'Bonjour,'),
+    presentation: (p, site) =>
+      `Je suis ${p}, le créateur de [namorama.com](${site}), et j'apprécierais beaucoup votre aide pour améliorer l'outil.`,
+    question: "Pourriez-vous me dire ce que vous avez aimé, ce qui vous a bloqué, ou n'importe quel point qui mériterait d'être amélioré dans l'application ?",
+    reponse: (f) =>
+      `Vous pouvez simplement répondre à ce courriel, ou passer par [ce court formulaire](${f}). Vos commentaires m'aideront ` +
+      "à améliorer l'outil, et comme mentionné sur le site, je serai ravi de vous offrir 500 crédits gratuits pour que " +
+      'vous puissiez prolonger votre expérience.',
+    avis: (u) => `Si vous le souhaitez, vous pouvez aussi partager votre expérience, quelle qu'elle soit, dans [un avis sur Trustpilot](${u}).`,
+    merci: "Merci d'avance,",
+  },
+  en: {
+    bonjour: (p) => (p ? `Hello ${p},` : 'Hello,'),
+    presentation: (p, site) =>
+      `I'm ${p}, the creator of [namorama.com](${site}), and I would really appreciate your help to improve the tool.`,
+    question: 'Could you tell me what you liked, what got in your way, or anything else that should be improved in the app?',
+    reponse: (f) =>
+      `You can simply reply to this email, or use [this short form](${f}). Your comments will help me improve the tool, ` +
+      "and as mentioned on the site, I'll be happy to give you 500 free credits so you can keep exploring.",
+    avis: (u) => `If you'd like, you can also share your experience, whatever it was, in [a Trustpilot review](${u}).`,
+    merci: 'Thanks in advance,',
+  },
+  de: {
+    bonjour: (p) => (p ? `Hallo ${p},` : 'Guten Tag,'),
+    presentation: (p, site) =>
+      `ich bin ${p}, der Gründer von [namorama.com](${site}), und ich würde mich sehr über Ihre Hilfe freuen, um das Tool zu verbessern.`,
+    question: 'Könnten Sie mir sagen, was Ihnen gefallen hat, was Sie gebremst hat oder was an der Anwendung verbessert werden sollte?',
+    reponse: (f) =>
+      `Sie können einfach auf diese E-Mail antworten oder [dieses kurze Formular](${f}) nutzen. Ihre Rückmeldung hilft mir, ` +
+      'das Tool zu verbessern, und wie auf der Website angekündigt, schenke ich Ihnen gerne 500 kostenlose Credits, damit Sie weiter ausprobieren können.',
+    avis: (u) => `Wenn Sie möchten, können Sie Ihre Erfahrung, wie auch immer sie war, auch in [einer Bewertung auf Trustpilot](${u}) teilen.`,
+    merci: 'Vielen Dank im Voraus,',
+  },
+  es: {
+    bonjour: (p) => (p ? `Hola, ${p}:` : 'Hola:'),
+    presentation: (p, site) =>
+      `Soy ${p}, el creador de [namorama.com](${site}), y le agradecería mucho su ayuda para mejorar la herramienta.`,
+    question: '¿Podría decirme qué le gustó, qué le frenó o cualquier aspecto de la aplicación que debería mejorarse?',
+    reponse: (f) =>
+      `Puede simplemente responder a este correo o usar [este breve formulario](${f}). Sus comentarios me ayudarán a mejorar ` +
+      'la herramienta y, como se indica en el sitio, estaré encantado de regalarle 500 créditos gratuitos para que pueda seguir explorando.',
+    avis: (u) => `Si lo desea, también puede compartir su experiencia, sea cual sea, en [una reseña en Trustpilot](${u}).`,
+    merci: 'Gracias de antemano,',
+  },
+  pt: {
+    bonjour: (p) => (p ? `Olá ${p},` : 'Olá,'),
+    presentation: (p, site) =>
+      `Sou o ${p}, criador do [namorama.com](${site}), e agradeceria muito a sua ajuda para melhorar a ferramenta.`,
+    question: 'Poderia dizer-me o que gostou, o que o impediu de avançar ou qualquer ponto da aplicação que deveria ser melhorado?',
+    reponse: (f) =>
+      `Pode simplesmente responder a este e-mail ou usar [este breve formulário](${f}). Os seus comentários vão ajudar-me a ` +
+      'melhorar a ferramenta e, como indicado no site, terei todo o gosto em oferecer-lhe 500 créditos gratuitos para continuar a explorar.',
+    avis: (u) => `Se quiser, também pode partilhar a sua experiência, seja ela qual for, numa [avaliação no Trustpilot](${u}).`,
+    merci: 'Obrigado desde já,',
+  },
+  it: {
+    bonjour: (p) => (p ? `Buongiorno ${p},` : 'Buongiorno,'),
+    presentation: (p, site) =>
+      `sono ${p}, il creatore di [namorama.com](${site}), e apprezzerei molto il suo aiuto per migliorare lo strumento.`,
+    question: "Potrebbe dirmi cosa le è piaciuto, cosa non ha funzionato per lei o qualsiasi aspetto dell'applicazione che andrebbe migliorato?",
+    reponse: (f) =>
+      `Può semplicemente rispondere a questa email o usare [questo breve modulo](${f}). I suoi commenti mi aiuteranno a ` +
+      'migliorare lo strumento e, come indicato sul sito, sarò felice di offrirle 500 crediti gratuiti per continuare a esplorare.',
+    avis: (u) => `Se lo desidera, può anche condividere la sua esperienza, qualunque sia stata, in [una recensione su Trustpilot](${u}).`,
+    merci: 'Grazie in anticipo,',
+  },
+  nl: {
+    bonjour: (p) => (p ? `Hallo ${p},` : 'Hallo,'),
+    presentation: (p, site) =>
+      `Ik ben ${p}, de maker van [namorama.com](${site}), en ik zou uw hulp om de tool te verbeteren erg waarderen.`,
+    question: 'Zou u mij willen vertellen wat u goed vond, waar u op vastliep, of wat er in de applicatie beter kan?',
+    reponse: (f) =>
+      `U kunt gewoon op deze e-mail antwoorden of [dit korte formulier](${f}) gebruiken. Uw opmerkingen helpen mij de tool ` +
+      'te verbeteren, en zoals op de site vermeld, geef ik u graag 500 gratis credits om verder te ontdekken.',
+    avis: (u) => `Als u wilt, kunt u uw ervaring, hoe die ook was, ook delen in [een review op Trustpilot](${u}).`,
+    merci: 'Alvast bedankt,',
+  },
+};
+
+/** Le message complet : le gabarit de la langue, la phrase du modèle, la signature. */
+export function composer(
+  langue: string,
+  prenom: string | null,
+  contexte: string,
+  qui: Signataire,
+  liens: Liens,
+): string {
+  const g = GABARITS[langue] ?? GABARITS.fr;
   return [
-    `Tu écris, au nom de ${qui.nomComplet}, créateur de Namorama, un courriel personnel à UN utilisateur.`,
-    "Namorama aide à trouver un nom de marque et un domaine disponibles à partir de la description d'un produit ; " +
+    g.bonjour(prenom),
+    g.presentation(qui.prenom, liens.site),
+    `${contexte} ${g.question}`,
+    g.reponse(liens.formulaire),
+    ...(liens.avis ? [g.avis(liens.avis)] : []),
+    `${g.merci}\n\n${signature(qui, langue)}`,
+  ].join('\n\n');
+}
+
+/**
+ * Les consignes : une seule phrase, celle qui rappelle à la personne ce
+ * qu'elle a fait. C'est ce qui personnalise le message — sans elle, il
+ * pourrait partir tel quel à n'importe qui.
+ */
+export function consignes(langue: string | null): string {
+  return [
+    "Tu écris UNE phrase qui sera insérée dans un courriel du créateur de Namorama à l'un de ses utilisateurs, " +
+      'juste avant la question « ce que vous avez aimé, ce qui vous a bloqué, ce qui mériterait d’être amélioré ». ' +
+      "Namorama aide à trouver un nom de marque et un domaine disponibles à partir de la description d'un produit ; " +
       'un rapport de marque payant vérifie domaines, réseaux sociaux et dépôts INPI.',
     '',
-    `BUT : demander de l'AIDE. ${qui.prenom} a besoin de son regard pour améliorer Namorama, et le lui dit simplement. ` +
-      "C'est l'interlocuteur qui rend service : valorise son avis, sans flatterie. Pas vendre, pas relancer l'usage.",
+    'LA PHRASE rappelle à la personne ce qu’elle a fait, pour qu’elle s’en souvienne — elle y a passé peu de temps :',
+    '- Elle commence par l’équivalent de « J’ai vu que vous… ».',
+    "- Le sujet de sa recherche, dit en quelques mots d'après la description de son projet (« une boulangerie bio à " +
+      "Nantes »). JAMAIS le nom du projet : il est généré, elle ne l'a pas choisi.",
+    "- Au plus un détail de plus, le plus parlant : un nom pour lequel elle a acheté un rapport, sinon un nom mis en " +
+      'favori.',
+    "- Sans projet : elle s'est inscrite sans aller jusqu'à décrire son produit.",
+    '- Des faits uniquement : aucune hypothèse sur ce qui l’a gênée, aucun chiffre, aucun crédit, aucune question.',
+    '- 30 mots au plus, vouvoiement, sans lien ni mise en forme.',
     '',
-    'SALUTATION, dans la langue du message : « Bonjour <prénom>, » si le prénom est connu, « Bonjour, » sinon ' +
-      '(« Hello <prénom>, », « Hallo <prénom>, »…).',
-    '',
-    'OUVERTURE : une phrase pour se présenter et rappeler ce qu’est Namorama — la personne y a passé peu de temps ' +
-      `et a pu l'oublier. Cite-le comme lien : [Namorama](${liens.site}). ` +
-      "Ne commence JAMAIS par « J'ai vu que », « J'ai remarqué », « I noticed » ou équivalent : on ne doit pas se sentir observé.",
-    '',
-    'PERSONNALISATION — le message ne doit pouvoir être envoyé à personne d’autre :',
-    "- `signaux` résume son parcours et ce qu'il suggère. Choisis LE signal le plus révélateur de ce qui a pu le " +
-      "gêner, et bâtis ta question dessus : quelqu'un bloqué faute de crédits, quelqu'un qui a recréé le même projet " +
-      "ou quelqu'un qui a acheté un rapport n'ont pas le même retour à faire. Évoque-le avec tact, en hypothèse " +
-      "(« peut-être… »), jamais comme une observation chiffrée.",
-    "- Cite au plus UN élément concret, naturellement : un nom testé dans un rapport, sinon un nom mis en favori, " +
-      "sinon le sujet de son projet dit en quelques mots. Les projets n'ont pas de nom : n'en invente pas.",
-    "- Formule la demande comme un service qu'il rendrait (« pourriez-vous m'aider », « j'aurais besoin de votre regard »).",
-    '- UNE question ouverte, précise, qui découle de ce signal.',
-    "- S'il a déjà donné un retour, remercie-le de celui-ci et demande ce qui manque encore.",
-    "- Si on lui a déjà écrit, ne reprends pas le même angle.",
-    "- N'invente aucun fait.",
-    '',
-    'CE QUE LE MESSAGE DOIT DIRE :',
-    `- Il peut répondre directement à ce courriel, ou passer par [ce court formulaire](${liens.formulaire}).`,
-    '- Comme annoncé sur le site, un retour lui vaut jusqu’à 500 crédits, ajoutés après lecture. ' +
-      'Une fois, en passant : c’est un remerciement, pas l’argument.',
-    ...(liens.avis
-      ? [
-          `- OBLIGATOIRE, juste avant la formule de politesse, une phrase courte qui laisse le choix : s'il le souhaite, ` +
-            `il peut aussi partager son expérience, quelle qu'elle soit, dans [un avis sur Trustpilot](${liens.avis}). ` +
-            'Ne la relie pas aux crédits.',
-        ]
-      : []),
-    '',
-    'FORME :',
-    (langue
-      ? `- En ${LANGUES[langue]}.`
-      : '- LANGUE : à déduire. Une description en anglais NE SUFFIT PAS : beaucoup de francophones décrivent en ' +
+    langue
+      ? `LANGUE : ${LANGUES[langue]}.`
+      : 'LANGUE : à déduire. Une description en anglais NE SUFFIT PAS : beaucoup de francophones décrivent en ' +
         'anglais un produit destiné à l’international. Croise la langue des descriptions, le prénom et ' +
         '`extensionEmail` ; en cas de doute, le français. Uniquement l’une de : ' +
-        `${Object.keys(LANGUES).join(', ')}.`),
-    '- Vouvoiement (ou forme de politesse équivalente). 50 à 100 mots, signature non comprise. Chaque phrase doit servir.',
-    '- Le ton d’une personne qui écrit à une autre : simple, direct, chaleureux. Aucune formule publicitaire, aucun emoji, ' +
-      "pas de points d'exclamation en série, pas de « cher utilisateur ».",
-    '- Termine par une formule de politesse brève. NE SIGNE PAS : la signature est ajoutée ensuite.',
-    '- Liens : UNIQUEMENT sous la forme [texte](url), avec les URL ci-dessus recopiées à l’identique. Aucune autre URL.',
-    "- Ne cite jamais de coût, de modèle d'IA ou d'information technique interne.",
-    '- Évite le vocabulaire des campagnes, que les filtres anti-spam repèrent : « offert », « gratuit », « cadeau », ' +
-      '« profitez », « exclusif », « cliquez ici », « urgent ».',
-    '- Texte brut : paragraphes séparés par une ligne vide. Aucune autre mise en forme que les liens [texte](url).',
+        `${Object.keys(LANGUES).join(', ')}.`,
     '',
-    'L’objet est fixé à part : n’écris que le corps. Réponds uniquement en JSON : ' +
-      '{"langue": "<code à deux lettres de la langue employée>", "corps": "..."}.',
+    'Réponds uniquement en JSON : {"langue": "<code à deux lettres>", "contexte": "<la phrase>"}.',
   ].join('\n');
 }
 
 /**
- * « ADEM » → « Adem », « JEAN-LUC » → « Jean-Luc ». Seulement quand le prénom
- * est tout en capitales : une casse choisie (« McKay », « de Villiers ») est
- * laissée telle quelle. « Bonjour ADEM » sonne comme un fichier client.
+ * « ADEM » → « Adem », « stéphane » → « Stéphane », « JEAN-LUC » → « Jean-Luc ».
+ * Seulement quand le prénom est tout en capitales ou tout en minuscules : une
+ * casse choisie (« McKay ») est laissée telle quelle. « Bonjour ADEM » sonne
+ * comme un fichier client, « Bonjour stéphane » comme un publipostage.
  */
 const PRENOMS_GENERIQUES = /^(support|contact|admin|administrat\w*|info|test\w*|hello|bonjour|team|equipe|équipe|user|utilisateur|null|undefined)$/i;
 
@@ -297,7 +379,8 @@ export function prenomLisible(prenom: string | null | undefined): string | null 
   const p = prenom?.trim();
   // « Bonjour Support » : un compte de service n'a pas de prénom à saluer.
   if (!p || PRENOMS_GENERIQUES.test(p)) return null;
-  if (p !== p.toUpperCase() || p === p.toLowerCase()) return p;
+  const casse = p === p.toUpperCase() || p === p.toLowerCase();
+  if (!casse) return p;
   return p.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_m, sep: string, l: string) => sep + l.toUpperCase());
 }
 
@@ -509,21 +592,21 @@ export class AdminMailService {
     const appel = this.openai.chat.completions.create({
       model: this.model,
       messages: [
-        { role: 'system', content: consignes(ctx.langue, qui, liens) },
+        { role: 'system', content: consignes(ctx.langue) },
         { role: 'user', content: demande },
       ],
       response_format: { type: 'json_object' },
-      max_completion_tokens: 900,
+      max_completion_tokens: 200,
       reasoning_effort: 'none',
     });
     const res = await this.usage.mesurer('admin_mail_draft', appel);
     const lu = lireBrouillon(res.choices[0]?.message?.content);
     if (!lu) throw new ServiceUnavailableException('Le modèle a rendu un brouillon inutilisable');
     // Langue du compte si on la connaît, sinon celle que le modèle a employée :
-    // objet et signature doivent suivre le corps.
+    // le gabarit, l'objet et la signature la suivent.
     const langue = ctx.langue ?? lu.langue;
-    // La signature suit le texte dans le formulaire : elle se relit et se retouche comme le reste.
-    const body = `${lu.corps}\n\n${signature(qui, langue)}`;
+    // Le message entier revient dans le formulaire : il se relit et se retouche comme un texte écrit à la main.
+    const body = composer(langue, ctx.prenom, lu.contexte, qui, liens);
     return { subject: OBJET[langue] ?? OBJET.fr, body, promptVersion: CONSIGNES_VERSION, avertissements: verifierBrouillon(body, liens) };
   }
 
