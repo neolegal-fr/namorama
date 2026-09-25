@@ -1,6 +1,7 @@
-import { consignes, langueDe, lireBrouillon, mettreEnPage, verifierBrouillon } from './admin-mail.service';
+import { consignes, langueDe, prenomLisible, lireBrouillon, mettreEnPage, signature, verifierBrouillon, versionTexte } from './admin-mail.service';
 
-const liens = { formulaire: 'https://namorama.com/app?avis=1', avis: 'https://fr.trustpilot.com/review/namorama.com' };
+const qui = { prenom: 'Nicolas', nomComplet: 'Nicolas Riousset' };
+const liens = { site: 'https://namorama.com', formulaire: 'https://namorama.com/app?avis=1', avis: 'https://fr.trustpilot.com/review/namorama.com' };
 
 describe('mettreEnPage', () => {
   it('échappe le HTML : le corps est du texte, pas du balisage', () => {
@@ -19,6 +20,16 @@ describe('mettreEnPage', () => {
   it('rend les liens https cliquables, sans avaler la ponctuation finale', () => {
     const html = mettreEnPage('Le formulaire : https://namorama.com/app?avis=1.');
     expect(html).toContain('<a href="https://namorama.com/app?avis=1">https://namorama.com/app?avis=1</a>.');
+  });
+
+  it('porte un lien nommé par ses mots, pas par son URL', () => {
+    const html = mettreEnPage('Passez par [ce court formulaire](https://namorama.com/app?avis=1), merci.');
+    expect(html).toContain('<a href="https://namorama.com/app?avis=1">ce court formulaire</a>, merci.');
+  });
+
+  it("ne laisse pas un lien nommé sortir de son attribut href", () => {
+    const html = mettreEnPage('[x](https://a.com/"onmouseover="alert(1))');
+    expect(html).not.toContain('"onmouseover');
   });
 
   it("n'a ni logo ni pied de page : un courriel personnel, pas une campagne", () => {
@@ -55,6 +66,11 @@ describe('verifierBrouillon', () => {
     expect(alertes).toHaveLength(3);
   });
 
+  it('reconnaît les liens nommés et le lien du site', () => {
+    const nomme = `[Namorama](${liens.site}) — [ce formulaire](${liens.formulaire}), 500 crédits, [avis](${liens.avis}).`;
+    expect(verifierBrouillon(nomme, liens)).toEqual([]);
+  });
+
   it("signale un lien que le modèle n'a pas reçu : il partirait sous le nom de l'administrateur", () => {
     const alertes = verifierBrouillon(`${complet} Voir https://exemple.com/offre.`, liens);
     expect(alertes).toEqual(['Lien(s) non fourni(s) au modèle : https://exemple.com/offre']);
@@ -67,14 +83,42 @@ describe('verifierBrouillon', () => {
 
 describe('consignes', () => {
   it("ne parlent de la page d'avis que si elle est configurée, et la séparent des crédits", () => {
-    expect(consignes('fr', 'Nicolas', liens)).toContain(liens.avis);
-    expect(consignes('fr', 'Nicolas', liens)).toMatch(/sans rapport avec les crédits/);
-    expect(consignes('fr', 'Nicolas', { ...liens, avis: null })).not.toMatch(/publiquement/);
+    expect(consignes('fr', qui, liens)).toContain(liens.avis);
+    expect(consignes('fr', qui, liens)).toMatch(/Ne la relie pas aux crédits/);
+    expect(consignes('fr', qui, { ...liens, avis: null })).not.toMatch(/publiquement/);
+  });
+
+  it("n'exposent aucun nom de projet : il est généré, l'utilisateur ne l'a pas choisi", () => {
+    expect(consignes('fr', qui, liens)).toMatch(/sans le moindre nom de projet/);
+    expect(consignes('fr', qui, liens)).toMatch(/NE SIGNE PAS/);
   });
 
   it('reprennent la promesse du site telle quelle : « jusqu’à » 500 crédits', () => {
-    expect(consignes('en', 'Nicolas', liens)).toMatch(/jusqu’à 500 crédits/);
-    expect(consignes('en', 'Nicolas', liens)).toMatch(/En anglais/);
+    expect(consignes('en', qui, liens)).toMatch(/jusqu’à 500 crédits/);
+    expect(consignes('en', qui, liens)).toMatch(/En anglais/);
+  });
+});
+
+describe('versionTexte', () => {
+  it('garde l’URL lisible là où un lien ne se clique pas', () => {
+    expect(versionTexte('Voir [Namorama](https://namorama.com).')).toBe('Voir Namorama (https://namorama.com).');
+  });
+});
+
+describe('signature', () => {
+  it('nom complet et titre, dans la langue du message', () => {
+    expect(signature(qui, 'fr')).toBe('Nicolas Riousset\nCréateur de Namorama');
+    expect(signature(qui, 'en')).toBe('Nicolas Riousset\nCreator of Namorama');
+  });
+});
+
+describe('prenomLisible', () => {
+  it('remet en casse un prénom saisi en capitales, et seulement celui-là', () => {
+    expect(prenomLisible('ADEM')).toBe('Adem');
+    expect(prenomLisible('JEAN-LUC')).toBe('Jean-Luc');
+    expect(prenomLisible('ÉLODIE')).toBe('Élodie');
+    expect(prenomLisible('McKay')).toBe('McKay');
+    expect(prenomLisible('  ')).toBeNull();
   });
 });
 
