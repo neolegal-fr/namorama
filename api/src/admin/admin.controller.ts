@@ -5,7 +5,7 @@ import { AdminService } from './admin.service';
 import { ModelCostsService } from './model-costs.service';
 import { ModelPricesService } from './model-prices.service';
 import { RetentionService } from './retention.service';
-import { AdminMailService } from './admin-mail.service';
+import { AdminMailService, Signataire } from './admin-mail.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import { UsersService } from '../users/users.service';
 
@@ -166,7 +166,7 @@ export class AdminController {
     @Body() body: CourrielDto,
     @AuthenticatedUser() admin: any,
   ) {
-    return this.adminMail.envoyer(id, { sub: admin.sub, nom: AdminController.signataire(admin) }, {
+    return this.adminMail.envoyer(id, { sub: admin.sub, nomComplet: AdminController.signataire(admin).nomComplet }, {
       subject: body.subject,
       body: body.body,
       promptVersion: body.promptVersion ?? null,
@@ -182,9 +182,12 @@ export class AdminController {
     return this.adminMail.enregistrerReponse(mailId, body.message);
   }
 
-  /** Le prénom de l'administrateur connecté : il signe, et nomme l'expéditeur. */
-  private static signataire(admin: any): string {
-    return String(admin?.given_name || admin?.name || 'Namorama').replace(/[\r\n"<>]/g, '').slice(0, 60);
+  /** L'administrateur connecté : il signe de son nom complet, qui nomme aussi l'expéditeur. */
+  private static signataire(admin: any): Signataire {
+    const propre = (v: unknown) => String(v ?? '').replace(/[\r\n"<>]/g, '').trim().slice(0, 60);
+    const prenom = propre(admin?.given_name) || propre(admin?.name) || 'Namorama';
+    const nomComplet = propre(admin?.name) || [prenom, propre(admin?.family_name)].filter(Boolean).join(' ');
+    return { prenom, nomComplet };
   }
 
   @Delete('users/:id')

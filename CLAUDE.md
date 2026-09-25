@@ -637,9 +637,17 @@ envoi ; **rien ne part automatiquement**, et c'est voulu.
   deux faits concrets du compte et des questions adaptées à l'endroit où il s'est
   arrêté. HTML nu, sans logo ni pied de page, avec une version texte. Un envoi
   groupé demanderait, lui, un consentement et un lien de désinscription.
+- **On demande de l'aide** : le message est court (50 à 100 mots), rappelle ce qu'est
+  Namorama — la personne y a passé quelques minutes — et cite le signal le plus fort
+  de son activité : un nom testé dans un rapport, sinon un favori, sinon le sujet du
+  projet. **Jamais le nom du projet** : il est généré par `suggest_name`, l'utilisateur
+  ne l'a pas choisi ; il n'est d'ailleurs pas transmis au modèle.
 - **Expéditeur** : l'adresse reste `SMTP_FROM` (OVH refuse un expéditeur différent du
-  compte authentifié), le nom affiché est le prénom de l'administrateur, et les
-  réponses vont à `ADMIN_MAIL_REPLY_TO`.
+  compte authentifié), le nom affiché est le nom complet de l'administrateur, et les
+  réponses vont à `ADMIN_MAIL_REPLY_TO`. La **signature est ajoutée par le code**
+  (« Nicolas Riousset / Créateur de Namorama », titre traduit), pas par le modèle.
+- **Liens** : `[texte](https://…)` devient un lien porté par le texte (« ce court
+  formulaire », « Namorama ») ; la version texte l'écrit « texte (url) ».
 - **La promesse est celle du site, mot pour mot** : « jusqu'à 500 crédits », ajoutés
   après lecture. Deux voies : répondre au courriel, ou `/app?avis=1`, qui ouvre le
   formulaire après connexion — les crédits vont au compte qui écrit.

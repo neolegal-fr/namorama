@@ -341,8 +341,8 @@ import { KeycloakService } from 'keycloak-angular';
           <textarea id="nm-corps" pInputTextarea rows="12" [(ngModel)]="corps" maxlength="10000"
                     style="width: 100%; resize: vertical; font-family: inherit"></textarea>
           <span class="text-xs text-500">
-            Part de support&#64;namorama.com sous votre prénom ; les réponses arrivent sur votre adresse.
-            Texte brut : une ligne vide sépare deux paragraphes, les liens https deviennent cliquables.
+            Part de support&#64;namorama.com sous votre nom ; les réponses arrivent sur votre adresse.
+            Texte brut : une ligne vide sépare deux paragraphes ; <code>[texte](https://…)</code> fait un lien sur le texte.
           </span>
         </div>
 
