@@ -637,19 +637,30 @@ envoi ; **rien ne part automatiquement**, et c'est voulu.
   deux faits concrets du compte et des questions adaptées à l'endroit où il s'est
   arrêté. HTML nu, sans logo ni pied de page, avec une version texte. Un envoi
   groupé demanderait, lui, un consentement et un lien de désinscription.
-- **On demande de l'aide** : le message est court (50 à 100 mots), rappelle ce qu'est
-  Namorama — la personne y a passé quelques minutes — et cite le signal le plus fort
-  de son activité : un nom testé dans un rapport, sinon un favori, sinon le sujet du
-  projet. **Jamais le nom du projet** : il est généré par `suggest_name`, l'utilisateur
-  ne l'a pas choisi ; il n'est d'ailleurs pas transmis au modèle.
-- **Objet fixe**, traduit : « Aidez-nous à améliorer Namorama » (`OBJET`). Le modèle
-  n'écrit que le corps, et évite le vocabulaire des campagnes (« offert », « gratuit »…).
-- **Expéditeur** : avec `ADMIN_SMTP_USER` / `ADMIN_SMTP_PASS`, le courriel part de cette
-  boîte — adresse affichée, authentifiée et de réponse identiques, comme écrit une
-  personne. Sinon il part de `SMTP_FROM` (OVH refuse un expéditeur différent du compte
-  authentifié) avec un Reply-To vers `ADMIN_MAIL_REPLY_TO`. Le nom affiché est le nom
-  complet de l'administrateur. La **signature est ajoutée par le code**
-  (« Nicolas Riousset / Créateur de Namorama », titre traduit), pas par le modèle.
+- **On demande de l'aide** : message court (50 à 100 mots) qui rappelle ce qu'est
+  Namorama — la personne y a passé quelques minutes. **Jamais le nom du projet** : il
+  est généré par `suggest_name`, l'utilisateur ne l'a pas choisi ; il n'est d'ailleurs
+  pas transmis au modèle.
+- **Des signaux, pas des chiffres bruts** (`signaux()`) : le code traduit l'activité
+  en constats interprétés — aucun projet, description sans recherche, **projets à
+  la description identique** (n'a pas su retrouver le sien ?), **reparti sous 10
+  crédits** (bloqué ?), favoris sans assez de crédits pour un rapport, noms proposés
+  sans favori, rapport acheté, compte engagé (≥ 100 crédits consommés), venu un seul
+  jour. Le modèle choisit le plus révélateur et bâtit sa question dessus, en
+  hypothèse. Le solde lu est celui **en base** : le renouvellement étant paresseux,
+  c'est celui avec lequel la personne est repartie.
+- **Langue** : celle du compte Keycloak, absente pour la plupart (64 sur 79). Le
+  modèle la déduit alors en croisant descriptions, prénom et extension de l'adresse
+  — une description en anglais ne suffit pas, beaucoup de francophones décrivent
+  ainsi un produit international — et la renvoie : objet et signature la suivent.
+- **Objet fixe**, traduit : « Une question rapide sur Namorama » (`OBJET`) — ce
+  qu'écrirait une personne. Le modèle n'écrit que le corps, sans le vocabulaire des
+  campagnes (« offert », « gratuit »…).
+- **Expéditeur : « Namorama » <`SMTP_FROM`>**, réponses à la même adresse. Un nom de
+  personne sur une adresse générique ressemble à une usurpation : c'est ce qu'a
+  montré un test Gmail le 25/09/2026 (SPF, DKIM et DMARC pourtant à « pass »). La
+  personne, c'est la **signature**, ajoutée par le code : « Nicolas Riousset /
+  Créateur de Namorama », titre traduit.
 - **Liens** : `[texte](https://…)` devient un lien porté par le texte (« ce court
   formulaire », « Namorama ») ; la version texte l'écrit « texte (url) ».
 - **La promesse est celle du site, mot pour mot** : « jusqu'à 500 crédits », ajoutés
@@ -673,8 +684,8 @@ envoi ; **rien ne part automatiquement**, et c'est voulu.
   contacté ; sinon il attend le bouton.
 
 > Migration : `2026-09-25-mails-aux-utilisateurs.sql`, avant de déployer l'image.
-> `ADMIN_MAIL_REPLY_TO` et `REVIEW_URL` sont à reporter dans le `docker-compose.yml`
-> de prod, qui liste ses variables une à une.
+> `REVIEW_URL` est à reporter dans le `docker-compose.yml` de prod, qui liste ses
+> variables une à une.
 
 ### Suivi des rapports de marque
 

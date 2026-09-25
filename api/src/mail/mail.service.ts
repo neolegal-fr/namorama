@@ -91,46 +91,22 @@ function getCopy(locale: string | null | undefined) {
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   private transporter: nodemailer.Transporter;
-  /**
-   * Boîte personnelle de l'administrateur (`ADMIN_SMTP_USER`), pour les
-   * courriels qu'il écrit lui-même. Facultative : sans elle, ils partent de
-   * `SMTP_FROM` avec un Reply-To. Avec elle, l'adresse affichée, celle qui
-   * s'authentifie et celle qui reçoit la réponse ne font qu'une — c'est ainsi
-   * qu'écrit une personne, et c'est ce que les filtres attendent d'elle.
-   */
-  private transporterAdmin?: nodemailer.Transporter;
-  private readonly adresseAdmin?: string;
 
   constructor(private config: ConfigService) {
-    this.transporter = this.transport(
-      this.config.get<string>('SMTP_USER', 'support@namorama.com'),
-      this.config.get<string>('SMTP_PASS', ''),
-    );
-    const user = this.config.get<string>('ADMIN_SMTP_USER')?.trim();
-    const pass = this.config.get<string>('ADMIN_SMTP_PASS');
-    if (user && pass) {
-      this.transporterAdmin = this.transport(user, pass);
-      this.adresseAdmin = user;
-    }
-  }
-
-  private transport(user: string, pass: string): nodemailer.Transporter {
-    return nodemailer.createTransport({
+    this.transporter = nodemailer.createTransport({
       host: this.config.get<string>('SMTP_HOST', 'ssl0.ovh.net'),
       port: this.config.get<number>('SMTP_PORT', 465),
       secure: this.config.get<string>('SMTP_SECURE', 'true') !== 'false',
-      auth: { user, pass },
+      auth: {
+        user: this.config.get<string>('SMTP_USER', 'support@namorama.com'),
+        pass: this.config.get<string>('SMTP_PASS', ''),
+      },
       // Bornes de sécurité : un SMTP lent/injoignable ne doit jamais bloquer
       // la requête appelante (ex. la génération d'un rapport).
       connectionTimeout: 10000,
       greetingTimeout: 10000,
       socketTimeout: 15000,
     });
-  }
-
-  /** L'adresse d'où partent les courriels de l'administrateur. */
-  expediteurAdmin(): string {
-    return this.adresseAdmin ?? this.config.get<string>('SMTP_FROM', 'support@namorama.com');
   }
 
   /**
@@ -149,18 +125,13 @@ export class MailService {
      */
     fromName?: string;
     replyTo?: string;
-    /** Courriel écrit par l'administrateur : part de sa boîte si elle est configurée. */
-    parAdmin?: boolean;
     attachments?: { filename: string; content: string | Buffer; contentType?: string }[];
   }): Promise<boolean> {
-    const { fromName, parAdmin, ...reste } = options;
-    const perso = parAdmin && this.transporterAdmin;
-    const adresse = perso ? this.adresseAdmin! : this.config.get<string>('SMTP_FROM', 'support@namorama.com');
+    const adresse = this.config.get<string>('SMTP_FROM', 'support@namorama.com');
+    const { fromName, ...reste } = options;
     const from = fromName ? { name: fromName, address: adresse } : adresse;
-    // Un Reply-To identique à l'expéditeur n'apporte rien : on l'omet.
-    if (reste.replyTo && reste.replyTo.toLowerCase() === adresse.toLowerCase()) delete reste.replyTo;
     try {
-      await (perso ? this.transporterAdmin! : this.transporter).sendMail({ from, ...reste });
+      await this.transporter.sendMail({ from, ...reste });
       return true;
     } catch (err) {
       this.logger.error('Failed to send email', err);

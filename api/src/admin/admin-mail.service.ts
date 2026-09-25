@@ -10,24 +10,48 @@ import { FeedbackService } from '../feedback/feedback.service';
 import { ModelUsageService } from '../common/model-usage/model-usage.service';
 import { AppLoggerService } from '../common/logging/app-logger.service';
 import { jourISO } from './predicats';
+import { BRAND_REPORT_COST } from '../brand-report/brand-report.service';
+import { FREE_MONTHLY_QUOTA } from '../users/users.service';
 
 /**
  * Version des consignes de rédaction. À CHANGER à chaque modification du
  * prompt : chaque envoi la garde, et c'est ce qui dit, après coup, à qui
  * l'ancienne version a écrit.
  */
-export const CONSIGNES_VERSION = '2026-09-25.3';
+export const CONSIGNES_VERSION = '2026-09-25.4';
 
 /** Ce que le modèle sait du destinataire — et rien de plus. */
 export interface ContexteDestinataire {
   prenom: string | null;
-  langue: string;
+  /**
+   * Langue du compte, si Keycloak la connaît. `null` pour la plupart (64 sur
+   * 79 le 25/09/2026) : le modèle la déduit alors des descriptions de projet.
+   */
+  langue: string | null;
+  /**
+   * Extension du domaine de son adresse (`fr`, `de`, `com`…), jamais
+   * l'adresse : un indice de langue quand Keycloak n'en a pas.
+   */
+  extensionEmail: string | null;
   inscritLe: string;
   derniereActivite: string | null;
-  creditsDisponibles: number;
+  /** 1 par nom proposé + le coût réel des rapports. */
+  creditsConsommes: number;
+  /**
+   * Le solde en base. Le renouvellement mensuel étant paresseux, c'est celui
+   * qu'il avait en partant — ce qui dit s'il a pu être bloqué.
+   */
+  soldeADerniereVisite: number;
+  /**
+   * Ce que ses chiffres laissent deviner de son parcours, dit en clair. Le
+   * modèle choisit le plus révélateur pour sa question : interpréter des
+   * chiffres bruts, il le fait mal (un solde de 3 n'évoque rien pour lui).
+   */
+  signaux: string[];
   /**
    * Sans leur nom : il est généré par défaut (`suggest_name`), l'utilisateur
-   * ne l'a pas choisi et ne le reconnaîtrait pas dans un courriel.
+   * ne l'a pas choisi et ne le reconnaîtrait pas dans un courriel. Les
+   * doublons n'apparaissent qu'une fois, le signal les compte.
    */
   projets: {
     description: string;
@@ -41,6 +65,21 @@ export interface ContexteDestinataire {
   retoursDonnes: { le: string; extrait: string }[];
   /** Messages déjà envoyés : ne pas répéter le même angle. */
   dejaEcrit: { le: string; extrait: string }[];
+}
+
+/** Les données brutes d'un compte, telles que lues en base. */
+export interface ActiviteBrute {
+  prenom: string | null;
+  locale: string | null;
+  email: string | null;
+  inscritLe: Date;
+  derniereActivite: Date | null;
+  solde: number;
+  projets: { id: string; description: string; creeLe: Date; proposes: number; ecartes: number }[];
+  aimes: { projectId: string; nom: string }[];
+  rapports: { nom: string; cout: number | null }[];
+  retours: { message: string; le: Date }[];
+  envois: { body: string; createdAt: Date; delivered: boolean }[];
 }
 
 export interface Liens {
@@ -61,13 +100,14 @@ export interface Brouillon {
 }
 
 /**
- * L'objet est FIXE, décidé et non généré : il dit d'emblée ce qu'on demande.
+ * L'objet est FIXE, décidé et non généré : ce qu'écrirait une personne, et
+ * un effort qui paraît léger.
  * Le modèle ne rédige plus que le corps.
  */
 export const OBJET: Record<string, string> = {
-  fr: 'Aidez-nous à améliorer Namorama', en: 'Help us improve Namorama', de: 'Helfen Sie uns, Namorama zu verbessern',
-  es: 'Ayúdenos a mejorar Namorama', pt: 'Ajude-nos a melhorar o Namorama', it: 'Ci aiuti a migliorare Namorama',
-  nl: 'Help ons Namorama te verbeteren',
+  fr: 'Une question rapide sur Namorama', en: 'A quick question about Namorama', de: 'Eine kurze Frage zu Namorama',
+  es: 'Una pregunta rápida sobre Namorama', pt: 'Uma pergunta rápida sobre o Namorama',
+  it: 'Una domanda veloce su Namorama', nl: 'Een korte vraag over Namorama',
 };
 
 /** Qui signe : son nom complet, et ce qu'il est pour Namorama, dans la langue du message. */
@@ -94,10 +134,16 @@ const LANGUES: Record<string, string> = {
   fr: 'français', en: 'anglais', de: 'allemand', es: 'espagnol', pt: 'portugais', it: 'italien', nl: 'néerlandais',
 };
 
-/** `fr-FR` → `fr` ; inconnue ou absente → `fr`, la langue du produit. */
-export function langueDe(locale: string | null | undefined): string {
+/** `fr-FR` → `fr` ; absente ou qu'on ne sait pas écrire → `null`, à déduire ailleurs. */
+export function langueDe(locale: string | null | undefined): string | null {
   const l = (locale ?? '').split('-')[0].toLowerCase();
-  return LANGUES[l] ? l : 'fr';
+  return LANGUES[l] ? l : null;
+}
+
+/** La langue que le modèle dit avoir employée, si c'en est une qu'on signe. */
+export function langueRendue(l: unknown): string {
+  const code = typeof l === 'string' ? l.trim().toLowerCase().slice(0, 2) : '';
+  return LANGUES[code] ? code : 'fr';
 }
 
 const echapper = (s: string) =>
@@ -146,11 +192,11 @@ export function mettreEnPage(texte: string): string {
  * Lit la réponse du modèle. Un brouillon sans corps n'est pas un brouillon :
  * on le refuse plutôt que de pré-remplir un champ vide.
  */
-export function lireBrouillon(contenu: string | null | undefined): string | null {
+export function lireBrouillon(contenu: string | null | undefined): { langue: string; corps: string } | null {
   try {
-    const brut = JSON.parse(contenu ?? '') as { corps?: unknown };
-    const body = typeof brut.corps === 'string' ? brut.corps.trim() : '';
-    return body || null;
+    const brut = JSON.parse(contenu ?? '') as { langue?: unknown; corps?: unknown };
+    const corps = typeof brut.corps === 'string' ? brut.corps.trim() : '';
+    return corps ? { langue: langueRendue(brut.langue), corps } : null;
   } catch {
     return null;
   }
@@ -177,7 +223,7 @@ export function verifierBrouillon(body: string, liens: Liens): string[] {
  * améliorer — et la personnalisation n'est pas un ornement : un message qui
  * pourrait partir tel quel à quelqu'un d'autre est un publipostage.
  */
-export function consignes(langue: string, qui: Signataire, liens: Liens): string {
+export function consignes(langue: string | null, qui: Signataire, liens: Liens): string {
   return [
     `Tu écris, au nom de ${qui.nomComplet}, créateur de Namorama, un courriel personnel à UN utilisateur.`,
     "Namorama aide à trouver un nom de marque et un domaine disponibles à partir de la description d'un produit ; " +
@@ -186,20 +232,22 @@ export function consignes(langue: string, qui: Signataire, liens: Liens): string
     `BUT : demander de l'AIDE. ${qui.prenom} a besoin de son regard pour améliorer Namorama, et le lui dit simplement. ` +
       "C'est l'interlocuteur qui rend service : valorise son avis, sans flatterie. Pas vendre, pas relancer l'usage.",
     '',
-    'SALUTATION : « Bonjour <prénom>, » (ou l’équivalent dans la langue) si le prénom est connu, « Bonjour, » sinon.',
+    'SALUTATION, dans la langue du message : « Bonjour <prénom>, » si le prénom est connu, « Bonjour, » sinon ' +
+      '(« Hello <prénom>, », « Hallo <prénom>, »…).',
     '',
     'OUVERTURE : une phrase pour se présenter et rappeler ce qu’est Namorama — la personne y a passé peu de temps ' +
       `et a pu l'oublier. Cite-le comme lien : [Namorama](${liens.site}). ` +
       "Ne commence JAMAIS par « J'ai vu que », « J'ai remarqué », « I noticed » ou équivalent : on ne doit pas se sentir observé.",
     '',
     'PERSONNALISATION — le message ne doit pouvoir être envoyé à personne d’autre :',
-    "- Un seul élément concret de son activité, cité naturellement, en prenant LE PLUS FORT qui existe : " +
-      "1) un nom pour lequel il a acheté un rapport ; 2) sinon un nom mis en favori ; 3) sinon le sujet de son projet, " +
-      "dit en quelques mots d'après sa description. Les projets n'ont pas de nom : n'en invente pas.",
+    "- `signaux` résume son parcours et ce qu'il suggère. Choisis LE signal le plus révélateur de ce qui a pu le " +
+      "gêner, et bâtis ta question dessus : quelqu'un bloqué faute de crédits, quelqu'un qui a recréé le même projet " +
+      "ou quelqu'un qui a acheté un rapport n'ont pas le même retour à faire. Évoque-le avec tact, en hypothèse " +
+      "(« peut-être… »), jamais comme une observation chiffrée.",
+    "- Cite au plus UN élément concret, naturellement : un nom testé dans un rapport, sinon un nom mis en favori, " +
+      "sinon le sujet de son projet dit en quelques mots. Les projets n'ont pas de nom : n'en invente pas.",
     "- Formule la demande comme un service qu'il rendrait (« pourriez-vous m'aider », « j'aurais besoin de votre regard »).",
-    "- UNE question ouverte, adaptée à l'endroit où il s'est arrêté : aucun projet → ce qui a bloqué ; " +
-      "des noms proposés mais aucun en favori → pourquoi ils ne convenaient pas ; des favoris sans rapport → ce qui " +
-      "manquait pour aller plus loin ; un rapport acheté → s'il lui a servi.",
+    '- UNE question ouverte, précise, qui découle de ce signal.',
     "- S'il a déjà donné un retour, remercie-le de celui-ci et demande ce qui manque encore.",
     "- Si on lui a déjà écrit, ne reprends pas le même angle.",
     "- N'invente aucun fait.",
@@ -217,7 +265,13 @@ export function consignes(langue: string, qui: Signataire, liens: Liens): string
       : []),
     '',
     'FORME :',
-    `- En ${LANGUES[langue]}, vouvoiement. 50 à 100 mots, signature non comprise. Court : chaque phrase doit servir.`,
+    (langue
+      ? `- En ${LANGUES[langue]}.`
+      : '- LANGUE : à déduire. Une description en anglais NE SUFFIT PAS : beaucoup de francophones décrivent en ' +
+        'anglais un produit destiné à l’international. Croise la langue des descriptions, le prénom et ' +
+        '`extensionEmail` ; en cas de doute, le français. Uniquement l’une de : ' +
+        `${Object.keys(LANGUES).join(', ')}.`),
+    '- Vouvoiement (ou forme de politesse équivalente). 50 à 100 mots, signature non comprise. Chaque phrase doit servir.',
     '- Le ton d’une personne qui écrit à une autre : simple, direct, chaleureux. Aucune formule publicitaire, aucun emoji, ' +
       "pas de points d'exclamation en série, pas de « cher utilisateur ».",
     '- Termine par une formule de politesse brève. NE SIGNE PAS : la signature est ajoutée ensuite.',
@@ -227,7 +281,8 @@ export function consignes(langue: string, qui: Signataire, liens: Liens): string
       '« profitez », « exclusif », « cliquez ici », « urgent ».',
     '- Texte brut : paragraphes séparés par une ligne vide. Aucune autre mise en forme que les liens [texte](url).',
     '',
-    'L’objet est fixé à part : n’écris que le corps. Réponds uniquement en JSON : {"corps": "..."}.',
+    'L’objet est fixé à part : n’écris que le corps. Réponds uniquement en JSON : ' +
+      '{"langue": "<code à deux lettres de la langue employée>", "corps": "..."}.',
   ].join('\n');
 }
 
@@ -236,9 +291,12 @@ export function consignes(langue: string, qui: Signataire, liens: Liens): string
  * est tout en capitales : une casse choisie (« McKay », « de Villiers ») est
  * laissée telle quelle. « Bonjour ADEM » sonne comme un fichier client.
  */
+const PRENOMS_GENERIQUES = /^(support|contact|admin|administrat\w*|info|test\w*|hello|bonjour|team|equipe|équipe|user|utilisateur|null|undefined)$/i;
+
 export function prenomLisible(prenom: string | null | undefined): string | null {
   const p = prenom?.trim();
-  if (!p) return null;
+  // « Bonjour Support » : un compte de service n'a pas de prénom à saluer.
+  if (!p || PRENOMS_GENERIQUES.test(p)) return null;
   if (p !== p.toUpperCase() || p === p.toLowerCase()) return p;
   return p.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_m, sep: string, l: string) => sep + l.toUpperCase());
 }
@@ -247,6 +305,97 @@ const raccourcir = (s: string | null | undefined, n: number) => {
   const t = (s ?? '').replace(/\s+/g, ' ').trim();
   return t.length > n ? `${t.slice(0, n - 1)}…` : t;
 };
+
+const normaliser = (s: string) => s.toLowerCase().replace(/\s+/g, ' ').trim();
+
+/**
+ * Ce que les chiffres d'un compte laissent deviner de son parcours.
+ *
+ * Calculé ici plutôt que laissé au modèle : il lit mal un solde ou un
+ * compteur, et un signal faux donnerait une question à côté. Chaque phrase
+ * dit le fait ET ce qu'il suggère, pour qu'il en tire une question.
+ */
+export function signaux(a: ActiviteBrute, parDescription: Map<string, number>): string[] {
+  const out: string[] = [];
+  const proposes = a.projets.reduce((n, p) => n + p.proposes, 0);
+  const favoris = a.aimes.length;
+
+  if (!a.projets.length) {
+    out.push("Inscrit sans avoir créé de projet : il s'est arrêté avant même de décrire son produit.");
+  } else if (!proposes) {
+    out.push("A décrit son produit mais n'a lancé aucune recherche de noms.");
+  }
+  const doublons = [...parDescription.values()].filter((n) => n > 1);
+  if (doublons.length) {
+    out.push(
+      `A créé ${Math.max(...doublons)} projets à la description identique : il n'a peut-être pas su retrouver ` +
+        'le projet déjà créé, ou a cru devoir recommencer pour relancer une recherche.',
+    );
+  }
+  if (a.solde < 10 && proposes) {
+    out.push(
+      `Est reparti avec ${a.solde} crédit(s) : il a probablement été bloqué faute de crédits au moment de continuer. ` +
+        `Le quota de ${FREE_MONTHLY_QUOTA} crédits se renouvelle chaque mois.`,
+    );
+  } else if (favoris && !a.rapports.length && a.solde < BRAND_REPORT_COST) {
+    out.push(
+      `A des noms en favori, mais ${a.solde} crédits : pas assez pour un rapport de marque (${BRAND_REPORT_COST} crédits).`,
+    );
+  }
+  if (proposes && !favoris) {
+    out.push(
+      `${proposes} noms proposés, aucun mis en favori : les propositions ne lui convenaient pas, ` +
+        "ou il n'a pas vu qu'on pouvait garder ceux qui plaisent.",
+    );
+  } else if (favoris && !a.rapports.length) {
+    out.push("A mis des noms en favori sans aller jusqu'au rapport de marque.");
+  }
+  if (a.rapports.length) out.push(`A acheté un rapport de marque (${a.rapports.map((r) => r.nom).join(', ')}).`);
+  const consommes = proposes + a.rapports.reduce((n, r) => n + (r.cout ?? 0), 0);
+  if (consommes >= FREE_MONTHLY_QUOTA) out.push(`Utilisateur engagé : ${consommes} crédits consommés.`);
+  if (a.derniereActivite && jourISO(a.derniereActivite) === jourISO(a.inscritLe)) {
+    out.push("N'est venu qu'une fois, le jour de son inscription.");
+  }
+  return out;
+}
+
+/** Séparée de la lecture en base, pour se tester sans elle. */
+export function construireContexte(a: ActiviteBrute): ContexteDestinataire {
+  const jour = (d: Date | null) => (d ? jourISO(new Date(d)) : null);
+  const parDescription = new Map<string, number>();
+  for (const p of a.projets) {
+    const k = normaliser(p.description);
+    parDescription.set(k, (parDescription.get(k) ?? 0) + 1);
+  }
+  const vus = new Set<string>();
+  const projets = a.projets
+    .filter((p) => {
+      const k = normaliser(p.description);
+      return vus.has(k) ? false : (vus.add(k), true);
+    })
+    .slice(0, 5)
+    .map((p) => ({
+      description: raccourcir(p.description, 400),
+      creeLe: jour(p.creeLe)!,
+      nomsProposes: p.proposes,
+      nomsAimes: a.aimes.filter((x) => x.projectId === p.id).slice(0, 8).map((x) => x.nom),
+      nomsEcartes: p.ecartes,
+    }));
+  return {
+    prenom: prenomLisible(a.prenom),
+    langue: langueDe(a.locale),
+    extensionEmail: a.email?.split('@')[1]?.split('.').pop()?.toLowerCase() || null,
+    inscritLe: jour(a.inscritLe)!,
+    derniereActivite: jour(a.derniereActivite),
+    creditsConsommes: a.projets.reduce((n, p) => n + p.proposes, 0) + a.rapports.reduce((n, r) => n + (r.cout ?? 0), 0),
+    soldeADerniereVisite: a.solde,
+    signaux: signaux(a, parDescription),
+    projets,
+    rapportsAchetes: a.rapports.map((r) => r.nom),
+    retoursDonnes: a.retours.map((r) => ({ le: jour(r.le)!, extrait: raccourcir(r.message, 300) })),
+    dejaEcrit: a.envois.filter((e) => e.delivered).slice(0, 5).map((e) => ({ le: jour(e.createdAt)!, extrait: raccourcir(e.body, 300) })),
+  };
+}
 
 /**
  * Écrire à un utilisateur pour lui demander un retour, un à la fois.
@@ -296,13 +445,14 @@ export class AdminMailService {
     const user = await this.users.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException(`User ${userId} not found`);
 
+    // Tous les projets, pas les cinq derniers : un doublon peut être ancien.
     const [projets, aimes, rapports, retours, envois] = await Promise.all([
       this.dataSource.query(
         `SELECT p.id, p.description, p.createdAt,
                 COUNT(ds.id) AS proposes, COALESCE(SUM(ds.rating = 'disliked'), 0) AS ecartes
            FROM project p LEFT JOIN domain_suggestion ds ON ds.projectId = p.id
           WHERE p.userId = ?
-          GROUP BY p.id ORDER BY p.createdAt DESC LIMIT 5`,
+          GROUP BY p.id ORDER BY p.createdAt DESC`,
         [userId],
       ),
       this.dataSource.query(
@@ -311,7 +461,7 @@ export class AdminMailService {
         [userId],
       ),
       this.dataSource.query(
-        'SELECT name FROM brand_report_record WHERE keycloakId = ? ORDER BY createdAt DESC LIMIT 5',
+        'SELECT name, costCredits FROM brand_report_record WHERE keycloakId = ? ORDER BY createdAt DESC LIMIT 5',
         [user.keycloakId],
       ),
       this.dataSource.query(
@@ -321,25 +471,27 @@ export class AdminMailService {
       this.historique(userId),
     ]);
 
-    const jour = (d: Date | string | null) => (d ? jourISO(new Date(d)) : null);
-    return {
-      prenom: prenomLisible(user.firstName),
-      langue: langueDe(user.locale),
-      inscritLe: jour(user.createdAt)!,
-      derniereActivite: jour(user.lastLogin),
-      creditsDisponibles: user.credits + user.extraCredits,
+    return construireContexte({
+      prenom: user.firstName,
+      locale: user.locale,
+      email: user.email,
+      inscritLe: user.createdAt,
+      derniereActivite: user.lastLogin,
+      solde: user.credits + user.extraCredits,
       projets: projets.map((p: any) => ({
-        description: raccourcir(p.description, 400),
-        creeLe: jour(p.createdAt)!,
-        nomsProposes: Number(p.proposes),
-        nomsAimes: aimes.filter((a: any) => a.projectId === p.id).slice(0, 8).map((a: any) => String(a.domainName)),
-        nomsEcartes: Number(p.ecartes),
+        id: String(p.id),
+        description: String(p.description ?? ''),
+        creeLe: p.createdAt,
+        proposes: Number(p.proposes),
+        ecartes: Number(p.ecartes),
       })),
-      rapportsAchetes: rapports.map((r: any) => String(r.name)),
-      retoursDonnes: retours.map((r: any) => ({ le: jour(r.createdAt)!, extrait: raccourcir(r.message, 300) })),
-      dejaEcrit: envois.filter((e) => e.delivered).slice(0, 5).map((e) => ({ le: jour(e.createdAt)!, extrait: raccourcir(e.body, 300) })),
-    };
+      aimes: aimes.map((x: any) => ({ projectId: String(x.projectId), nom: String(x.domainName) })),
+      rapports: rapports.map((x: any) => ({ nom: String(x.name), cout: x.costCredits === null ? null : Number(x.costCredits) })),
+      retours: retours.map((x: any) => ({ message: String(x.message), le: x.createdAt })),
+      envois,
+    });
   }
+
 
   /**
    * Un brouillon rédigé à partir de l'activité du compte. `note` est une
@@ -365,11 +517,14 @@ export class AdminMailService {
       reasoning_effort: 'none',
     });
     const res = await this.usage.mesurer('admin_mail_draft', appel);
-    const texte = lireBrouillon(res.choices[0]?.message?.content);
-    if (!texte) throw new ServiceUnavailableException('Le modèle a rendu un brouillon inutilisable');
+    const lu = lireBrouillon(res.choices[0]?.message?.content);
+    if (!lu) throw new ServiceUnavailableException('Le modèle a rendu un brouillon inutilisable');
+    // Langue du compte si on la connaît, sinon celle que le modèle a employée :
+    // objet et signature doivent suivre le corps.
+    const langue = ctx.langue ?? lu.langue;
     // La signature suit le texte dans le formulaire : elle se relit et se retouche comme le reste.
-    const body = `${texte}\n\n${signature(qui, ctx.langue)}`;
-    return { subject: OBJET[ctx.langue] ?? OBJET.fr, body, promptVersion: CONSIGNES_VERSION, avertissements: verifierBrouillon(body, liens) };
+    const body = `${lu.corps}\n\n${signature(qui, langue)}`;
+    return { subject: OBJET[langue] ?? OBJET.fr, body, promptVersion: CONSIGNES_VERSION, avertissements: verifierBrouillon(body, liens) };
   }
 
   /**
@@ -395,9 +550,10 @@ export class AdminMailService {
       subject,
       html: mettreEnPage(body),
       text: versionTexte(body),
-      fromName: admin.nomComplet,
-      parAdmin: true,
-      replyTo: this.config.get<string>('ADMIN_MAIL_REPLY_TO', 'nicolas@namorama.com'),
+      // « Namorama » : un nom de personne sur une adresse générique ressemble à
+      // une usurpation (relevé sur un test Gmail le 25/09/2026). La personne,
+      // c'est la signature. Réponses à support@, l'adresse d'envoi.
+      fromName: 'Namorama',
     });
 
     const envoi = await this.repo.save(this.repo.create({

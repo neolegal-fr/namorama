@@ -1,4 +1,4 @@
-import { consignes, langueDe, prenomLisible, lireBrouillon, mettreEnPage, signature, verifierBrouillon, versionTexte } from './admin-mail.service';
+import { construireContexte, consignes, langueDe, prenomLisible, lireBrouillon, mettreEnPage, signature, verifierBrouillon, versionTexte } from './admin-mail.service';
 
 const qui = { prenom: 'Nicolas', nomComplet: 'Nicolas Riousset' };
 const liens = { site: 'https://namorama.com', formulaire: 'https://namorama.com/app?avis=1', avis: 'https://fr.trustpilot.com/review/namorama.com' };
@@ -38,8 +38,13 @@ describe('mettreEnPage', () => {
 });
 
 describe('lireBrouillon', () => {
-  it('lit le corps', () => {
-    expect(lireBrouillon('{"corps":" Bonjour "}')).toBe('Bonjour');
+  it('lit le corps et la langue employée', () => {
+    expect(lireBrouillon('{"langue":"EN","corps":" Hello "}')).toEqual({ langue: 'en', corps: 'Hello' });
+  });
+
+  it("retombe sur le français si la langue rendue n'en est pas une qu'on signe", () => {
+    expect(lireBrouillon('{"langue":"ja","corps":"x"}')?.langue).toBe('fr');
+    expect(lireBrouillon('{"corps":"x"}')?.langue).toBe('fr');
   });
 
   it('refuse un brouillon vide ou illisible plutôt que de pré-remplir un champ vide', () => {
@@ -93,6 +98,7 @@ describe('consignes', () => {
   it('reprennent la promesse du site telle quelle : « jusqu’à » 500 crédits', () => {
     expect(consignes('en', qui, liens)).toMatch(/jusqu’à 500 crédits/);
     expect(consignes('en', qui, liens)).toMatch(/En anglais/);
+    expect(consignes(null, qui, liens)).toMatch(/Une description en anglais NE SUFFIT PAS/);
   });
 });
 
@@ -116,14 +122,67 @@ describe('prenomLisible', () => {
     expect(prenomLisible('ÉLODIE')).toBe('Élodie');
     expect(prenomLisible('McKay')).toBe('McKay');
     expect(prenomLisible('  ')).toBeNull();
+    expect(prenomLisible('Support')).toBeNull();
   });
 });
 
 describe('langueDe', () => {
-  it('garde la langue du compte quand on sait écrire dedans, le français sinon', () => {
+  it("garde la langue du compte quand on sait écrire dedans ; sinon, rien — le modèle la déduira", () => {
     expect(langueDe('en-GB')).toBe('en');
     expect(langueDe('de')).toBe('de');
-    expect(langueDe('ja')).toBe('fr');
-    expect(langueDe(null)).toBe('fr');
+    expect(langueDe('ja')).toBeNull();
+    expect(langueDe(null)).toBeNull();
+  });
+});
+
+describe('construireContexte — signaux', () => {
+  const base = {
+    prenom: 'Léa', locale: null, email: 'lea@exemple.fr', inscritLe: new Date(2026, 8, 1, 10), derniereActivite: new Date(2026, 8, 1, 11),
+    solde: 100, projets: [], aimes: [], rapports: [], retours: [], envois: [],
+  };
+  const projet = (id: string, description: string, proposes = 10) =>
+    ({ id, description, creeLe: new Date(2026, 8, 1), proposes, ecartes: 0 });
+
+  it("repère un inscrit qui n'a rien décrit, venu une seule fois", () => {
+    const ctx = construireContexte(base);
+    expect(ctx.signaux.join(' ')).toMatch(/sans avoir créé de projet/);
+    expect(ctx.signaux.join(' ')).toMatch(/N'est venu qu'une fois/);
+    expect(ctx.langue).toBeNull();
+    expect(ctx.extensionEmail).toBe('fr');
+  });
+
+  it('repère deux projets identiques, et ne les montre qu’une fois au modèle', () => {
+    const ctx = construireContexte({
+      ...base,
+      projets: [projet('a', 'Boulangerie  bio à Nantes'), projet('b', 'boulangerie bio à nantes'), projet('c', 'Autre chose')],
+    });
+    expect(ctx.signaux.join(' ')).toMatch(/2 projets à la description identique/);
+    expect(ctx.projets).toHaveLength(2);
+  });
+
+  it('repère un compte bloqué faute de crédits, et compte ce qu’il a consommé', () => {
+    const ctx = construireContexte({ ...base, solde: 3, projets: [projet('a', 'x', 97)] });
+    expect(ctx.signaux.join(' ')).toMatch(/Est reparti avec 3 crédit/);
+    expect(ctx.creditsConsommes).toBe(97);
+  });
+
+  it('distingue des favoris sans les crédits d’un rapport', () => {
+    const ctx = construireContexte({ ...base, solde: 30, projets: [projet('a', 'x')], aimes: [{ projectId: 'a', nom: 'levainerie' }] });
+    expect(ctx.signaux.join(' ')).toMatch(/pas assez pour un rapport de marque \(50 crédits\)/);
+    expect(ctx.projets[0].nomsAimes).toEqual(['levainerie']);
+  });
+
+  it('repère un utilisateur engagé qui a acheté un rapport', () => {
+    const ctx = construireContexte({
+      ...base, projets: [projet('a', 'x', 60)], aimes: [{ projectId: 'a', nom: 'kessio' }],
+      rapports: [{ nom: 'kessio', cout: 50 }],
+    });
+    expect(ctx.signaux.join(' ')).toMatch(/A acheté un rapport de marque \(kessio\)/);
+    expect(ctx.signaux.join(' ')).toMatch(/110 crédits consommés/);
+  });
+
+  it('propose des noms sans favori : les propositions ne convenaient pas', () => {
+    const ctx = construireContexte({ ...base, projets: [projet('a', 'x', 25)] });
+    expect(ctx.signaux.join(' ')).toMatch(/25 noms proposés, aucun mis en favori/);
   });
 });
