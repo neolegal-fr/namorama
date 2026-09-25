@@ -18,7 +18,8 @@ export type OperationModele =
   | 'generate_names'
   | 'analyze'
   | 'pick_best'
-  | 'name_variants';
+  | 'name_variants'
+  | 'admin_mail_draft';
 
 /** Consommation lue dans une réponse, quelle que soit l'API qui l'a rendue. */
 export interface Consommation {

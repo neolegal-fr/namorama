@@ -11,6 +11,7 @@ export const LIBELLES_OPERATION: Record<string, string> = {
   analyze: 'Analyse des noms',
   pick_best: 'Meilleur choix',
   name_variants: 'Variantes INPI',
+  admin_mail_draft: 'Courriel rédigé (admin)',
 };
 
 export function libelleOperation(op: string): string {

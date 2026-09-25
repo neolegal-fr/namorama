@@ -34,6 +34,17 @@ export class FeedbackService {
     return { creditsAwarded: false };
   }
 
+  /**
+   * Une réponse reçue par courriel, recopiée depuis l'admin.
+   *
+   * Même enregistrement que le formulaire, pour que les crédits promis se
+   * valident au même endroit ; mais pas de notification à support@ — c'est
+   * l'administrateur lui-même qui vient de la saisir.
+   */
+  async recordEmailReply(keycloakId: string, email: string | null, message: string): Promise<Feedback> {
+    return this.feedbackRepo.save(this.feedbackRepo.create({ keycloakId, email, message: message.trim() }));
+  }
+
   async awardCredits(feedbackId: string): Promise<Feedback> {
     const feedback = await this.feedbackRepo.findOne({ where: { id: feedbackId } });
     if (!feedback) throw new NotFoundException('Feedback not found');

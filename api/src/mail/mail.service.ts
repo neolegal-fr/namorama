@@ -117,11 +117,21 @@ export class MailService {
     to: string;
     subject: string;
     html: string;
+    /** Version texte : un courriel personnel en a une, une newsletter souvent pas. */
+    text?: string;
+    /**
+     * Nom affiché de l'expéditeur. L'ADRESSE reste `SMTP_FROM` : OVH refuse un
+     * expéditeur différent du compte authentifié.
+     */
+    fromName?: string;
+    replyTo?: string;
     attachments?: { filename: string; content: string | Buffer; contentType?: string }[];
   }): Promise<boolean> {
-    const from = this.config.get<string>('SMTP_FROM', 'support@namorama.com');
+    const adresse = this.config.get<string>('SMTP_FROM', 'support@namorama.com');
+    const { fromName, ...reste } = options;
+    const from = fromName ? { name: fromName, address: adresse } : adresse;
     try {
-      await this.transporter.sendMail({ from, ...options });
+      await this.transporter.sendMail({ from, ...reste });
       return true;
     } catch (err) {
       this.logger.error('Failed to send email', err);

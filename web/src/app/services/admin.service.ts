@@ -39,6 +39,10 @@ export interface AdminUser {
   /** Suggestions de ses projets notées 👍 / 👎. */
   likes: number;
   dislikes: number;
+  /** Dernier courriel écrit depuis l'admin et remis. */
+  lastMailAt: string | null;
+  lastMailSubject: string | null;
+  lastMailReplied: boolean;
 }
 
 /** Consommation d'une opération sur un modèle. Voir `LigneConsommation` côté API. */
@@ -92,6 +96,30 @@ export interface AdminModelCosts {
   weeks: SemaineCouts[];
   prices: TarifCourant[];
   webSearchPerCall: number | null;
+}
+
+/** Un courriel écrit depuis l'administration à un utilisateur. */
+export interface AdminMail {
+  id: number;
+  userId: number;
+  subject: string;
+  body: string;
+  aiDrafted: boolean;
+  /** Version des consignes du brouillon de départ ; `null` pour un texte écrit à la main. */
+  promptVersion: string | null;
+  /** Le SMTP l'a accepté. */
+  delivered: boolean;
+  /** La réponse reçue par courriel, enregistrée comme feedback. */
+  feedbackId: string | null;
+  createdAt: string;
+}
+
+export interface BrouillonMail {
+  subject: string;
+  body: string;
+  promptVersion: string;
+  /** Contrôles mécaniques : liens et promesse bien recopiés. */
+  avertissements: string[];
 }
 
 export interface UserModelCosts {
@@ -361,6 +389,24 @@ export class AdminService {
    */
   setInternal(userId: number, internal: boolean): Observable<AdminUser> {
     return this.http.patch<AdminUser>(`${this.base}/users/${userId}/internal`, { internal });
+  }
+
+  getUserMails(userId: number): Observable<AdminMail[]> {
+    return this.http.get<AdminMail[]>(`${this.base}/users/${userId}/mails`);
+  }
+
+  /** Brouillon rédigé par le modèle : rien n'est envoyé. */
+  draftUserMail(userId: number, note?: string): Observable<BrouillonMail> {
+    return this.http.post<BrouillonMail>(`${this.base}/users/${userId}/mails/draft`, { note });
+  }
+
+  sendUserMail(userId: number, mail: { subject: string; body: string; promptVersion: string | null }): Observable<AdminMail> {
+    return this.http.post<AdminMail>(`${this.base}/users/${userId}/mails`, mail);
+  }
+
+  /** La réponse reçue par courriel devient un feedback, à valider dans l'onglet Feedbacks. */
+  recordMailReply(mailId: number, message: string): Observable<AdminMail> {
+    return this.http.post<AdminMail>(`${this.base}/mails/${mailId}/reply`, { message });
   }
 
   deleteUser(userId: number): Observable<void> {

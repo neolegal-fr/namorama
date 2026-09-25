@@ -624,6 +624,46 @@ D'où **`visitor_session`** : une ligne par session de navigateur (`sessionStora
 > `/assets/config.json` du journal nginx : **3 à 12 chargements d'application par
 > jour**, pour 9 inscriptions du 10 au 24.
 
+### Demander un retour à un utilisateur
+
+Depuis **Administration → Utilisateurs**, l'enveloppe d'une ligne ouvre un courriel
+de demande de retour, **rédigé par le modèle à partir de l'activité du compte** —
+projets et descriptions, noms aimés, rapports achetés, retours déjà donnés,
+courriels déjà reçus. Un destinataire à la fois, relu et confirmé avant chaque
+envoi ; **rien ne part automatiquement**, et c'est voulu.
+
+- **De la correspondance, pas de la prospection.** Un message qui pourrait partir
+  tel quel à quelqu'un d'autre est un publipostage : les consignes exigent un ou
+  deux faits concrets du compte et des questions adaptées à l'endroit où il s'est
+  arrêté. HTML nu, sans logo ni pied de page, avec une version texte. Un envoi
+  groupé demanderait, lui, un consentement et un lien de désinscription.
+- **Expéditeur** : l'adresse reste `SMTP_FROM` (OVH refuse un expéditeur différent du
+  compte authentifié), le nom affiché est le prénom de l'administrateur, et les
+  réponses vont à `ADMIN_MAIL_REPLY_TO`.
+- **La promesse est celle du site, mot pour mot** : « jusqu'à 500 crédits », ajoutés
+  après lecture. Deux voies : répondre au courriel, ou `/app?avis=1`, qui ouvre le
+  formulaire après connexion — les crédits vont au compte qui écrit.
+- Une réponse reçue par courriel se **recopie depuis l'historique** du dialogue : elle
+  devient un feedback ordinaire, et les crédits se valident dans l'onglet Feedbacks,
+  comme les autres.
+- **Page d'avis (`REVIEW_URL`, Trustpilot)** : citée seulement si configurée, et
+  jamais liée aux crédits. Trustpilot comme Google interdisent de récompenser un avis
+  et de ne solliciter que les clients satisfaits : la phrase vaut « quelle que soit
+  votre expérience », et figure dans chaque message.
+- **`CONSIGNES_VERSION`** (`admin-mail.service.ts`) est gardée sur chaque envoi : à
+  changer à chaque retouche du prompt. L'historique signale les messages écrits avec
+  d'anciennes consignes — ceux à qui il peut valoir la peine de réécrire.
+- `verifierBrouillon` contrôle mécaniquement le brouillon (lien du formulaire, mention
+  des 500 crédits, lien d'avis, **aucun lien inventé**) ; les alertes s'affichent au-dessus
+  du texte, qui reste modifiable.
+- Un brouillon coûte ~1 000 tokens en entrée et ~250 en sortie (`admin_mail_draft`,
+  imputé à l'administrateur). Le dialogue ne rédige d'office que pour un compte jamais
+  contacté ; sinon il attend le bouton.
+
+> Migration : `2026-09-25-mails-aux-utilisateurs.sql`, avant de déployer l'image.
+> `ADMIN_MAIL_REPLY_TO` et `REVIEW_URL` sont à reporter dans le `docker-compose.yml`
+> de prod, qui liste ses variables une à une.
+
 ### Suivi des rapports de marque
 
 Deux sources, volontairement distinctes — elles ne mesurent pas la même chose :
