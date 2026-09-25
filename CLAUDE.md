@@ -642,9 +642,13 @@ envoi ; **rien ne part automatiquement**, et c'est voulu.
   de son activité : un nom testé dans un rapport, sinon un favori, sinon le sujet du
   projet. **Jamais le nom du projet** : il est généré par `suggest_name`, l'utilisateur
   ne l'a pas choisi ; il n'est d'ailleurs pas transmis au modèle.
-- **Expéditeur** : l'adresse reste `SMTP_FROM` (OVH refuse un expéditeur différent du
-  compte authentifié), le nom affiché est le nom complet de l'administrateur, et les
-  réponses vont à `ADMIN_MAIL_REPLY_TO`. La **signature est ajoutée par le code**
+- **Objet fixe**, traduit : « Aidez-nous à améliorer Namorama » (`OBJET`). Le modèle
+  n'écrit que le corps, et évite le vocabulaire des campagnes (« offert », « gratuit »…).
+- **Expéditeur** : avec `ADMIN_SMTP_USER` / `ADMIN_SMTP_PASS`, le courriel part de cette
+  boîte — adresse affichée, authentifiée et de réponse identiques, comme écrit une
+  personne. Sinon il part de `SMTP_FROM` (OVH refuse un expéditeur différent du compte
+  authentifié) avec un Reply-To vers `ADMIN_MAIL_REPLY_TO`. Le nom affiché est le nom
+  complet de l'administrateur. La **signature est ajoutée par le code**
   (« Nicolas Riousset / Créateur de Namorama », titre traduit), pas par le modèle.
 - **Liens** : `[texte](https://…)` devient un lien porté par le texte (« ce court
   formulaire », « Namorama ») ; la version texte l'écrit « texte (url) ».

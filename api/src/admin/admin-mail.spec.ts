@@ -38,19 +38,15 @@ describe('mettreEnPage', () => {
 });
 
 describe('lireBrouillon', () => {
-  it('lit objet et corps', () => {
-    expect(lireBrouillon('{"objet":" Votre projet ","corps":"Bonjour"}')).toEqual({ subject: 'Votre projet', body: 'Bonjour' });
+  it('lit le corps', () => {
+    expect(lireBrouillon('{"corps":" Bonjour "}')).toBe('Bonjour');
   });
 
-  it('refuse un brouillon incomplet ou illisible plutôt que de pré-remplir un champ vide', () => {
+  it('refuse un brouillon vide ou illisible plutôt que de pré-remplir un champ vide', () => {
     expect(lireBrouillon('{"objet":"x"}')).toBeNull();
-    expect(lireBrouillon('{"objet":"","corps":"y"}')).toBeNull();
-    expect(lireBrouillon('{"objet":"x","corps":')).toBeNull();
+    expect(lireBrouillon('{"corps":"  "}')).toBeNull();
+    expect(lireBrouillon('{"corps":')).toBeNull();
     expect(lireBrouillon(null)).toBeNull();
-  });
-
-  it("ramène l'objet sur une ligne : un saut de ligne n'a rien à faire dans un en-tête", () => {
-    expect(lireBrouillon('{"objet":"a\\nb","corps":"c"}')?.subject).toBe('a b');
   });
 });
 
@@ -89,7 +85,8 @@ describe('consignes', () => {
   });
 
   it("n'exposent aucun nom de projet : il est généré, l'utilisateur ne l'a pas choisi", () => {
-    expect(consignes('fr', qui, liens)).toMatch(/sans le moindre nom de projet/);
+    expect(consignes('fr', qui, liens)).toMatch(/Les projets n'ont pas de nom/);
+    expect(consignes('fr', qui, liens)).toMatch(/n’écris que le corps/);
     expect(consignes('fr', qui, liens)).toMatch(/NE SIGNE PAS/);
   });
 

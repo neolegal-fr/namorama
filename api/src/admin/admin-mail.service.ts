@@ -16,7 +16,7 @@ import { jourISO } from './predicats';
  * prompt : chaque envoi la garde, et c'est ce qui dit, après coup, à qui
  * l'ancienne version a écrit.
  */
-export const CONSIGNES_VERSION = '2026-09-25.2';
+export const CONSIGNES_VERSION = '2026-09-25.3';
 
 /** Ce que le modèle sait du destinataire — et rien de plus. */
 export interface ContexteDestinataire {
@@ -40,7 +40,7 @@ export interface ContexteDestinataire {
   /** Retours déjà envoyés par formulaire ou par courriel. */
   retoursDonnes: { le: string; extrait: string }[];
   /** Messages déjà envoyés : ne pas répéter le même angle. */
-  dejaEcrit: { le: string; objet: string }[];
+  dejaEcrit: { le: string; extrait: string }[];
 }
 
 export interface Liens {
@@ -59,6 +59,16 @@ export interface Brouillon {
   /** Ce que la relecture doit regarder en priorité ; le brouillon reste modifiable. */
   avertissements: string[];
 }
+
+/**
+ * L'objet est FIXE, décidé et non généré : il dit d'emblée ce qu'on demande.
+ * Le modèle ne rédige plus que le corps.
+ */
+export const OBJET: Record<string, string> = {
+  fr: 'Aidez-nous à améliorer Namorama', en: 'Help us improve Namorama', de: 'Helfen Sie uns, Namorama zu verbessern',
+  es: 'Ayúdenos a mejorar Namorama', pt: 'Ajude-nos a melhorar o Namorama', it: 'Ci aiuti a migliorare Namorama',
+  nl: 'Help ons Namorama te verbeteren',
+};
 
 /** Qui signe : son nom complet, et ce qu'il est pour Namorama, dans la langue du message. */
 export interface Signataire {
@@ -133,15 +143,14 @@ export function mettreEnPage(texte: string): string {
 }
 
 /**
- * Lit la réponse du modèle. Un brouillon sans objet ou sans corps n'est pas
- * un brouillon : on le refuse plutôt que de pré-remplir un champ vide.
+ * Lit la réponse du modèle. Un brouillon sans corps n'est pas un brouillon :
+ * on le refuse plutôt que de pré-remplir un champ vide.
  */
-export function lireBrouillon(contenu: string | null | undefined): { subject: string; body: string } | null {
+export function lireBrouillon(contenu: string | null | undefined): string | null {
   try {
-    const brut = JSON.parse(contenu ?? '') as { objet?: unknown; corps?: unknown };
-    const subject = typeof brut.objet === 'string' ? brut.objet.replace(/\s+/g, ' ').trim().slice(0, 200) : '';
+    const brut = JSON.parse(contenu ?? '') as { corps?: unknown };
     const body = typeof brut.corps === 'string' ? brut.corps.trim() : '';
-    return subject && body ? { subject, body } : null;
+    return body || null;
   } catch {
     return null;
   }
@@ -197,7 +206,7 @@ export function consignes(langue: string, qui: Signataire, liens: Liens): string
     '',
     'CE QUE LE MESSAGE DOIT DIRE :',
     `- Il peut répondre directement à ce courriel, ou passer par [ce court formulaire](${liens.formulaire}).`,
-    '- Comme annoncé sur le site, un retour lui vaut jusqu’à 500 crédits offerts, ajoutés après lecture. ' +
+    '- Comme annoncé sur le site, un retour lui vaut jusqu’à 500 crédits, ajoutés après lecture. ' +
       'Une fois, en passant : c’est un remerciement, pas l’argument.',
     ...(liens.avis
       ? [
@@ -211,15 +220,14 @@ export function consignes(langue: string, qui: Signataire, liens: Liens): string
     `- En ${LANGUES[langue]}, vouvoiement. 50 à 100 mots, signature non comprise. Court : chaque phrase doit servir.`,
     '- Le ton d’une personne qui écrit à une autre : simple, direct, chaleureux. Aucune formule publicitaire, aucun emoji, ' +
       "pas de points d'exclamation en série, pas de « cher utilisateur ».",
-    "- OBJET : court, sans le moindre nom de projet. S'il a un nom en favori ou testé dans un rapport, cite-le " +
-      '(ex. « Levainerie, et votre avis sur Namorama ») ; sinon une demande d’aide autour de Namorama ' +
-      '(ex. « Votre avis pour améliorer Namorama »). Ni majuscules, ni « offre », ni « gratuit ».',
     '- Termine par une formule de politesse brève. NE SIGNE PAS : la signature est ajoutée ensuite.',
     '- Liens : UNIQUEMENT sous la forme [texte](url), avec les URL ci-dessus recopiées à l’identique. Aucune autre URL.',
     "- Ne cite jamais de coût, de modèle d'IA ou d'information technique interne.",
+    '- Évite le vocabulaire des campagnes, que les filtres anti-spam repèrent : « offert », « gratuit », « cadeau », ' +
+      '« profitez », « exclusif », « cliquez ici », « urgent ».',
     '- Texte brut : paragraphes séparés par une ligne vide. Aucune autre mise en forme que les liens [texte](url).',
     '',
-    'Réponds uniquement en JSON : {"objet": "...", "corps": "..."}.',
+    'L’objet est fixé à part : n’écris que le corps. Réponds uniquement en JSON : {"corps": "..."}.',
   ].join('\n');
 }
 
@@ -329,7 +337,7 @@ export class AdminMailService {
       })),
       rapportsAchetes: rapports.map((r: any) => String(r.name)),
       retoursDonnes: retours.map((r: any) => ({ le: jour(r.createdAt)!, extrait: raccourcir(r.message, 300) })),
-      dejaEcrit: envois.filter((e) => e.delivered).slice(0, 5).map((e) => ({ le: jour(e.createdAt)!, objet: e.subject })),
+      dejaEcrit: envois.filter((e) => e.delivered).slice(0, 5).map((e) => ({ le: jour(e.createdAt)!, extrait: raccourcir(e.body, 300) })),
     };
   }
 
@@ -357,11 +365,11 @@ export class AdminMailService {
       reasoning_effort: 'none',
     });
     const res = await this.usage.mesurer('admin_mail_draft', appel);
-    const brouillon = lireBrouillon(res.choices[0]?.message?.content);
-    if (!brouillon) throw new ServiceUnavailableException('Le modèle a rendu un brouillon inutilisable');
+    const texte = lireBrouillon(res.choices[0]?.message?.content);
+    if (!texte) throw new ServiceUnavailableException('Le modèle a rendu un brouillon inutilisable');
     // La signature suit le texte dans le formulaire : elle se relit et se retouche comme le reste.
-    const body = `${brouillon.body}\n\n${signature(qui, ctx.langue)}`;
-    return { subject: brouillon.subject, body, promptVersion: CONSIGNES_VERSION, avertissements: verifierBrouillon(body, liens) };
+    const body = `${texte}\n\n${signature(qui, ctx.langue)}`;
+    return { subject: OBJET[ctx.langue] ?? OBJET.fr, body, promptVersion: CONSIGNES_VERSION, avertissements: verifierBrouillon(body, liens) };
   }
 
   /**
@@ -388,6 +396,7 @@ export class AdminMailService {
       html: mettreEnPage(body),
       text: versionTexte(body),
       fromName: admin.nomComplet,
+      parAdmin: true,
       replyTo: this.config.get<string>('ADMIN_MAIL_REPLY_TO', 'nicolas@namorama.com'),
     });
 
