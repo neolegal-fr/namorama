@@ -364,6 +364,14 @@ poser : ce dernier ne part qu'au clic sur « Analyser », donc uniquement quand 
 n'a PAS été pré-calculée. Un seul exemplaire en sept jours pour 409 analyses produites —
 l'absence de signal mesurait l'efficacité du pré-calcul, pas la lecture.
 
+`name_copied` (depuis le 28/09/2026) est le seul indice, sur les cartes de résultats,
+qu'un utilisateur est reparti **avec** un nom. `domain_reserve_clicked` existe depuis le
+20/08, mais « Réserver » ne figure qu'au rapport et à l'écran « le nom retenu » :
+**zéro clic en 30 jours**, pour un écran que presque personne n'atteint. Or 59 comptes
+sur 85 repartaient sans une seule note — impossible de distinguer « trouvé » de
+« déçu ». L'événement porte `source` (`results_grid`, `pick_best`) et, depuis la
+grille, `toutLibre`, `favori`, `verifie` ; jamais le nom.
+
 ### Parcours utilisateur
 
 Deux canaux complémentaires :

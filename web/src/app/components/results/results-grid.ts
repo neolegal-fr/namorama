@@ -4,6 +4,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SafeHtml } from '@angular/platform-browser';
 import { BrandReportSummary } from '../../services/brand-report';
 import { VisibleOnceDirective } from './visible-once.directive';
+import { AnalyticsService } from '../../services/analytics';
 
 /** Une extension et son verdict, tels qu'affichés sur une carte. */
 interface ExtVerdict {
@@ -105,7 +106,20 @@ interface ExtVerdict {
               sur le nom, pas sur le rapport. Près du bouton d'achat, leur objet
               devenait ambigu.
             -->
-            <div class="rg-rate" *ngIf="!readOnly()">
+            <div class="rg-rate">
+              <!-- Copier le nom : le geste de qui l'emporte ailleurs — chez un
+                   registrar, dans un message, dans un document. Tracé, parce que
+                   c'est le seul indice, sur cet écran, que quelqu'un a trouvé
+                   ce qu'il cherchait. Présent en lecture seule : copier n'écrit
+                   rien. -->
+              <button type="button" class="rg-icon"
+                      [class.rg-icon--on]="copied() === d.name"
+                      [attr.aria-label]="('WIZARD.STEP3.PICK_COPY' | translate) + ' — ' + d.name"
+                      [attr.title]="'WIZARD.STEP3.PICK_COPY' | translate"
+                      (click)="copier(d)">
+                <i class="pi" [class.pi-check]="copied() === d.name" [class.pi-copy]="copied() !== d.name"></i>
+              </button>
+              @if (!readOnly()) {
               <button type="button" class="rg-icon"
                       [class.rg-icon--on]="isLiked(d)"
                       [attr.aria-label]="'WIZARD.STEP3.RATE_LIKED' | translate"
@@ -120,6 +134,7 @@ interface ExtVerdict {
                       (click)="rate.emit({ result: d, rating: d.rating === 'disliked' ? 'neutral' : 'disliked' })">
                 <i class="pi" [class.pi-thumbs-down-fill]="d.rating === 'disliked'" [class.pi-thumbs-down]="d.rating !== 'disliked'"></i>
               </button>
+              }
             </div>
           </header>
 
@@ -381,6 +396,34 @@ export class ResultsGridComponent {
   readonly carteVue = output<string>();
 
   readonly filter = signal<'all' | 'free' | 'report' | 'fav' | 'rejected'>('all');
+
+  private readonly analytics = inject(AnalyticsService);
+
+  /** Nom tout juste copié : l'icône passe à la coche le temps de le voir. */
+  readonly copied = signal<string | null>(null);
+
+  /**
+   * Copie le nom et le signale.
+   *
+   * « Réserver » n'est pas sur les cartes (retiré au profit du rapport), si
+   * bien que rien ne distinguait quelqu'un reparti avec un nom de quelqu'un
+   * reparti bredouille : 59 comptes sur 85 n'avaient laissé aucune note. La
+   * copie est l'indice le plus proche. L'événement ne porte pas le nom, mais
+   * ce qui permet de lire le geste : le nom était-il libre partout, aimé,
+   * vérifié ?
+   */
+  copier(d: any): void {
+    navigator.clipboard?.writeText(d.name).then(() => {
+      this.copied.set(d.name);
+      setTimeout(() => this.copied.set(null), 1500);
+    }).catch(() => { /* presse-papiers refusé : rien à signaler */ });
+    this.analytics.track('name_copied', {
+      source: 'results_grid',
+      toutLibre: this.allFree(d),
+      favori: this.isLiked(d),
+      verifie: !!this.summaryOf(d),
+    });
+  }
 
   /**
    * Filtres EXCLUSIFS : une seule vue à la fois.

@@ -1884,6 +1884,7 @@ export class WizardComponent implements OnInit, OnDestroy {
   }
 
   copyDomainName(name: string) {
+    this.analytics.track('name_copied', { source: 'pick_best' });
     navigator.clipboard.writeText(name).then(() => {
       this.copiedDomain.set(name);
       setTimeout(() => this.copiedDomain.set(null), 1500);
