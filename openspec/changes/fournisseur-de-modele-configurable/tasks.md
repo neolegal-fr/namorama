@@ -3,6 +3,7 @@
 ## 1. Avant le code : l'enveloppe tient-elle ?
 
 - [ ] 1.1 Saisir dans Administration → Tarifs IA les tarifs datés de `claude-haiku-5-5`, `claude-sonnet-5-5` et `claude-opus-5-5` (entrée, entrée en cache, sortie), vérifiés sur la page tarifs d'Anthropic le jour de la saisie. Puis relever au simulateur le coût projeté sur 30 jours pour chaque combinaison de modèles de D10, majoré de 30 %. Vérification : les trois tarifs apparaissent à l'écran, et la projection est notée dans ce fichier sous la tâche.
+  - Grille vérifiée le 20/10/2026 sur platform.claude.com/docs/en/about-claude/pricing ($/M tokens, entrée · cache lu · sortie) : `claude-haiku-5-5` 0,10 · 0,01 · 0,50 (prompts ≤ 100 000 tokens ; 0,50 · 0,05 · 2,50 au-delà, non modélisé) ; `claude-sonnet-5-5` 2 · 0,10 · 10 ; `claude-opus-5-5` 4 · 0,20 · 20. Recherche web : 10 $ les mille, comme chez OpenAI. Saisie faite dans la base **locale** ; reste à la faire en prod.
 - [ ] 1.2 Réclamer les crédits Max (Settings → Billing, organisation Console liée), créer un espace de travail `namorama` sans moyen de paiement ni rechargement automatique, et y créer une clé. Vérification : la Console affiche le solde de crédits sur l'organisation, et un `curl` minimal vers `/v1/messages` avec la clé répond 200.
 
 ## 2. Le port et l'adaptateur OpenAI, sans changement de comportement

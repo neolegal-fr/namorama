@@ -26,7 +26,7 @@ import { Adaptateur, Fournisseur } from '../src/common/modele-ia/modele-ia.types
 import { lireConsommation, OperationModele } from '../src/common/model-usage/model-usage.service';
 
 /**
- * Tarifs $/M tokens (entrée, entrée en cache, sortie), relevés le 06/10/2026.
+ * Tarifs $/M tokens (entrée, entrée en cache, sortie), vérifiés le 20/10/2026 sur platform.claude.com/docs/en/about-claude/pricing.
  * Une estimation pour comparer, pas une facture : le tableau de bord, lui,
  * lit `model_price`. Le modèle est un préfixe, comme là-bas.
  */
@@ -34,7 +34,7 @@ const TARIFS: [prefixe: string, entree: number, cache: number, sortie: number][]
   ['gpt-5.6-luna', 0.2, 0.02, 1.2],
   ['gpt-5.6-terra', 2, 0.2, 12],
   ['claude-haiku-5-5', 0.1, 0.01, 0.5],
-  ['claude-sonnet-5-5', 2, 0.2, 10],
+  ['claude-sonnet-5-5', 2, 0.1, 10],
   ['claude-opus-5-5', 4, 0.2, 20],
 ];
 const WEB_SEARCH = 0.01;
