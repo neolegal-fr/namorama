@@ -17,9 +17,9 @@
 
 ## 3. Wizard : exclusion cumulée, note, actualisation du rapport (web)
 
-- [ ] 3.1 Dans `wizard.ts`, ajouter un signal `testedNames`, alimenté par `done.checkedNames`, vidé à un changement de projet et à une recherche qui n'est pas un ajout. Envoyer `excludeNames` = noms affichés ∪ `testedNames`, limité aux 2 000 plus récents. Vérifier dans l'onglet réseau du navigateur que le second « 10 de plus » envoie les noms du premier `done`.
-- [ ] 3.2 Paramétrer `WIZARD.STEP3.NOTE` par `{{extensions}}` et `{{mode}}` dans `fr.json` et `en.json` (« .fr ou .com » / « .fr et .com »), et les fournir dans `wizard.html`. Vérifier au navigateur avec .io seul : la note ne dit pas « .com ».
-- [ ] 3.3 Passer `extensions: this.selectedExtensions()` dans `refreshBrandReport`. Vérifier au navigateur que le rapport actualisé d'un projet .fr + .com n'affiche ni .io, ni .net, ni .app.
+- [x] 3.1 Dans `wizard.ts`, ajouter un signal `testedNames`, alimenté par `done.checkedNames`, vidé à un changement de projet et à une recherche qui n'est pas un ajout. Envoyer `excludeNames` = noms affichés ∪ `testedNames`, limité aux 2 000 plus récents. Vérifier dans l'onglet réseau du navigateur que le second « 10 de plus » envoie les noms du premier `done`.
+- [x] 3.2 Paramétrer `WIZARD.STEP3.NOTE` par `{{extensions}}` et `{{mode}}` dans `fr.json` et `en.json` (« .fr ou .com » / « .fr et .com »), et les fournir dans `wizard.html`. Vérifier au navigateur avec .io seul : la note ne dit pas « .com ».
+- [x] 3.3 Passer `extensions: this.selectedExtensions()` dans `refreshBrandReport`. Vérifier au navigateur que le rapport actualisé d'un projet .fr + .com n'affiche ni .io, ni .net, ni .app.
 - [x] 3.4 Lancer `cd web && npm run build` (build de production) : il passe, budgets compris.
 
 ## 4. Vérification d'ensemble et documentation
