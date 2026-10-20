@@ -20,6 +20,7 @@ describe('lireConsommation', () => {
       },
     });
     expect(c).toEqual({
+      provider: 'openai',
       model: 'gpt-5.6-luna-2026-07-01',
       inputTokens: 420,
       cachedInputTokens: 128,
@@ -45,6 +46,60 @@ describe('lireConsommation', () => {
     expect(c.outputTokens).toBe(700);
     expect(c.reasoningTokens).toBe(300);
     expect(c.webSearchCalls).toBe(2);
+  });
+
+  describe('Messages (Anthropic)', () => {
+    const message = (usage: Record<string, unknown>) => ({
+      type: 'message',
+      model: 'claude-haiku-5-5',
+      content: [{ type: 'text', text: '…' }],
+      usage,
+    });
+
+    it('note un appel simple, fournisseur compris', () => {
+      const c = lireConsommation(message({ input_tokens: 300, output_tokens: 120 }));
+      expect(c).toEqual({
+        provider: 'anthropic',
+        model: 'claude-haiku-5-5',
+        inputTokens: 300,
+        cachedInputTokens: 0,
+        outputTokens: 120,
+        reasoningTokens: 0,
+        webSearchCalls: 0,
+        mesuree: true,
+      });
+    });
+
+    /*
+     * Chez Anthropic, `input_tokens` n'est que la part non cachée : la lire
+     * seule ferait disparaître du relevé tout ce qui passe par le cache.
+     */
+    it('recompose toute l\'entrée, cache écrit et lu compris', () => {
+      const c = lireConsommation(message({
+        input_tokens: 200,
+        cache_creation_input_tokens: 50,
+        cache_read_input_tokens: 800,
+        output_tokens: 40,
+      }));
+      expect(c.inputTokens).toBe(1050);
+      expect(c.cachedInputTokens).toBe(800);
+    });
+
+    it('lit la réflexion et les recherches web', () => {
+      const c = lireConsommation(message({
+        input_tokens: 9000,
+        output_tokens: 700,
+        output_tokens_details: { thinking_tokens: 250 },
+        server_tool_use: { web_search_requests: 3 },
+      }));
+      expect(c.reasoningTokens).toBe(250);
+      expect(c.webSearchCalls).toBe(3);
+    });
+
+    it('signale une réponse sans usage', () => {
+      const c = lireConsommation({ type: 'message', model: 'claude-haiku-5-5', content: [] });
+      expect(c).toMatchObject({ provider: 'anthropic', mesuree: false, inputTokens: 0 });
+    });
   });
 
   it('signale une réponse sans usage au lieu d\'inventer des tokens', () => {
@@ -75,7 +130,7 @@ describe('ModelUsageService.mesurer', () => {
     const { svc, inserts } = fabrique();
     const r = await svc.mesurer('refine', Promise.resolve(reponse));
     expect(r).toBe(reponse);
-    expect(inserts[0]).toMatchObject({ operation: 'refine', model: 'gpt-5.6-luna', inputTokens: 10, outputTokens: 5, keycloakId: null });
+    expect(inserts[0]).toMatchObject({ operation: 'refine', provider: 'openai', model: 'gpt-5.6-luna', inputTokens: 10, outputTokens: 5, keycloakId: null });
   });
 
   it('ne note rien quand l\'appel échoue, et laisse passer l\'erreur', async () => {

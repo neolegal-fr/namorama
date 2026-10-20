@@ -23,6 +23,7 @@ export type OperationModele =
 
 /** Consommation lue dans une réponse, quelle que soit l'API qui l'a rendue. */
 export interface Consommation {
+  provider: 'openai' | 'anthropic';
   model: string;
   inputTokens: number;
   cachedInputTokens: number;
@@ -36,9 +37,9 @@ export interface Consommation {
 const entier = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.round(v)) : 0);
 
 /**
- * Lit la consommation d'une réponse OpenAI.
+ * Lit la consommation d'une réponse, quel que soit le fournisseur.
  *
- * Deux API, deux vocabulaires pour la même chose :
+ * Trois API, trois vocabulaires pour la même chose :
  *
  * - Chat Completions : `prompt_tokens` / `completion_tokens`, détails dans
  *   `prompt_tokens_details.cached_tokens` et
@@ -46,10 +47,19 @@ const entier = (v: unknown): number => (typeof v === 'number' && Number.isFinite
  * - Responses : `input_tokens` / `output_tokens`, détails dans
  *   `input_tokens_details` et `output_tokens_details`. Les recherches web ne
  *   sont pas des tokens : elles se comptent dans `output`, un élément
- *   `web_search_call` par appel d'outil.
+ *   `web_search_call` par appel d'outil ;
+ * - Messages (Anthropic, `type: 'message'`) : `input_tokens` n'est que la
+ *   part NON cachée ; l'écriture et la lecture du cache s'ajoutent
+ *   (`cache_creation_input_tokens`, `cache_read_input_tokens`). La réflexion
+ *   est dans `output_tokens`, détaillée dans
+ *   `output_tokens_details.thinking_tokens` ; les recherches web dans
+ *   `server_tool_use.web_search_requests`.
  *
- * Dans les deux cas l'entrée INCLUT sa part en cache, et la sortie son
+ * Partout, la colonne d'entrée INCLUT sa part en cache, et la sortie son
  * raisonnement : les détails sont des sous-ensembles, pas des compléments.
+ * L'entrée Anthropic est donc recomposée. Les tokens écrits en cache y sont
+ * comptés au plein tarif d'entrée, pas à leur tarif majoré : une
+ * surestimation plutôt qu'un oubli.
  */
 export function lireConsommation(reponse: any): Consommation {
   const u = reponse?.usage;
@@ -57,12 +67,27 @@ export function lireConsommation(reponse: any): Consommation {
     ? reponse.output.filter((o: any) => o?.type === 'web_search_call').length
     : 0;
   const model = typeof reponse?.model === 'string' && reponse.model ? reponse.model : 'inconnu';
+  const provider = reponse?.type === 'message' ? 'anthropic' : 'openai';
 
   if (!u) {
-    return { model, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0, webSearchCalls, mesuree: false };
+    return { provider, model, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0, webSearchCalls, mesuree: false };
+  }
+  if (provider === 'anthropic') {
+    const lu = entier(u.cache_read_input_tokens);
+    return {
+      provider,
+      model,
+      inputTokens: entier(u.input_tokens) + entier(u.cache_creation_input_tokens) + lu,
+      cachedInputTokens: lu,
+      outputTokens: entier(u.output_tokens),
+      reasoningTokens: entier(u.output_tokens_details?.thinking_tokens),
+      webSearchCalls: entier(u.server_tool_use?.web_search_requests),
+      mesuree: true,
+    };
   }
   const responses = u.input_tokens !== undefined || u.output_tokens !== undefined;
   return {
+    provider,
     model,
     inputTokens: entier(responses ? u.input_tokens : u.prompt_tokens),
     cachedInputTokens: entier(responses ? u.input_tokens_details?.cached_tokens : u.prompt_tokens_details?.cached_tokens),
@@ -91,6 +116,8 @@ export class ModelUsageService {
    *
    * S'utilise en enveloppe, pour que l'oubli se voie à la lecture :
    * `await usage.mesurer('refine', openai.chat.completions.create({…}))`.
+   * Seuls les adaptateurs de `ModeleIA` l'appellent : un service ne parle
+   * jamais directement à un SDK.
    *
    * Un appel qui LÈVE n'est pas noté : une erreur de l'API n'est pas facturée,
    * et l'exception remonte telle quelle. Une réponse tronquée, elle, l'est — et
@@ -114,6 +141,7 @@ export class ModelUsageService {
       // `route.path` plutôt que l'URL : pas d'identifiant, donc une valeur qui se groupe.
       route: ctx ? String((ctx.req as any).route?.path ?? ctx.req.path ?? '').slice(0, 120) || null : null,
       operation,
+      provider: conso.provider,
       model: conso.model.slice(0, 64),
       inputTokens: conso.inputTokens,
       cachedInputTokens: conso.cachedInputTokens,

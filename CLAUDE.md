@@ -7,7 +7,7 @@ SaaS pour trouver des noms de marque et domaines disponibles à partir d'une des
 - **Frontend** : Angular 21, PrimeNG 21 (Aura theme), Tailwind CSS 4
 - **Backend** : NestJS, TypeORM, MariaDB 10.6
 - **Auth** : Keycloak SSO (realm `namorama`, auto-importé depuis `infra/keycloak/realm-export.json`)
-- **IA** : OpenAI GPT-5.6 — voir « Coût des appels au modèle »
+- **IA** : OpenAI GPT-5.6 par défaut, ou Claude (Anthropic) — `AI_PROVIDER`, voir « Fournisseur du modèle »
 - **Infra** : Docker Compose (`infra/docker-compose.yml`), orchestration via `justfile`
 
 ## Commandes
@@ -151,11 +151,46 @@ Tout le reste pesait 1 %.
 **Trois modèles, trois rôles.** Les identifiants sont configurables ; les valeurs par
 défaut sont dans `api/.env.example`.
 
-| variable | usage | tarif (in / out par M) |
-|---|---|---|
-| `OPENAI_MODEL` | reformulation, mots-clés, contraintes, nom de projet | luna — 0,20 $ / 1,20 $ |
-| `OPENAI_MODEL_CREATIVE` | génération de noms, pick-best, repérage du marché | terra — 2,00 $ / 12,00 $ |
-| `OPENAI_MODEL_ANALYSIS` | notation des noms. **Non définie ⇒ `OPENAI_MODEL`** | luna |
+| rôle | usage | OpenAI (défaut) | Claude |
+|---|---|---|---|
+| simple | reformulation, mots-clés, contraintes, nom de projet, découpage INPI | `OPENAI_MODEL` — luna, 0,20 $ / 1,20 $ | `ANTHROPIC_MODEL` |
+| créatif | génération de noms, pick-best, repérage du marché, brouillon admin | `OPENAI_MODEL_CREATIVE` — terra, 2,00 $ / 12,00 $ | `ANTHROPIC_MODEL_CREATIVE` |
+| analyse | notation des noms. **Non définie ⇒ modèle simple** | `OPENAI_MODEL_ANALYSIS` — luna | `ANTHROPIC_MODEL_ANALYSIS` |
+
+#### Fournisseur du modèle
+
+`AI_PROVIDER` (`openai` par défaut, ou `anthropic`) choisit qui sert **tous** les appels.
+Depuis le 07/10/2026, l'abonnement Claude Max comprend 100 $ de crédits API par mois,
+sur l'organisation Console liée à l'abonnement : c'est ce qui rend Claude intéressant.
+
+- **Un seul point d'entrée, `ModeleIA`** (`api/src/common/modele-ia/`). Les services
+  décrivent ce qu'ils demandent — rôle, consigne, format, budget, raisonnement —, deux
+  adaptateurs le traduisent. **Aucun service n'importe un SDK** : un appel ajouté hors
+  du port échappe au choix du fournisseur et au relevé.
+- **Aucun modèle Claude n'a de valeur par défaut** : `ANTHROPIC_MODEL` et
+  `ANTHROPIC_MODEL_CREATIVE` sont obligatoires. Le démarrage refuse une configuration
+  inutilisable, en nommant la variable.
+- **Le JSON, côté Claude, passe par un schéma** (`schemas.ts`) : Anthropic n'a pas de
+  mode JSON sans forme imposée. Un schéma qui s'écarte de son parseur rendrait un
+  résultat vide sans erreur — `schemas.spec.ts` fait passer un exemple de chacun par
+  son parseur.
+- **`reasoning_effort: none` n'existe pas tel quel chez Claude** : `thinking` désactivé
+  sur Haiku 5.5, `between_tools` sur Sonnet 5.5 (`disabled` y rend un 400), `effort: low`
+  sur Opus 5.5, qui ne désactive pas sa réflexion (`parametresDeRaisonnement`).
+- **Une réponse tronquée ou refusée arrive vide** à l'opération, qui applique son repli,
+  et se journalise (`<operation> : réponse tronquée par …`). Le budget de sortie est
+  majoré de 30 % chez Claude (`MAJORATION_SORTIE`), à recalibrer sur mesures.
+- **Le secours (`AI_FALLBACK_PROVIDER`) ne joue que sur un refus de crédit** — solde
+  Anthropic épuisé, `insufficient_quota` chez OpenAI. Une limite de débit ne bascule
+  pas : ce serait doubler les appels payants pendant une saturation. Chaque bascule se
+  journalise (`ai_provider_fallback`, au plus une fois par heure). Le signal Anthropic
+  est un **texte de message** (« credit balance »), le seul qui existe : si les bascules
+  cessent alors que les crédits sont à zéro, c'est lui qu'il faut revoir.
+- **Pas de carte sur l'organisation Console** : sinon, les crédits épuisés, la dépense
+  continue sur la carte au lieu de passer au secours.
+- Avec `AI_PROVIDER=openai`, les requêtes sont celles d'avant, paramètre pour paramètre
+  (`requetes-openai.spec.ts`). Seul écart : le brouillon admin suit le rôle créatif, alors
+  qu'il retombait sur luna quand `OPENAI_MODEL_CREATIVE` manquait.
 
 Trois règles, chacune tirée d'une dépense qu'on a vraiment payée :
 
@@ -187,7 +222,7 @@ Trois règles, chacune tirée d'une dépense qu'on a vraiment payée :
 
 Chaque appel au modèle écrit une ligne dans `model_usage` (depuis le 22/09/2026) :
 entrée, part en cache, sortie, part de raisonnement, appels `web_search`, opération,
-modèle, compte, session. Le **coût n'est jamais stocké** : il se calcule à la lecture,
+modèle, **fournisseur** (`provider`, depuis le 20/10/2026), compte, session. Le **coût n'est jamais stocké** : il se calcule à la lecture,
 tokens × tarif de `model_price` **en vigueur à la date de l'appel** (`cout-sql.ts`).
 
 - **Changer un tarif = ajouter un tarif daté**, depuis l'écran **Administration → Tarifs
@@ -198,8 +233,10 @@ tokens × tarif de `model_price` **en vigueur à la date de l'appel** (`cout-sql
   « long contexte » (> 272k tokens d'entrée) n'est pas modélisé, nos appels en sont loin. Le modèle d'un tarif est un **préfixe** (`gpt-5.6-luna` couvre
   l'instantané daté que l'API renvoie). Un modèle sans tarif est « non chiffré » —
   signalé au tableau de bord, jamais compté à zéro.
-- **Tout appel passe par `ModelUsageService.mesurer(operation, appel)`**. Un appel OpenAI
-  ajouté sans cette enveloppe est une dépense invisible. Un appel servi par un cache n'en
+- **Tout appel passe par `ModelUsageService.mesurer(operation, appel)`**, que seuls les
+  adaptateurs de `ModeleIA` appellent. Un appel ajouté sans cette enveloppe est une
+  dépense invisible. Chez Anthropic, `input_tokens` n'est que la part non cachée :
+  `lireConsommation` recompose toute l'entrée, comme la compte la colonne. Un appel servi par un cache n'en
   écrit pas : il n'a rien coûté.
 - **Imputation** : le compte du jeton, ou le **payeur** désigné par `imputer()` (le
   propriétaire d'un projet partagé, comme pour les crédits). Le contexte suit la requête
@@ -212,8 +249,9 @@ tokens × tarif de `model_price` **en vigueur à la date de l'appel** (`cout-sql
   modèle aux mêmes tokens. Juste à `reasoning_effort: none` ; ordre de grandeur pour
   `pick_best` et `competitors`, dont le raisonnement dépend du modèle.
 
-> Contrôle de complétude : une fois par mois, comparer le total du tableau de bord à la
-> facture OpenAI. Un écart de plus de quelques pour cent signale un appel non enveloppé.
+> Contrôle de complétude : une fois par mois, comparer le total du tableau de bord, par
+> fournisseur, à la facture OpenAI **et** à la consommation de la Console Anthropic. Un
+> écart de plus de quelques pour cent signale un appel non enveloppé.
 
 > **Les cinq endpoints de l'étape 1 sont `@Public()`**, sans crédit ni limite de débit.
 > Toute dépense qu'on y branche est une dépense que n'importe qui peut déclencher en

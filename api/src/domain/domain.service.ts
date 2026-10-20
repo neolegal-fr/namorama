@@ -1,12 +1,12 @@
-import { Injectable, Logger, BadRequestException, Optional } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { Resolver } from 'node:dns/promises';
 import { MatchMode } from './dto/search-domains.dto';
 import { RdapService } from './rdap.service';
-import { ModelUsageService, OperationModele } from '../common/model-usage/model-usage.service';
+import { ModeleIA } from '../common/modele-ia/modele-ia.service';
+import { SCHEMA_ANALYSES, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_NOMS } from '../common/modele-ia/schemas';
 
 const execFileAsync = promisify(execFile);
 
@@ -216,7 +216,6 @@ export interface FindDomainsOptions {
 @Injectable()
 export class DomainService {
   private readonly logger = new Logger(DomainService.name);
-  private openai: OpenAI;
   /** Une file d'attente par registre, cf. PER_REGISTRY_CONCURRENCY. */
   private readonly registryGates = new Map<string, { active: number; queue: (() => void)[] }>();
 
@@ -229,21 +228,6 @@ export class DomainService {
 
   /** Par TLD : le pré-filtre DNS y est-il utilisable ? Voir `prefiltreUtilisable`. */
   private readonly dnsUtilisable = new Map<string, Promise<boolean>>();
-
-  /** Modèle par défaut pour les tâches simples/rapides (reformulation, mots-clés…). */
-  private readonly model: string;
-  /** Modèle « qualité » pour les étapes créatives / à jugement (génération de noms, pick-best). */
-  private readonly creativeModel: string;
-  /**
-   * Modèle de la notation des noms — le modèle simple par défaut.
-   *
-   * L'analyse tournait sur le modèle créatif, à raisonnement `low` : 0,0075 $
-   * l'appel là où la tâche est une notation sur cinq critères dans un JSON
-   * imposé, pas de la création. Le modèle simple la rend au dixième du prix.
-   * Variable séparée pour que revenir en arrière sur la seule analyse ne
-   * ramène pas aussi la génération de noms — c'est là que la qualité se joue.
-   */
-  private readonly analysisModel: string;
 
   /**
    * Repérage du marché déjà payé, par description.
@@ -259,46 +243,35 @@ export class DomainService {
    */
   private readonly competitorsCache = new Map<string, { at: number; value: CompetitorsResult }>();
 
+  /*
+   * Les modèles par rôle (simple, créatif, analyse) et le fournisseur se
+   * choisissent à la configuration : voir `ModeleIA` et `.env.example`.
+   * L'analyse tourne sur le modèle simple par défaut — une notation sur cinq
+   * critères dans un JSON imposé, pas de la création.
+   */
   constructor(
     private configService: ConfigService,
     private readonly rdap: RdapService,
-    // Facultatif pour les tests unitaires, qui construisent le service à la main.
-    @Optional() private readonly usage?: ModelUsageService,
-  ) {
-    this.openai = new OpenAI({
-      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
-    });
-    // Modèles configurables via env — cf. .env.example.
-    // IDs API GPT-5.6 : gpt-5.6-luna (rapide/éco), gpt-5.6-terra (équilibré), gpt-5.6-sol (max).
-    this.model = this.configService.get<string>('OPENAI_MODEL') ?? 'gpt-5.6-luna';
-    this.creativeModel = this.configService.get<string>('OPENAI_MODEL_CREATIVE') ?? 'gpt-5.6-terra';
-    this.analysisModel = this.configService.get<string>('OPENAI_MODEL_ANALYSIS') ?? this.model;
-    this.logger.log(`Modèles OpenAI — simple: "${this.model}" | créatif: "${this.creativeModel}" | analyse: "${this.analysisModel}"`);
-  }
-
-  /** Note la consommation d'un appel au modèle. Voir `ModelUsageService.mesurer`. */
-  private mesurer<T>(operation: OperationModele, appel: Promise<T>, items = 1): Promise<T> {
-    return this.usage ? this.usage.mesurer(operation, appel, items) : appel;
-  }
+    private readonly modele: ModeleIA,
+  ) {}
 
   async refineDescription(description: string): Promise<string> {
     try {
-      const response = await this.mesurer('refine', this.openai.chat.completions.create({
-        model: this.model,
-        messages: [
-          {
-            role: 'system',
-            content:
-              'Tu es un expert en marketing et branding. Reformule et complète la description suivante pour en extraire l\'essence et la valeur ajoutée du produit. Sois concis mais percutant. ' +
-              'Réponds en texte brut uniquement : pas de Markdown, pas de titres (#), pas de gras/italique (*, **, _), pas de listes à puces ni de numérotation. Un ou deux paragraphes simples séparés par un saut de ligne.',
-          },
-          { role: 'user', content: description },
-        ],
-        max_completion_tokens: 500,
-        reasoning_effort: 'none',
-      }));
+      const response = await this.modele.completer('refine', {
+        role: 'simple',
+        systeme:
+          'Tu es un expert en marketing et branding. Reformule et complète la description suivante pour en extraire l\'essence et la valeur ajoutée du produit. Sois concis mais percutant. ' +
+          'Réponds en texte brut uniquement : pas de Markdown, pas de titres (#), pas de gras/italique (*, **, _), pas de listes à puces ni de numérotation. Un ou deux paragraphes simples séparés par un saut de ligne.',
+        message: description,
+        format: { type: 'texte' },
+        maxSortie: 500,
+        raisonnement: 'none',
+      });
 
-      return this.stripMarkdown(response.choices[0].message.content?.trim() ?? '');
+      // Rien d'exploitable (réponse tronquée, refusée, vide) : la description
+      // d'origine plutôt qu'un champ vidé sous les yeux de l'utilisateur.
+      const refined = this.stripMarkdown(response.texte.trim());
+      return refined || description;
     } catch (error) {
       this.logger.error('Erreur lors de la reformulation IA:', error);
       throw error;
@@ -323,22 +296,18 @@ export class DomainService {
 
   async suggestProjectName(description: string): Promise<string> {
     try {
-      const response = await this.mesurer('suggest_name', this.openai.chat.completions.create({
-        model: this.model,
-        messages: [
-          {
-            role: 'system',
-            content: 'Tu es un expert en branding. Suggère UNIQUEMENT un seul mot (nom propre ou mot inventé) qui soit extrêmement évocateur, moderne et mémorisable pour le projet décrit. Pas de ponctuation, pas de phrase.',
-          },
-          { role: 'user', content: description },
-        ],
+      const response = await this.modele.completer('suggest_name', {
+        role: 'simple',
+        systeme: 'Tu es un expert en branding. Suggère UNIQUEMENT un seul mot (nom propre ou mot inventé) qui soit extrêmement évocateur, moderne et mémorisable pour le projet décrit. Pas de ponctuation, pas de phrase.',
+        message: description,
+        format: { type: 'texte' },
         // Budget généreux : sur un modèle à raisonnement, une limite trop basse
         // (ex. 10) serait absorbée par les tokens de raisonnement → réponse vide.
-        max_completion_tokens: 200,
-        reasoning_effort: 'none',
-      }));
+        maxSortie: 200,
+        raisonnement: 'none',
+      });
 
-      return response.choices[0].message.content?.trim().replace(/[^a-zA-Z0-9]/g, '') ?? '';
+      return response.texte.trim().replace(/[^a-zA-Z0-9]/g, '');
     } catch (error) {
       this.logger.error('Erreur lors de la suggestion du nom de projet:', error);
       return '';
@@ -362,25 +331,21 @@ export class DomainService {
       : 'Generate keywords in English, suitable for an international audience.';
 
     try {
-      const response = await this.mesurer('keywords', this.openai.chat.completions.create({
-        model: this.model,
-        messages: [
-          {
-            role: 'system',
-            content: `You are an SEO and semantics expert.
+      const response = await this.modele.completer('keywords', {
+        role: 'simple',
+        systeme: `You are an SEO and semantics expert.
             Identify the ${KEYWORD_LIMIT} MOST RELEVANT keywords for the following description, ordered from most to least relevant.
             Vary the angles: synonyms, technical terms, user benefits, and abstract concepts related to the domain.
             Prefer precision over coverage: a shorter, sharper list is better than an exhaustive one.
             ${localeInstruction}
             Return ONLY a comma-separated list of words, no numbering.`,
-          },
-          { role: 'user', content: description },
-        ],
-        max_completion_tokens: 600,
-        reasoning_effort: 'none',
-      }));
+        message: description,
+        format: { type: 'texte' },
+        maxSortie: 600,
+        raisonnement: 'none',
+      });
 
-      const content = response.choices[0].message.content;
+      const content = response.texte;
       if (!content) return [];
       return dedupeKeywords(content.split(',')).slice(0, KEYWORD_LIMIT);
     } catch (error) {
@@ -409,14 +374,14 @@ Rules:
 Description: "${description.replace(/"/g, "'").slice(0, 800)}"`;
 
     try {
-      const response = await this.mesurer('constraints', this.openai.chat.completions.create({
-        model: this.model,
-        messages: [{ role: 'user', content: prompt }],
-        max_completion_tokens: 300,
-        reasoning_effort: 'none',
-        response_format: { type: 'json_object' },
-      }));
-      const content = response.choices[0].message.content;
+      const response = await this.modele.completer('constraints', {
+        role: 'simple',
+        message: prompt,
+        format: { type: 'json', schema: SCHEMA_CONTRAINTES },
+        maxSortie: 300,
+        raisonnement: 'none',
+      });
+      const content = response.texte;
       if (!content) return { ...DEFAULT_CONSTRAINTS };
       const p = JSON.parse(content);
 
@@ -547,11 +512,10 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
     // 1) Recherche web en direct
     const startedAt = Date.now();
     try {
-      const response = await this.mesurer('competitors', this.openai.responses.create({
-        model: this.creativeModel,
-        tools: [{ type: 'web_search' }],
-        input: this.competitorsPrompt(description, locale, true),
-        max_output_tokens: 1500,
+      const response = await this.modele.chercherSurLeWeb('competitors', {
+        role: 'creatif',
+        message: this.competitorsPrompt(description, locale, true),
+        maxSortie: 1500,
         // L'appel le plus cher du produit était le seul à tourner à l'effort
         // de raisonnement par défaut du modèle. `low` le borne sans le
         // museler. Pas `none` : c'est le modèle qui décide d'appeler
@@ -559,11 +523,11 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
         // alors un appel outillé qui ne cherche rien, pour retomber sur le
         // repli. Le cas s'observe dans les logs : `source: 'model'` là où la
         // voie web a pourtant été tentée.
-        reasoning: { effort: 'low' },
-      }));
+        raisonnement: 'low',
+      });
       const modelMs = Date.now() - startedAt;
-      const usedWeb = response.output?.some((o: any) => o.type === 'web_search_call') ?? false;
-      const competitors = this.parseCompetitors(response.output_text ?? '');
+      const usedWeb = response.recherchesWeb > 0;
+      const competitors = this.parseCompetitors(response.texte);
       if (competitors.length > 0) {
         const verifyStartedAt = Date.now();
         const verified = await this.dropUnregisteredDomains(competitors);
@@ -581,14 +545,14 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
 
     // 2) Repli : connaissance du modèle
     try {
-      const response = await this.mesurer('competitors', this.openai.chat.completions.create({
-        model: this.creativeModel,
-        messages: [{ role: 'user', content: this.competitorsPrompt(description, locale, false) }],
-        max_completion_tokens: 800,
-        reasoning_effort: 'none',
-        response_format: { type: 'json_object' },
-      }));
-      const competitors = this.parseCompetitors(response.choices[0].message.content ?? '');
+      const response = await this.modele.completer('competitors', {
+        role: 'creatif',
+        message: this.competitorsPrompt(description, locale, false),
+        format: { type: 'json', schema: SCHEMA_CONCURRENTS },
+        maxSortie: 800,
+        raisonnement: 'none',
+      });
+      const competitors = this.parseCompetitors(response.texte);
       return this.cacheCompetitors(description, locale, {
         competitors: await this.dropUnregisteredDomains(competitors),
         source: 'model',
@@ -779,18 +743,18 @@ Respond ONLY with a JSON object. Example:
 {"names": [{"name": "velora", "style": "standard"}, {"name": "boulangerieprovence", "style": "descriptive"}, {"name": "petitpoucet", "style": "cultural"}]}`;
 
     try {
-      const response = await this.mesurer('generate_names', this.openai.chat.completions.create({
-        model: this.creativeModel,
-        messages: [{ role: 'user', content: prompt }],
+      const response = await this.modele.completer('generate_names', {
+        role: 'creatif',
+        message: prompt,
+        format: { type: 'json', schema: SCHEMA_NOMS },
         // Budget élargi : couvre les tokens de raisonnement + le JSON de ~30 noms.
-        max_completion_tokens: 4000,
+        maxSortie: 4000,
         // 'none' : la génération tourne en boucle (jusqu'à MAX_TENTATIVES) → on privilégie la
         // latence. terra produit d'excellents noms sans raisonnement.
-        reasoning_effort: 'none',
-        response_format: { type: 'json_object' }
-      }));
+        raisonnement: 'none',
+      });
 
-      const content = response.choices[0].message.content;
+      const content = response.texte;
       if (!content) return [];
 
       const parsed = JSON.parse(content);
@@ -898,14 +862,15 @@ Names:
 ${names.map((n) => `- ${n}`).join('\n')}`;
 
     try {
-      const response = await this.mesurer('analyze', this.openai.chat.completions.create({
-        model: this.analysisModel,
-        messages: [{ role: 'user', content: prompt }],
-        max_completion_tokens: 200 + TOKENS_PAR_ANALYSE * names.length,
-        reasoning_effort: 'none',
-        response_format: { type: 'json_object' },
-      }), names.length);
-      return this.parseAnalyses(response.choices[0].message.content ?? '', names, lang);
+      const response = await this.modele.completer('analyze', {
+        role: 'analyse',
+        message: prompt,
+        format: { type: 'json', schema: SCHEMA_ANALYSES },
+        maxSortie: 200 + TOKENS_PAR_ANALYSE * names.length,
+        raisonnement: 'none',
+        items: names.length,
+      });
+      return this.parseAnalyses(response.texte, names, lang);
     } catch (error) {
       this.logger.error(`Erreur analyse IA pour ${names.length} nom(s) :`, error);
       return new Map();
@@ -986,14 +951,14 @@ Respond ONLY in JSON: {"recommended": "thename", "reason": "2-3 sentences explai
 ${langInstruction}`;
 
     try {
-      const response = await this.mesurer('pick_best', this.openai.chat.completions.create({
-        model: this.creativeModel,
-        messages: [{ role: 'user', content: prompt }],
-        max_completion_tokens: 600,
-        reasoning_effort: 'low',
-        response_format: { type: 'json_object' },
-      }));
-      const content = response.choices[0].message.content;
+      const response = await this.modele.completer('pick_best', {
+        role: 'creatif',
+        message: prompt,
+        format: { type: 'json', schema: SCHEMA_CHOIX },
+        maxSortie: 600,
+        raisonnement: 'low',
+      });
+      const content = response.texte;
       if (!content) throw new Error('Empty response');
       return JSON.parse(content);
     } catch (error) {

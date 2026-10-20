@@ -1,7 +1,6 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
-import { ModelUsageService } from '../../common/model-usage/model-usage.service';
+import { ModeleIA } from '../../common/modele-ia/modele-ia.service';
+import { SCHEMA_DECOUPAGES } from '../../common/modele-ia/schemas';
 
 /**
  * Orthographes d'un même nom que l'index de l'INPI ne rapproche pas tout seul.
@@ -21,16 +20,6 @@ import { ModelUsageService } from '../../common/model-usage/model-usage.service'
 @Injectable()
 export class NameVariantsService {
   private readonly logger = new Logger(NameVariantsService.name);
-  /**
-   * Absent si aucune clé n'est configurée — le service rend alors ses seules
-   * variantes mécaniques, sans rien dire de plus.
-   *
-   * Construire le client OpenAI avec une clé vide LÈVE, et lèverait ici à
-   * l'instanciation du module : tout le rapport de marque tomberait pour une
-   * aide facultative. Un service best-effort ne casse pas le démarrage.
-   */
-  private readonly openai?: OpenAI;
-  private readonly model: string;
 
   /** Séparateurs qui font, ou défont, un jeton dans l'index. */
   private static readonly SEPARATORS = /[\s\-_.’']+/g;
@@ -41,15 +30,11 @@ export class NameVariantsService {
    */
   private static readonly MIN_LENGTH_FOR_SPLIT = 6;
 
-  constructor(
-    config: ConfigService,
-    // Facultatif pour les tests unitaires, qui construisent le service à la main.
-    @Optional() private readonly usage?: ModelUsageService,
-  ) {
-    const apiKey = config.get<string>('OPENAI_API_KEY');
-    this.openai = apiKey ? new OpenAI({ apiKey }) : undefined;
-    this.model = config.get<string>('OPENAI_MODEL') ?? 'gpt-5.6-luna';
-  }
+  /**
+   * Absent, le service rend ses seules variantes mécaniques, sans rien dire
+   * de plus : c'est une aide facultative, elle ne fait pas tomber le rapport.
+   */
+  constructor(@Optional() private readonly modele?: ModeleIA) {}
 
   /**
    * Orthographes à chercher EN PLUS du nom lui-même, les plus utiles d'abord.
@@ -95,27 +80,21 @@ export class NameVariantsService {
    * chose que le nom qu'on lui a donné.
    */
   private async splitWithModel(name: string): Promise<string[]> {
-    if (!this.openai) return [];
+    if (!this.modele) return [];
     try {
-      const appel = this.openai.chat.completions.create({
-        model: this.model,
-        messages: [
-          {
-            role: 'system',
-            content:
-              "Tu découpes un nom de marque écrit en un seul mot en mots réels (français ou anglais). " +
-              "N'ajoute, ne retire et ne modifie AUCUNE lettre : le découpage doit redonner le mot exact " +
-              "une fois les espaces retirés. Si aucun découpage ne fait sens, renvoie une liste vide. " +
-              'Réponds uniquement en JSON : {"decoupages": ["mot mot"]}. Deux propositions au maximum.',
-          },
-          { role: 'user', content: name },
-        ],
-        response_format: { type: 'json_object' },
-        max_completion_tokens: 120,
-        reasoning_effort: 'none',
+      const res = await this.modele.completer('name_variants', {
+        role: 'simple',
+        systeme:
+          "Tu découpes un nom de marque écrit en un seul mot en mots réels (français ou anglais). " +
+          "N'ajoute, ne retire et ne modifie AUCUNE lettre : le découpage doit redonner le mot exact " +
+          "une fois les espaces retirés. Si aucun découpage ne fait sens, renvoie une liste vide. " +
+          'Réponds uniquement en JSON : {"decoupages": ["mot mot"]}. Deux propositions au maximum.',
+        message: name,
+        format: { type: 'json', schema: SCHEMA_DECOUPAGES },
+        maxSortie: 120,
+        raisonnement: 'none',
       });
-      const res = this.usage ? await this.usage.mesurer('name_variants', appel) : await appel;
-      const raw = JSON.parse(res.choices[0]?.message?.content ?? '{}') as { decoupages?: unknown };
+      const raw = JSON.parse(res.texte || '{}') as { decoupages?: unknown };
       const proposals = Array.isArray(raw.decoupages) ? raw.decoupages : [];
       const kept = proposals
         .filter((v): v is string => typeof v === 'string')

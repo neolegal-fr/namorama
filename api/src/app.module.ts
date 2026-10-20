@@ -22,6 +22,7 @@ import { BrandReportModule } from './brand-report/brand-report.module';
 import { LoggingModule } from './common/logging/logging.module';
 import { FunnelModule } from './common/funnel/funnel.module';
 import { ModelUsageModule } from './common/model-usage/model-usage.module';
+import { ModeleIAModule } from './common/modele-ia/modele-ia.module';
 import { EventsController } from './events/events.controller';
 import { HorlogeService } from './common/horloge.service';
 
@@ -66,6 +67,7 @@ import { HorlogeService } from './common/horloge.service';
     LoggingModule,
     FunnelModule,
     ModelUsageModule,
+    ModeleIAModule,
     DomainModule,
     UsersModule,
     ProjectsModule,

@@ -48,11 +48,18 @@ export class ModelUsage {
   @Column({ type: 'varchar', length: 32 })
   operation: string;
 
+  /**
+   * Fournisseur qui a servi l'appel, `openai` ou `anthropic` — secours
+   * compris : c'est celui qui a facturé. Défaut `openai` pour l'historique.
+   */
+  @Column({ type: 'varchar', length: 16, default: 'openai' })
+  provider: string;
+
   /** Modèle tel que l'API l'a nommé dans sa réponse (instantané daté compris). */
   @Column({ type: 'varchar', length: 64 })
   model: string;
 
-  /** Tokens d'entrée, cache compris — c'est ainsi qu'OpenAI les compte. */
+  /** Tokens d'entrée, cache compris — c'est ainsi qu'OpenAI les compte, et qu'on recompte ceux d'Anthropic. */
   @Column({ type: 'int', default: 0 })
   inputTokens: number;
 

@@ -81,7 +81,7 @@ Pour chaque opération, le système SHALL rendre au reste de l'application un r�
 
 ### Requirement: Le repérage du marché cherche sur le web chez les deux fournisseurs
 
-Avec l'un ou l'autre fournisseur, le repérage du marché SHALL d'abord tenter une recherche web, puis se replier sur la connaissance du modèle quand la recherche ne rend rien d'exploitable. Le résultat SHALL indiquer `source: 'web'` seulement si au moins une recherche web a effectivement eu lieu. Le cache de 24 h par description SHALL s'appliquer pareillement, et un résultat obtenu sur un fournisseur SHALL rester servi après une bascule.
+Avec l'un ou l'autre fournisseur, le repérage du marché SHALL d'abord tenter une recherche web, puis se replier sur la connaissance du modèle quand la recherche ne rend rien d'exploitable. Le résultat SHALL indiquer `source: 'web'` seulement si au moins une recherche web a effectivement eu lieu. Le cache de 24 h par description SHALL s'appliquer pareillement, et sa clé ne SHALL PAS dépendre du fournisseur. Ce cache vit en mémoire : une bascule, qui demande un redémarrage, le vide comme tout redéploiement.
 
 #### Scenario: Repérage sur Claude
 
