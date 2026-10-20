@@ -24,6 +24,9 @@
 
 ## 4. Vérification d'ensemble et documentation
 
-- [ ] 4.1 En local, sur une description saturée en `.com` seul, enchaîner trois « 10 de plus ». Vérifier : 10 noms par lot ou une note qui cite « .com » ; aucun nom revu d'un lot à l'autre ; Stop en cours de lot → solde de crédits inchangé après rechargement.
+- [x] 4.1 En local, sur une description saturée en `.com` seul, enchaîner trois « 10 de plus ». Vérifier : 10 noms par lot ou une note qui cite « .com » ; aucun nom revu d'un lot à l'autre ; Stop en cours de lot → solde de crédits inchangé après rechargement.
+  - Vérifié le 20/10/2026 en local, en `.com` seul et longueur ≥ 5. Aucun nom revu d'un lot à l'autre, et le débit égale les noms rendus (29 crédits pour 29 noms). Stop : serveur arrêté en 2 s, solde inchangé après rechargement.
+  - Les lots ont rendu 10, 7, 4 et 8 noms, les trois courts arrêtés sur le plafond de 10 tentatives : le modèle repropose 30 à 50 % de noms déjà exclus. Quand un ajout rend moins de 10 noms, c'est le toast `PARTIAL_RESULTS` qui s'affiche, pas la note : il sera reformulé au chantier B.
+  - Décision du 20/10/2026 : garder 60 s et 10 tentatives, et trancher sur les mesures de prod (4.3).
 - [x] 4.2 Ajouter à `CLAUDE.md` une section « Suggestions supplémentaires » : budget de temps et plafond, exclusion des noms vérifiés, annulation sans débit, champs `attempts` et `stopReason` du journal. Vérifier que les constantes citées existent dans le code.
 - [ ] 4.3 Après déploiement, relire une semaine de `search_completed` avec le mode de 2.5. Vérifier que la part des ajouts rendant moins de 10 a baissé, et chiffrer le surcoût en tentatives. Sur Stop en prod, vérifier qu'aucun débit n'apparaît.
