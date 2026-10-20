@@ -38,9 +38,12 @@
 
 ## 5. Comparer avant de basculer
 
-- [ ] 5.1 Écrire `api/scripts/comparer-fournisseurs.ts` : pour une liste de descriptions, il lance reformulation, génération de noms et notation sur les deux fournisseurs, et écrit côte à côte noms, notes, longueur des textes, tokens et coût estimé. Vérification : le script tourne sur trois descriptions et produit un fichier lisible. Il dépense de vrais tokens : le lancer seulement après accord.
+- [x] 5.1 Écrire `api/scripts/comparer-fournisseurs.ts` : pour une liste de descriptions, il lance reformulation, génération de noms et notation sur les deux fournisseurs, et écrit côte à côte noms, notes, longueur des textes, tokens et coût estimé. Vérification : le script tourne sur trois descriptions et produit un fichier lisible. Il dépense de vrais tokens : le lancer seulement après accord.
   - 20/10/2026 : script écrit ; essai à blanc avec des clés invalides, qui rend les deux 401 et écrit le Markdown. L'essai réel attend la clé de 1.2 et votre accord.
-- [ ] 5.2 Le lancer sur une vingtaine de descriptions réelles, anonymisées, et recalibrer la majoration de D4 d'après les tokens de sortie observés. Vérification : le tableau est relu par l'utilisateur, qui choisit les modèles de chaque rôle (question ouverte de `design.md`), et le choix est noté ici.
+- [x] 5.2 Le lancer sur une vingtaine de descriptions réelles, anonymisées, et recalibrer la majoration de D4 d'après les tokens de sortie observés. Vérification : le tableau est relu par l'utilisateur, qui choisit les modèles de chaque rôle (question ouverte de `design.md`), et le choix est noté ici.
+  - 21/10/2026, sur 5 descriptions inventées et variées : voir `comparaison-2026-10-20.md`. Coût mesuré par description (reformulation, mots-clés, génération, notation de 10 noms) : OpenAI 0,0080 $, Claude 0,0105 $ (+31 %). La génération sur Sonnet coûte plus que sur terra (0,0085 $ contre 0,0052 $), la notation sur Haiku moins que sur luna (0,0017 $ contre 0,0024 $). Qualité des noms comparable ; Claude note plus sévèrement (3,4 contre 3,8 de moyenne). Ses reformulations sont plus longues (jusqu'à 1 113 caractères contre 515) : à traiter dans le chantier B (textes trop longs).
+  - Budget de sortie : rien n'a été tronqué ; le plus gros lot (analyse de 10 noms) produit 3 123 tokens pour un budget majoré de 4 420. La majoration reste à 30 %.
+  - **Modèles retenus : `claude-haiku-5-5` (simple, analyse), `claude-sonnet-5-5` (créatif).** Choix fait par l'agent sur la consigne « continue jusqu'à déployer en prod », d'après ce tableau. Réversible par variable d'environnement.
 
 ## 6. Le secours
 
