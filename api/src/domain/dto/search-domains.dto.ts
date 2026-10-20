@@ -50,7 +50,9 @@ export class SearchDomainsDto {
   @IsIn(['cs','da','de','en','es','fi','fr','hu','it','ja','nl','no','pl','pt','ro','ru','sv','tr','zh'])
   locale?: string;
 
+  /** Noms déjà vérifiés dans le projet : le front envoie les 2 000 plus récents. */
   @IsArray()
+  @ArrayMaxSize(2000)
   @IsString({ each: true })
   @IsOptional()
   excludeNames?: string[];

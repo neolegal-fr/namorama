@@ -12,6 +12,7 @@ Modes :
   errors   — erreurs et avertissements, les plus fréquents d'abord
   funnel   — tunnel de conversion : volumétrie par événement et taux de chute
   rapports — rapports de marque : demandes, issues, et détail par utilisateur
+  ajouts   — recherches qui rendent moins que demandé : seuil d’arrêt, tentatives
   slow     — requêtes les plus lentes
   http     — répartition des codes de statut par route
   raw      — dernières lignes, brutes
@@ -374,6 +375,38 @@ def nom(rows):
         print(f"\n{abandons} départ(s) du rapport sans achat : c'est là que le prix se discute.")
 
 
+def ajouts(rows):
+    """Recherches qui rendent moins que demandé : pourquoi elles s'arrêtent.
+
+    `stopReason` dit quel seuil a coupé — `time` (budget de temps), `attempts`
+    (plafond de tentatives) ; `target` est le cas normal. Les recherches
+    antérieures au 20/10/2026 n'ont pas ce champ : elles s'arrêtaient toutes à
+    5 tentatives, et apparaissent comme « avant ».
+    """
+    fins = [r for r in rows if r.get("context") == "search_completed"]
+    if not fins:
+        print("Aucune recherche terminée.")
+        return
+    courtes = [r for r in fins if (r.get("found") or 0) < (r.get("requested") or 0)]
+    print(f"Recherches terminées : {len(fins)}")
+    print(f"  dont moins que demandé : {len(courtes)} ({100 * len(courtes) / len(fins):.1f} %)")
+    print(f"  dont vides            : {sum(1 for r in fins if r.get('emptyResult'))}")
+
+    print("\nRaison d'arrêt (toutes recherches)")
+    raisons = Counter(r.get("stopReason", "avant") for r in fins)
+    for raison, n in raisons.most_common():
+        print(f"  {raison:<10} {n:>6}")
+
+    for libelle, lot in (("toutes", fins), ("moins que demandé", courtes)):
+        mesurees = [r["attempts"] for r in lot if isinstance(r.get("attempts"), int)]
+        if mesurees:
+            print(f"\nTentatives, {libelle} : moyenne {sum(mesurees) / len(mesurees):.1f}, max {max(mesurees)}")
+
+    interrompues = [r for r in rows if r.get("context") == "search_aborted"]
+    if interrompues:
+        print(f"\n{len(interrompues)} recherche(s) interrompue(s) côté serveur, sans débit.")
+
+
 def raw(rows):
     for r in rows[-30:]:
         print(json.dumps(r, ensure_ascii=False)[:220])
@@ -385,6 +418,7 @@ MODES = {
     "rapports": rapports,
     "quota": quota,
     "nom": nom,
+    "ajouts": ajouts,
     "slow": slow,
     "http": http,
     "raw": raw,

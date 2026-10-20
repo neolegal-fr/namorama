@@ -63,7 +63,7 @@ Les deux valeurs deviennent des constantes nommées en tête de `domain.service.
 
 - Le contrôleur crée un `AbortController` et écoute `res.on('close')`. Si la réponse n'est pas terminée à ce moment-là, la connexion est perdue et il appelle `abort()`.
 - `findAvailableDomains` reçoit le `signal`. Il le consulte avant chaque tentative et avant chaque vérification d'un candidat, et sort avec `stopReason = 'aborted'`.
-- Le contrôleur ne débite rien et n'enregistre rien : pas de `createOrUpdate`, pas d'`addSuggestions`, et pas de `done` à émettre. Il journalise `search_cancelled_by_user` côté serveur. Cet événement existe déjà dans le tunnel, émis par le front.
+- Le contrôleur ne débite rien et n'enregistre rien : pas de `createOrUpdate`, pas d'`addSuggestions`, et pas de `done` à émettre. Il journalise `search_aborted`. Ce n'est pas `search_cancelled_by_user`, que le front émet déjà et que le tunnel compte : reprendre ce nom compterait chaque Stop deux fois.
 - Un appel au modèle déjà parti va à son terme : son coût est dépensé de toute façon, et l'annuler demanderait de propager le signal jusqu'au client OpenAI pour quelques secondes gagnées.
 
 On écoute `res.on('close')` et non `req.on('close')` : avec Express, `req` émet `close` dès la fin de la lecture du corps, ce qui couperait toutes les recherches.
@@ -71,7 +71,7 @@ On écoute `res.on('close')` et non `req.on('close')` : avec Express, `req` éme
 ### 5. La note cite les extensions et le mode réels
 
 - `NOTE` prend les paramètres `{{extensions}}` et `{{mode}}`. Le wizard les construit depuis `selectedExtensions()` et `matchMode()` : « .fr ou .com », « .fr et .com ».
-- `totalChecked` affiché reste celui de la recherche. On cesse en revanche de compter les noms exclus d'office : le serveur renvoie le nombre de noms vérifiés par cette recherche, pas la taille de `checkedNames` amorcée par l'exclusion.
+- Le serveur renvoie dans `totalChecked` le nombre de noms vérifiés par cette recherche, et non plus la taille de `checkedNames`, amorcée par l'exclusion. Le wizard cumule ce nombre d'un ajout à l'autre : la note le compare au nombre de cartes affichées, qui se cumule aussi.
 
 ### 6. L'actualisation passe les extensions
 

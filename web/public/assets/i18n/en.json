@@ -218,7 +218,7 @@
     "STEP3": {
       "TITLE": "{{n}} names available in {{extensions}}",
       "SUBTITLE": "Here are our suggestions for your project.",
-      "NOTE": "Note: We analyzed {{total}} name ideas, but only {{count}} were actually available in .com.",
+      "NOTE": "Note: We analyzed {{total}} name ideas, but only {{count}} were actually available in {{extensions}}.",
       "NO_RESULTS": "No domains found. Try changing your keywords.",
       "MORE_BTN": "10 more suggestions · 1 credit each",
       "STOP_BTN": "Stop the search",

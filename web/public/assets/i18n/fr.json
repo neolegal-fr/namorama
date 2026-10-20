@@ -218,7 +218,7 @@
     "STEP3": {
       "TITLE": "{{n}} noms disponibles en {{extensions}}",
       "SUBTITLE": "Voici nos suggestions pour votre projet.",
-      "NOTE": "Note : Nous avons analysé {{total}} idées de noms, mais seulement {{count}} étaient réellement disponibles en .com.",
+      "NOTE": "Note : Nous avons analysé {{total}} idées de noms, mais seulement {{count}} étaient réellement disponibles en {{extensions}}.",
       "NO_RESULTS": "Aucun domaine trouvé. Essayez de changer vos mots-clés.",
       "MORE_BTN": "10 suggestions de plus · 1 crédit chacune",
       "STOP_BTN": "Arrêter la recherche",
