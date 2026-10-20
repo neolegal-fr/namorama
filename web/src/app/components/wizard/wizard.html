@@ -463,7 +463,7 @@
           }
 
           <div *ngIf="totalChecked() > 0 && domains().length < 10" class="p-2 border-left-4 border-solid border-round text-sm font-italic wizard-row" style="background: var(--nm-app-verdict-unknown-bg); border-color: var(--nm-app-verdict-unknown-fg); color: var(--nm-app-verdict-unknown-fg); text-align: left">
-            {{ 'WIZARD.STEP3.NOTE' | translate:{ total: totalChecked(), count: domains().length } }}
+            {{ 'WIZARD.STEP3.NOTE' | translate:{ total: totalChecked(), count: domains().length, extensions: extensionsPhrase() } }}
           </div>
 
           <div class="wizard-row" style="display: flex; justify-content: space-between; align-items: center">

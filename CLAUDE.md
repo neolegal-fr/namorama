@@ -247,6 +247,30 @@ La disponibilité a **trois états** : libre, pris, et **non vérifiable** (`nul
 
 > Ne jamais faire retomber un doute sur `true` ou `false` : « pris » masque des noms libres, « libre » fait payer un crédit pour un domaine inachetable.
 
+### Suggestions supplémentaires (« 10 de plus »)
+
+Deux retours du 20/10/2026 : « 10 de plus » en rendait parfois 2 à 4. En `.com` seul,
+un compte a obtenu 4, 4, 2, 2, 6, 3, 1, 2, 0, 3, 3 noms pour ~150 vérifications par lot.
+Sur les 30 jours précédents, 39 recherches sur 209 (18,7 %) rendaient moins que demandé.
+
+- **Trois seuils d'arrêt** au lieu de 5 tentatives fixes : l'objectif atteint,
+  `BUDGET_RECHERCHE_MS` (60 s), ou `MAX_TENTATIVES` (10). Une tentative demande
+  30 noms au modèle ; mesuré, 5 tentatives prenaient de 22 à 47 s.
+- **Un nom vérifié n'est plus revérifié.** L'événement `done` porte `checkedNames` —
+  les noms passés au registre, pas ceux générés et laissés de côté. Le wizard les
+  accumule (`testedNames`) et les exclut au lot suivant, avec les cartes affichées.
+  N'exclure que les cartes laissait le modèle reproposer des noms déjà trouvés pris.
+- `excludeNames` est borné à 2 000 entrées ; la consigne n'en cite que les **200 plus
+  récentes**, le filtre du serveur les voit toutes.
+- **Stop arrête aussi le serveur.** La fermeture de la connexion (`res.on('close')`,
+  pas `req` : Express émet `close` sur `req` dès la fin du corps) déclenche un
+  `AbortSignal`. Rien n'est débité ni enregistré, et le serveur journalise
+  `search_aborted` — pas `search_cancelled_by_user`, que le front émet déjà.
+- `search_completed` porte `attempts` et `stopReason` (`target`, `time`, `attempts`).
+  `python3 - ajouts` les résume.
+- Les noms vérifiés ne vivent que le temps de la session : rouvrir un projet repart
+  des seules cartes enregistrées.
+
 ## Partage d'un projet
 
 Un projet se partage **par adresse e-mail**, en lecture (défaut) ou en écriture,
@@ -392,6 +416,9 @@ ssh namorama-prod "python3 - quota"    < scripts/analyze-logs.py
 
 # Parcours « j'ai déjà un nom » : de la page publique au projet créé
 ssh namorama-prod "python3 - nom"      < scripts/analyze-logs.py
+
+# Recherches qui rendent moins que demandé : seuil d'arrêt et tentatives
+ssh namorama-prod "python3 - ajouts"   < scripts/analyze-logs.py
 
 # Requêtes les plus lentes / codes de statut par route / lignes brutes
 ssh namorama-prod "python3 - slow"   < scripts/analyze-logs.py

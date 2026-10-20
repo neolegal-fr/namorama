@@ -423,6 +423,13 @@ export class WizardComponent implements OnInit, OnDestroy {
   // Étape 3
   domains = signal<any[]>([]);
   totalChecked = signal(0);
+  /**
+   * Noms que le serveur a déjà vérifiés dans ce projet, pendant cette session,
+   * y compris ceux trouvés pris. Un « 10 de plus » les exclut tous : n'exclure
+   * que les noms affichés laissait le modèle reproposer des noms déjà refusés,
+   * et la recherche s'épuisait à les revérifier.
+   */
+  testedNames = signal<string[]>([]);
   recheckLoading = signal(false);
   copiedDomain = signal<string | null>(null);
   newDomainName = signal('');
@@ -1229,7 +1236,14 @@ export class WizardComponent implements OnInit, OnDestroy {
    * déjà à jour.
    */
   refreshBrandReport(name: string): void {
-    this.brandReportService.full(name, { force: true, ...(this.projectId() ? { projectId: this.projectId()! } : {}) }).subscribe({
+    this.brandReportService.full(name, {
+      force: true,
+      // Les mêmes extensions que la première génération : sans elles, le
+      // serveur retombait sur ses défauts et le rapport actualisé montrait des
+      // domaines jamais demandés (.io, .net, .app).
+      extensions: this.selectedExtensions().map((e) => e.replace(/^\./, '')),
+      ...(this.projectId() ? { projectId: this.projectId()! } : {}),
+    }).subscribe({
       next: () => this.loadReportSummaries(),
       error: () => this.messageService.add({
         severity: 'error',
@@ -1688,6 +1702,7 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.projectService.getProject(id).subscribe({
       next: (project) => {
         this.projectId.set(project.id);
+        this.testedNames.set([]);
         // Le rôle vient du serveur : c'est lui qui décide, l'interface ne fait
         // que s'y conformer. Un projet à soi n'a pas de rôle transmis dans les
         // anciennes réponses — d'où le défaut « owner ».
@@ -1780,6 +1795,7 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.refinedDescription.set('');
     this.keywords.set([]);
     this.domains.set([]);
+    this.testedNames.set([]);
     // Les cartes du projet précédent disparaissent : ce qu'on avait vu d'elles
     // n'a plus d'objet, et deux projets peuvent proposer le même nom.
     this.oublierCeQuiEstVu();
@@ -2678,6 +2694,7 @@ export class WizardComponent implements OnInit, OnDestroy {
 
     if (!append) {
       this.domains.set([]);
+      this.testedNames.set([]);
       this.oublierCeQuiEstVu();
     }
     this.showNoResultHelp.set(false);
@@ -2702,8 +2719,12 @@ export class WizardComponent implements OnInit, OnDestroy {
       projectId: this.projectId() || undefined,
       projectName: this.projectName() || undefined,
       locale: this.effectiveLocale(),
-      // US-015 — lors d'un append, exclure tous les noms déjà évalués
-      excludeNames: append ? this.domains().map(d => d.name) : [],
+      // US-015 — lors d'un append, exclure tous les noms déjà évalués : les
+      // cartes affichées ET les noms vérifiés et trouvés pris. Le serveur en
+      // accepte 2 000 ; au-delà, les plus anciens tombent.
+      excludeNames: append
+        ? [...new Set([...this.testedNames(), ...this.domains().map(d => d.name)])].slice(-2000)
+        : [],
       // US-032 — naming styles (local mode only)
       descriptiveNames: this.isLocal() ? this.descriptiveNames() : false,
       culturalNames: this.isLocal() ? this.culturalNames() : false,
@@ -2737,7 +2758,11 @@ export class WizardComponent implements OnInit, OnDestroy {
           this.streamProgress.update(p => p ? { ...p, found: this.domains().length } : null);
 
         } else if (event.type === 'done') {
-          this.totalChecked.set(event.totalChecked || 0);
+          // Cumulé sur les ajouts, comme les cartes auxquelles la note le compare.
+          this.totalChecked.update(t => (append ? t : 0) + (event.totalChecked || 0));
+          if (event.checkedNames?.length) {
+            this.testedNames.update(t => [...new Set([...t, ...event.checkedNames])]);
+          }
           // Mettre à jour les IDs des suggestions sauvegardées
           if (event.savedDomains?.length) {
             this.domains.update(list => list.map(d => {

@@ -17,6 +17,19 @@ const execFileAsync = promisify(execFile);
 const CANDIDATE_CONCURRENCY = 6;
 
 /**
+ * Une recherche s'arrête au premier de trois seuils : l'objectif atteint, ce
+ * budget de temps, ou ce plafond de tentatives. Elle s'arrêtait à 5 tentatives
+ * quel que soit le manque : sur un marché saturé en .com, un « 10 de plus »
+ * rendait 2 à 4 noms (relevé du 20/10/2026), alors qu'un clic de plus en
+ * ressortait d'autres. Mesuré : 5 tentatives prennent 22 à 47 s.
+ */
+export const BUDGET_RECHERCHE_MS = 60_000;
+export const MAX_TENTATIVES = 10;
+
+/** Pourquoi une recherche s'est arrêtée — journalisé dans `search_completed`. */
+export type StopReason = 'target' | 'time' | 'attempts' | 'aborted';
+
+/**
  * Vérifications simultanées vers un **même** registre.
  *
  * Mesuré depuis le serveur de production, 24 vérifications par palier :
@@ -193,6 +206,11 @@ export interface FindDomainsOptions {
   competitorDomains?: string[];
   /** Domaines dont l'utilisateur a explicitement rejeté le style. */
   dislikedStyleDomains?: string[];
+  /** Déclenché quand le client ferme la connexion : la recherche s'arrête sans rien rendre de plus. */
+  signal?: AbortSignal;
+  /** Surcharges des seuils d'arrêt — les tests s'en servent, la production garde les défauts. */
+  budgetMs?: number;
+  maxAttempts?: number;
 }
 
 @Injectable()
@@ -643,9 +661,11 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
       ? `Names should resonate with a "${locale}"-language audience. Prefer names that are easy to pronounce in that language, and may incorporate roots, sounds, or cultural references familiar to its speakers. Local or regional words are encouraged alongside invented ones.`
       : 'Names should be internationally friendly — easy to pronounce for a global audience, preferring Anglo-Saxon or Latin roots.';
 
-    // US-015 — cap at 200 to avoid token bloat
+    // US-015 — plafond de 200 pour ne pas gonfler la consigne. Les plus récents :
+    // ce sont ceux que le modèle risque le plus de reproduire. Le filtre du
+    // serveur, lui, voit toute la liste.
     const exclusionSection = excludeNames.length > 0
-      ? `\nAlready tested — do NOT reproduce any of these names: ${excludeNames.slice(0, 200).join(', ')}\n`
+      ? `\nAlready tested — do NOT reproduce any of these names: ${excludeNames.slice(-200).join(', ')}\n`
       : '';
 
     // US-046 — user preference feedback to guide generation
@@ -764,7 +784,7 @@ Respond ONLY with a JSON object. Example:
         messages: [{ role: 'user', content: prompt }],
         // Budget élargi : couvre les tokens de raisonnement + le JSON de ~30 noms.
         max_completion_tokens: 4000,
-        // 'none' : la génération tourne en boucle (jusqu'à 5×) → on privilégie la
+        // 'none' : la génération tourne en boucle (jusqu'à MAX_TENTATIVES) → on privilégie la
         // latence. terra produit d'excellents noms sans raisonnement.
         reasoning_effort: 'none',
         response_format: { type: 'json_object' }
@@ -1249,7 +1269,7 @@ ${langInstruction}`;
     description: string,
     keywords: string[],
     options: FindDomainsOptions = {},
-  ): Promise<{ results: any[], totalChecked: number, minLengthUsed: number, unresolved: Record<string, number>, sources: SourcesVerdict }> {
+  ): Promise<{ results: any[], totalChecked: number, verifiedNames: string[], attempts: number, stopReason: StopReason, minLengthUsed: number, unresolved: Record<string, number>, sources: SourcesVerdict }> {
     const {
       targetCount = 10,
       extensions = ['.com'],
@@ -1265,15 +1285,23 @@ ${langInstruction}`;
       likedExamples = [],
       competitorDomains = [],
       dislikedStyleDomains = [],
+      signal,
+      budgetMs = BUDGET_RECHERCHE_MS,
+      maxAttempts = MAX_TENTATIVES,
     } = options;
 
+    const startedAt = Date.now();
     const finalResults: any[] = [];
     // US-015 — pre-seed with already-evaluated names so the LLM never re-proposes them
     const checkedNames = new Set<string>(excludeNames);
+    // Les noms réellement passés au registre. `checkedNames` contient aussi les
+    // exclusions reçues et les noms générés qu'on n'a pas eu besoin d'examiner :
+    // le front n'exclura plus tard que ceux-ci, un nom jamais vérifié restant
+    // proposable.
+    const verifiedNames: string[] = [];
     /** Vérifications non concluantes, par extension : remontées dans les logs. */
     const unresolved = new Map<string, number>();
     let attempts = 0;
-    const maxAttempts = 5;
 
     // #1/#2 — extraire une seule fois les contraintes de naming du brief libre
     const constraints = await this.extractNamingConstraints(description);
@@ -1293,7 +1321,13 @@ ${langInstruction}`;
     // registre commence à répondre à tout.
     const sources: SourcesVerdict = { dns: 0, registre: 0 };
 
-    while (finalResults.length < targetCount && attempts < maxAttempts) {
+    let stopReason: StopReason = 'target';
+    while (finalResults.length < targetCount) {
+      // Seuils vérifiés avant chaque tentative : une tentative commencée va à son terme.
+      if (signal?.aborted) { stopReason = 'aborted'; break; }
+      if (attempts >= maxAttempts) { stopReason = 'attempts'; break; }
+      if (Date.now() - startedAt >= budgetMs) { stopReason = 'time'; break; }
+
       onEvent?.({ type: 'generating' });
       const items = await this.generateDomainIdeas(description, keywords, locale, [...checkedNames], descriptiveNames, culturalNames, likedNames, dislikedNames, constraints, competitorDomains, dislikedStyleDomains);
 
@@ -1315,12 +1349,15 @@ ${langInstruction}`;
         { length: Math.min(CANDIDATE_CONCURRENCY, newItems.length) },
         async () => {
           while (finalResults.length < targetCount) {
+            if (signal?.aborted) return;
             const item = newItems[cursor++];
             if (!item) return;
 
-            onEvent?.({ type: 'candidate', name: item.name, checkedSoFar: checkedNames.size });
+            verifiedNames.push(item.name);
+            onEvent?.({ type: 'candidate', name: item.name, checkedSoFar: verifiedNames.length });
 
             const extStatus = await this.checkExtensions(item.name, extensions, matchMode, sources);
+            if (signal?.aborted) return;
 
             const availableExts = Object.keys(extStatus).filter(ext => extStatus[ext] === true);
             // Extensions dont la disponibilité n'a pas pu être établie : elles
@@ -1354,10 +1391,15 @@ ${langInstruction}`;
       await Promise.all(workers);
       attempts++;
     }
+    if (signal?.aborted) stopReason = 'aborted';
 
     return {
       results: finalResults,
-      totalChecked: checkedNames.size,
+      // Les noms vérifiés par CETTE recherche, sans les exclusions reçues.
+      totalChecked: verifiedNames.length,
+      verifiedNames,
+      attempts,
+      stopReason,
       // Longueur mini réellement appliquée (réglage UI ou déduite du brief) —
       // le front s'en sert pour proposer de l'assouplir quand rien n'est trouvé.
       minLengthUsed: constraints.minLength,

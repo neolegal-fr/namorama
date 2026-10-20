@@ -233,8 +233,15 @@ export class DomainController {
       isAppend: (dto.excludeNames ?? []).length > 0,
     });
 
+    // Stop côté client = connexion fermée. Sans cette écoute, la recherche allait
+    // à son terme et débitait des noms que l'utilisateur ne voyait qu'au
+    // rechargement. `res` et non `req` : avec Express, `req` émet `close` dès
+    // la fin de la lecture du corps, ce qui couperait toutes les recherches.
+    const annulation = new AbortController();
+    res.on('close', () => { if (!res.writableEnded) annulation.abort(); });
+
     try {
-      const { totalChecked, minLengthUsed, unresolved, sources } = await this.domainService.findAvailableDomains(
+      const { totalChecked, verifiedNames, attempts, stopReason, minLengthUsed, unresolved, sources } = await this.domainService.findAvailableDomains(
         dto.description,
         dto.keywords,
         {
@@ -255,8 +262,22 @@ export class DomainController {
           likedExamples: dto.likedExamples ?? [],
           competitorDomains: dto.competitorDomains ?? [],
           dislikedStyleDomains: dto.dislikedStyleDomains ?? [],
+          signal: annulation.signal,
         },
       );
+
+      // Recherche interrompue : rien n'est débité ni enregistré, et personne
+      // n'attend plus la réponse.
+      if (stopReason === 'aborted') {
+        this.events.event('search_aborted', {
+          userId: keycloakUser.sub,
+          found: results.length,
+          attempts,
+          durationMs: Date.now() - startedAt,
+        });
+        res.end();
+        return;
+      }
 
       const actualCost = results.length;
       let project: Project;
@@ -295,6 +316,10 @@ export class DomainController {
           requested: limit,
           totalChecked,
           minLengthUsed,
+          // Combien de tentatives, et pourquoi on s'est arrêté : de quoi
+          // chiffrer ce que coûte un marché saturé, et ce qu'il rend.
+          attempts,
+          stopReason,
           durationMs: Date.now() - startedAt,
           // Le cas qui mérite le plus d'attention : l'utilisateur a attendu
           // pour rien, et c'est le premier motif d'abandon attendu.
@@ -313,6 +338,9 @@ export class DomainController {
         emit({
           type: 'done',
           totalChecked,
+          // Le front les exclura des prochains « 10 de plus » : un nom trouvé
+          // pris n'a pas à être revérifié.
+          checkedNames: verifiedNames,
           minLengthUsed,
           requested: limit,
           found: results.length,
