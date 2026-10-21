@@ -1,22 +1,14 @@
 import { NameVariantsService } from './name-variants.service';
+import { modeleOpenAiFactice } from '../../common/modele-ia/modele-ia.testing';
 
-const config = { get: () => undefined } as any;
-
-/** Remplace le client OpenAI : ces tests ne sortent pas de la machine. */
-const withModel = (reply: unknown) => {
-  const svc = new NameVariantsService(config);
-  (svc as any).openai = {
-    chat: {
-      completions: {
-        create: async () => ({ choices: [{ message: { content: JSON.stringify(reply) } }] }),
-      },
-    },
-  };
-  return svc;
-};
+/** Un modèle factice : ces tests ne sortent pas de la machine. */
+const withModel = (reply: unknown) =>
+  new NameVariantsService(
+    modeleOpenAiFactice(async () => ({ choices: [{ message: { content: JSON.stringify(reply) } }] })),
+  );
 
 describe('NameVariantsService', () => {
-  const svc = new NameVariantsService(config);
+  const svc = new NameVariantsService();
 
   describe('variantes mécaniques — gratuites, sans appel au modèle', () => {
     it('un nom écrit avec un espace cherche aussi sa forme collée', async () => {
@@ -62,8 +54,7 @@ describe('NameVariantsService', () => {
     });
 
     it('une panne du modèle ne casse rien non plus', async () => {
-      const s = new NameVariantsService(config);
-      (s as any).openai = { chat: { completions: { create: async () => { throw new Error('coupé'); } } } };
+      const s = new NameVariantsService(modeleOpenAiFactice(async () => { throw new Error('coupé'); }));
       await expect(s.variants('neolegal')).resolves.toEqual([]);
     });
   });

@@ -1,3 +1,4 @@
+import { modeleOpenAiFactice } from '../common/modele-ia/modele-ia.testing';
 import { DomainService } from './domain.service';
 import { MatchMode } from './dto/search-domains.dto';
 
@@ -97,10 +98,8 @@ describe('DomainService — consigne de génération', () => {
   it('transmet au modèle les 200 exclusions les plus récentes', async () => {
     const service = Object.create(DomainService.prototype) as any;
     service.logger = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
-    service.creativeModel = 'modele';
     const create = jest.fn().mockResolvedValue({ choices: [{ message: { content: '{"names": []}' } }] });
-    service.openai = { chat: { completions: { create } } };
-    service.mesurer = (_op: string, p: Promise<any>) => p;
+    service.modele = modeleOpenAiFactice(create);
 
     const exclusions = Array.from({ length: 300 }, (_, i) => `exclu${i}`);
     await service.generateDomainIdeas('desc', ['mot'], undefined, exclusions);

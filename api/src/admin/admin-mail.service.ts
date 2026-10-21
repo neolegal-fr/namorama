@@ -2,12 +2,12 @@ import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnav
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import OpenAI from 'openai';
 import { AdminMail } from './entities/admin-mail.entity';
 import { User } from '../users/entities/user.entity';
 import { MailService } from '../mail/mail.service';
 import { FeedbackService } from '../feedback/feedback.service';
-import { ModelUsageService } from '../common/model-usage/model-usage.service';
+import { ModeleIA } from '../common/modele-ia/modele-ia.service';
+import { SCHEMA_BROUILLON } from '../common/modele-ia/schemas';
 import { AppLoggerService } from '../common/logging/app-logger.service';
 import { jourISO } from './predicats';
 import { BRAND_REPORT_COST } from '../brand-report/brand-report.service';
@@ -490,9 +490,6 @@ export function construireContexte(a: ActiviteBrute): ContexteDestinataire {
 @Injectable()
 export class AdminMailService {
   private readonly logger = new Logger(AdminMailService.name);
-  /** Absent sans clé : la rédaction assistée est indisponible, l'envoi reste possible. */
-  private readonly openai?: OpenAI;
-  private readonly model: string;
 
   constructor(
     @InjectRepository(AdminMail) private readonly repo: Repository<AdminMail>,
@@ -500,15 +497,10 @@ export class AdminMailService {
     private readonly dataSource: DataSource,
     private readonly mail: MailService,
     private readonly feedback: FeedbackService,
-    private readonly usage: ModelUsageService,
+    private readonly modele: ModeleIA,
     private readonly events: AppLoggerService,
     private readonly config: ConfigService,
-  ) {
-    const apiKey = config.get<string>('OPENAI_API_KEY');
-    this.openai = apiKey ? new OpenAI({ apiKey }) : undefined;
-    // Un courriel se lit : le modèle créatif, à un appel par brouillon.
-    this.model = config.get<string>('OPENAI_MODEL_CREATIVE') ?? config.get<string>('OPENAI_MODEL') ?? 'gpt-5.6-luna';
-  }
+  ) {}
 
   liens(): Liens {
     const site = this.config.get<string>('FRONTEND_URL', 'https://namorama.com').replace(/\/+$/, '');
@@ -582,25 +574,22 @@ export class AdminMailService {
    * elle ne peut pas ajouter de promesse, les consignes l'interdisent.
    */
   async rediger(userId: number, qui: Signataire, note?: string): Promise<Brouillon> {
-    if (!this.openai) throw new ServiceUnavailableException('Rédaction assistée indisponible : OPENAI_API_KEY absente');
     const ctx = await this.contexte(userId);
     const liens = this.liens();
     const demande = [
       note ? `Consigne de ${qui.prenom} pour ce message : ${note}\n` : '',
       `Compte :\n${JSON.stringify(ctx, null, 2)}`,
     ].join('');
-    const appel = this.openai.chat.completions.create({
-      model: this.model,
-      messages: [
-        { role: 'system', content: consignes(ctx.langue) },
-        { role: 'user', content: demande },
-      ],
-      response_format: { type: 'json_object' },
-      max_completion_tokens: 200,
-      reasoning_effort: 'none',
+    // Un courriel se lit : le modèle créatif, à un appel par brouillon.
+    const res = await this.modele.completer('admin_mail_draft', {
+      role: 'creatif',
+      systeme: consignes(ctx.langue),
+      message: demande,
+      format: { type: 'json', schema: SCHEMA_BROUILLON },
+      maxSortie: 200,
+      raisonnement: 'none',
     });
-    const res = await this.usage.mesurer('admin_mail_draft', appel);
-    const lu = lireBrouillon(res.choices[0]?.message?.content);
+    const lu = lireBrouillon(res.texte);
     if (!lu) throw new ServiceUnavailableException('Le modèle a rendu un brouillon inutilisable');
     // Langue du compte si on la connaît, sinon celle que le modèle a employée :
     // le gabarit, l'objet et la signature la suivent.

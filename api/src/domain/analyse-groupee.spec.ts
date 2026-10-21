@@ -7,25 +7,19 @@ import { DomainService } from './domain.service';
  * portent ces tests, pas sur le contenu des notes.
  */
 
-// Une clé factice suffit : le client est remplacé juste après. Construire
-// `OpenAI` sans clé LÈVE, et ferait échouer ces tests à l'instanciation.
-const config = { get: (k: string) => (k === 'OPENAI_API_KEY' ? 'sk-test' : undefined) } as any;
+import { modeleOpenAiFactice } from '../common/modele-ia/modele-ia.testing';
+
+const config = {} as any;
 const rdap = {} as any;
 
-/** Remplace le client OpenAI et retient ce qui lui a été envoyé. */
+/** Un modèle factice qui retient ce qui lui a été envoyé. */
 const withModel = (reply: unknown) => {
-  const svc = new DomainService(config, rdap);
   const appels: any[] = [];
-  (svc as any).openai = {
-    chat: {
-      completions: {
-        create: async (params: any) => {
-          appels.push(params);
-          return { choices: [{ message: { content: typeof reply === 'string' ? reply : JSON.stringify(reply) } }] };
-        },
-      },
-    },
-  };
+  const modele = modeleOpenAiFactice(async (params: any) => {
+    appels.push(params);
+    return { choices: [{ message: { content: typeof reply === 'string' ? reply : JSON.stringify(reply) } }] };
+  });
+  const svc = new DomainService(config, rdap, modele);
   return { svc, appels };
 };
 
