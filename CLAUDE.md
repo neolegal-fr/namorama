@@ -275,7 +275,10 @@ sur l'organisation Console liée à l'abonnement : c'est ce qui rend Claude int�
   (`requetes-openai.spec.ts`). Deux écarts : le brouillon admin suit le rôle créatif, alors
   qu'il retombait sur luna quand `OPENAI_MODEL_CREATIVE` manquait ; et `keywords` passe en
   JSON (`{ keywords, namingBusiness }`, 31/10/2026) pour écarter du cadrage le vocabulaire
-  du nommage (`estVocabulaireDeNommage`), sauf pour une activité de nommage.
+  du nommage (`estVocabulaireDeNommage`), sauf pour une activité de nommage. Et la
+  consigne de génération a changé de texte pour toutes les recherches avec le plancher
+  à 6 (`refondre-l-ecran-de-cadrage`) : bornes [6, 10] par défaut, mode court décidé
+  par le maximum, sans exemples sous le plancher.
 
 Trois règles, chacune tirée d'une dépense qu'on a vraiment payée :
 
@@ -377,10 +380,19 @@ Les utilisateurs écrivent un cahier des charges autant qu'une description : rel
 éviter, 13 des marques de référence. Les noms rendus les contredisaient
 (« 4-5 lettres » → `duopawear`). Chantier OpenSpec `respecter-le-cahier-des-charges`.
 
-- **Le brief fixe la longueur, sauf réglage explicite.** Le front n'envoie `minLength`
-  ou `maxLength` que si l'utilisateur les a touchés ; sinon le serveur applique les
-  bornes du brief (`briefMinLength`, `briefMaxLength`), **sans jamais élargir un
-  maximum demandé** (`bornesDeLongueur`). Plancher technique : 5.
+- **La longueur se règle par un maximum, au-dessus d'un plancher à 6** (chantier
+  `refondre-l-ecran-de-cadrage`). L'utilisateur raisonne en « pas trop long » :
+  l'écran propose « au plus N caractères » (6 à 12, ou « sans limite », envoyé
+  `maxLength: 30`), et rien d'autre. Le minimum n'est pas réglable : à 5 caractères,
+  ~75 % des .com prononçables sont pris (`TAKEN_RATE`, estimation), contre ~25 % à
+  6. Sans brief ni réglage : **[6, 10]**. Le front n'envoie `maxLength` que si
+  l'utilisateur l'a touché ; sinon le serveur applique les bornes du brief
+  (`briefMinLength`, `briefMaxLength`), **relevées au plancher** — « 4-5 lettres »
+  donne [6, 6], et l'écran le dit avant la recherche. `minLength` n'arrive plus que
+  d'un onglet antérieur, relevé à 6. `bornesDeLongueur` et son double d'affichage
+  côté web partagent une table de cas, `bornes-de-longueur.cas.json`.
+- **Le maximum est exact** : plus de lettre de tolérance au-delà, l'écran promet
+  « au plus N ». Le mode « noms courts » de la consigne se déclenche à `max ≤ 7`.
 - **Le filtre garantit, la consigne aide** : `respecteLesContraintes` écarte après
   génération, pour tous les styles, les noms hors longueur (noms inventés), à
   terminaison interdite, contenant un mot à éviter, ou sans le mot imposé. Un mot

@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { modeleOpenAiFactice } from '../common/modele-ia/modele-ia.testing';
 import { bornesDeLongueur, DomainService } from './domain.service';
 import { MatchMode } from './dto/search-domains.dto';
@@ -126,31 +128,52 @@ describe('DomainService — consigne de génération', () => {
   });
 });
 
-describe('bornes de longueur : réglage, puis brief, puis défaut', () => {
-  const brief = (min: number | null, max: number | null) => ({ briefMinLength: min, briefMaxLength: max });
+/**
+ * Table partagée avec le web (`bornesAffichees`) : ce que l'écran annonce et
+ * ce que le serveur applique ne peuvent diverger sans faire échouer l'un des
+ * deux tests.
+ */
+const CAS_DE_LONGUEUR: {
+  cas: string;
+  brief: [number | null, number | null];
+  reglage: { minLength?: number; maxLength?: number };
+  attendu: { min: number; max: number; origine: string };
+}[] = JSON.parse(readFileSync(join(__dirname, '../../../web/src/app/components/wizard/bornes-de-longueur.cas.json'), 'utf8'));
 
-  it('« 6 lettres exactement », réglage intact : [6, 6]', () => {
-    expect(bornesDeLongueur(brief(6, 6))).toEqual({ min: 6, max: 6, origine: 'brief' });
+describe('consigne de génération : le mode court suit le maximum', () => {
+  const consigne = async (minLength: number, maxLength: number): Promise<string> => {
+    const service = Object.create(DomainService.prototype) as any;
+    service.logger = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
+    const create = jest.fn().mockResolvedValue({ choices: [{ message: { content: '{"names": []}' } }] });
+    service.modele = modeleOpenAiFactice(create);
+    const c = { minLength, maxLength, avoidWords: [], referenceBrands: [], avoidEndings: [], requiredWords: [], nameType: null, briefMinLength: null, briefMaxLength: null };
+    await service.generateDomainIdeas('desc', ['mot'], undefined, [], false, false, [], [], c);
+    return create.mock.calls[0][0].messages[0].content;
+  };
+
+  it('[6, 10], le défaut : ni mode court ni « trelox » cité comme trop court', async () => {
+    const texte = await consigne(6, 10);
+    expect(texte).not.toContain('EXPLICITLY wants SHORT');
+    expect(texte).not.toContain('"trelox"');
+    expect(texte).toContain('MINIMUM 6 characters, MAXIMUM 10 characters');
   });
 
-  it('« 4-5 lettres » : plancher à 5, maximum jamais élargi', () => {
-    expect(bornesDeLongueur(brief(4, 5))).toEqual({ min: 5, max: 5, origine: 'brief' });
+  it('[6, 7] : mode court, sans exemple sous le plancher', async () => {
+    const texte = await consigne(6, 7);
+    expect(texte).toContain('EXPLICITLY wants SHORT');
+    expect(texte).not.toContain('"orva"');
+    expect(texte).not.toContain('"nyxo"');
   });
 
-  it('un réglage explicite prime sur le brief', () => {
-    expect(bornesDeLongueur(brief(5, 5), { minLength: 7 })).toEqual({ min: 7, max: 12, origine: 'utilisateur' });
+  it('[8, 10] : « trelox » est bien trop court', async () => {
+    const texte = await consigne(8, 10);
+    expect(texte).toContain('"trelox", "voxify", "namify" (too short — under 8 chars)');
   });
+});
 
-  it('un maximum du brief compatible avec le réglage est gardé', () => {
-    expect(bornesDeLongueur(brief(null, 9), { minLength: 6 })).toEqual({ min: 6, max: 9, origine: 'utilisateur' });
-  });
-
-  it('sans brief ni réglage : les défauts', () => {
-    expect(bornesDeLongueur(brief(null, null))).toEqual({ min: 7, max: 12, origine: 'defaut' });
-  });
-
-  it('un maximum réglé sous le minimum est relevé au minimum', () => {
-    expect(bornesDeLongueur(brief(null, null), { minLength: 8, maxLength: 6 })).toEqual({ min: 8, max: 8, origine: 'utilisateur' });
+describe('bornes de longueur : un maximum réglé, un plancher à 6', () => {
+  it.each(CAS_DE_LONGUEUR)('$cas', ({ brief, reglage, attendu }) => {
+    expect(bornesDeLongueur({ briefMinLength: brief[0], briefMaxLength: brief[1] }, reglage)).toEqual(attendu);
   });
 });
 
