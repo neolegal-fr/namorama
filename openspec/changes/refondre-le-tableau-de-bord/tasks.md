@@ -31,21 +31,30 @@
 
 ## 4. Période partagée et onglet Coûts IA (web)
 
-- [ ] 4.1 Créer `admin-periode.component.ts` (7 jours, 30 jours par défaut, mois civil, personnalisé) qui lit et écrit la période dans l'URL (D9). Vérifier au navigateur : choisir « septembre 2026 » donne `?periode=2026-09`, et un rechargement garde le choix.
-- [ ] 4.2 Créer la route `/admin/costs` (garde admin) et l'entrée « Coûts IA » du menu (`app.ts:497`), qui affiche `admin-model-costs` avec le sélecteur de 4.1 ; retirer ce composant du tableau de bord. Vérifier au navigateur, sur des données de coût non vides : le relevé et le simulateur s'affichent dans l'onglet, la période suit le lien depuis le tableau de bord, et un compte non admin est redirigé.
-- [ ] 4.3 Lancer `cd web && npm run build` : il passe, budgets compris.
+- [x] 4.1 Créer `admin-periode.component.ts` (7 jours, 30 jours par défaut, mois civil, personnalisé) qui lit et écrit la période dans l'URL (D9). Vérifier au navigateur : choisir « septembre 2026 » donne `?periode=2026-09`, et un rechargement garde le choix.
+  - Vérifié le 31/10/2026 (Chrome piloté par Playwright, front 4205 / API 3005 sur la base locale peuplée) : « septembre 2026 » → `?periode=2026-09`, rechargement → toujours septembre, « comparés à août 2026 ».
+- [x] 4.2 Créer la route `/admin/costs` (garde admin) et l'entrée « Coûts IA » du menu (`app.ts:497`), qui affiche `admin-model-costs` avec le sélecteur de 4.1 ; retirer ce composant du tableau de bord. Vérifier au navigateur, sur des données de coût non vides : le relevé et le simulateur s'affichent dans l'onglet, la période suit le lien depuis le tableau de bord, et un compte non admin est redirigé.
+  - Vérifié : `/admin/costs?periode=2026-09` atteint par « Détail des coûts → », relevé par opération et simulateur affichés ; sans session, `/admin/costs` renvoie à l'accueil sans rien afficher (même garde que tout `/admin`).
+- [x] 4.3 Lancer `cd web && npm run build` : il passe, budgets compris.
+  - Build de production sans erreur ; seul avertissement : budget CSS de `wizard.css` (16,47 kB pour 16 kB), antérieur à ce changement et hors de son périmètre.
 
 ## 5. Tableau de bord refondu (web)
 
-- [ ] 5.1 Remplacer `admin-weekly-chart` par `admin-serie-chart` au mois (mois en cours estompé, exclu des moyennes, barre empilée pour la décomposition des actifs). Vérifier au navigateur sur 12 mois avec données : octobre est estompé et la décomposition se lit par couleur avec légende.
-- [ ] 5.2 Réécrire `admin-dashboard.component.ts` en cinq blocs : bandeau (MAU avec nouveaux / récurrents, inscrits, activation, chiffre d'affaires, taux de succès), Engagement, Satisfaction, Monétisation, Coût résumé, puis l'historique ; supprimer les cartes retirées par la proposition. Vérifier au navigateur sur la base locale peuplée : chaque carte de la spec affiche une valeur ou « — » avec sa raison, « Tarifs consultés » n'apparaît que dans la monétisation, et aucun pourcentage de 👍.
-- [ ] 5.3 Réécrire `admin-retention.component.ts` : décomposition mensuelle et triangle de cohortes, retours sous 7 et 30 jours conservés. Vérifier au navigateur : le mois en cours est estompé dans le triangle, les mois futurs sont vides.
-- [ ] 5.4 Passer à 390 px de large : aucun défilement horizontal de page (le triangle défile dans sa carte). Vérifier dans les outils de développement du navigateur.
-- [ ] 5.5 Lancer `cd web && npm run build` : il passe, budgets compris.
+- [x] 5.1 Remplacer `admin-weekly-chart` par `admin-serie-chart` au mois (mois en cours estompé, exclu des moyennes, barre empilée pour la décomposition des actifs). Vérifier au navigateur sur 12 mois avec données : octobre est estompé et la décomposition se lit par couleur avec légende.
+  - Écart au plan : le composant est GÉNÉRALISÉ (`admin-serie-chart`, entrée `pas` = `semaine` | `mois`) plutôt que remplacé — le détail des coûts et la fiche d'un utilisateur restent à la semaine. La barre empilée des actifs vit dans le bloc Rétention (couleurs, légende, tableau des valeurs) pour ne pas montrer deux fois la même série ; l'historique porte inscrits, CA et coût IA. Vérifié : octobre estompé, « max » formaté.
+- [x] 5.2 Réécrire `admin-dashboard.component.ts` en cinq blocs : bandeau (MAU avec nouveaux / récurrents, inscrits, activation, chiffre d'affaires, taux de succès), Engagement, Satisfaction, Monétisation, Coût résumé, puis l'historique ; supprimer les cartes retirées par la proposition. Vérifier au navigateur sur la base locale peuplée : chaque carte de la spec affiche une valeur ou « — » avec sa raison, « Tarifs consultés » n'apparaît que dans la monétisation, et aucun pourcentage de 👍.
+  - Vérifié sur la base locale peuplée : MAU 12 (10 nouveaux · 2 récurrents), activation 80 %, CA 9,90 €, succès 27,8 % ; « tarif » absent avant la monétisation, aucun pourcentage de 👍, aucune erreur console. Corrigé en passant : badge d'écart vide rendu « – » (le `display` du badge écrasait `[hidden]`, déjà le cas avant), pluriel « nouveaux », décimale à la française.
+- [x] 5.3 Réécrire `admin-retention.component.ts` : décomposition mensuelle et triangle de cohortes, retours sous 7 et 30 jours conservés. Vérifier au navigateur : le mois en cours est estompé dans le triangle, les mois futurs sont vides.
+  - Vérifié : cohorte de septembre, M+1 (octobre, en cours) estompé, M+2 à M+5 vides ; retours sous 7 jours 30 % (3 sur 10).
+- [x] 5.4 Passer à 390 px de large : aucun défilement horizontal de page (le triangle défile dans sa carte). Vérifier dans les outils de développement du navigateur.
+  - Vérifié à 390 px : `scrollWidth` 390 = `innerWidth` 390 ; le triangle défile dans sa carte.
+- [x] 5.5 Lancer `cd web && npm run build` : il passe, budgets compris.
+  - Idem 4.3.
 
 ## 6. Vérification d'ensemble et déploiement
 
-- [ ] 6.1 En local, avec une copie anonymisée des agrégats ou la base de développement peuplée, comparer chaque carte du bandeau aux requêtes de contrôle de 2.2 et 2.3 : écart nul.
+- [x] 6.1 En local, avec une copie anonymisée des agrégats ou la base de développement peuplée, comparer chaque carte du bandeau aux requêtes de contrôle de 2.2 et 2.3 : écart nul.
+  - Vérifié le 31/10/2026, octobre, mesures prises au même instant (la base locale est partagée avec d'autres sessions et bougeait) : API = contrôle sur actifs 11 / 18 jours / 9 nouveaux, projets 12 dont 4 réussis par 8 comptes, 2 multi, 2 retours, 1 paiement 990 c, 9 inscrits, 12 comptes. Le bandeau rend ces champs sans recalcul (vérifié au navigateur en 5.2).
 - [ ] 6.2 Appliquer en production la migration de 1.1, après sauvegarde datée dans `backups/`. Vérifier `SHOW CREATE TABLE paiement`.
 - [ ] 6.3 Déployer l'image (après le build GitHub Actions), puis lancer le rattrapage de 1.4 deux fois dans le conteneur. Vérifier : 2 lignes dans `paiement` (ou 0 si les sessions de mars sont en mode test, noté ici), soldes de crédits inchangés.
 

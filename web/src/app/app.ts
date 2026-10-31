@@ -497,6 +497,7 @@ export class AppComponent implements OnInit {
     { label: 'Dashboard',    icon: 'pi pi-chart-bar', command: () => this.router.navigate(['/admin/dashboard']) },
     { label: 'Utilisateurs', icon: 'pi pi-users',     command: () => this.router.navigate(['/admin/users']) },
     { label: 'Feedbacks',    icon: 'pi pi-comment',   command: () => this.router.navigate(['/admin/feedback']) },
+    { label: 'Coûts IA',     icon: 'pi pi-calculator', command: () => this.router.navigate(['/admin/costs']) },
     { label: 'Tarifs IA',    icon: 'pi pi-dollar',    command: () => this.router.navigate(['/admin/prices']) },
   ];
 
