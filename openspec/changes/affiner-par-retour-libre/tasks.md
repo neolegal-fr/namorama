@@ -91,8 +91,14 @@
 
 ## 5. Livraison
 
-- [ ] 5.1 Appliquer la migration 1.1 en production (sauvegarde préalable, cf. accès base prod), puis vérifier la colonne. Vérification : `SHOW COLUMNS FROM project LIKE 'retours'` en production rend une ligne.
+- [x] 5.1 Appliquer la migration 1.1 en production (sauvegarde préalable, cf. accès base prod), puis vérifier la colonne. Vérification : `SHOW COLUMNS FROM project LIKE 'retours'` en production rend une ligne.
+  - 31/10/2026 : sauvegarde `backups/namorama-2026-10-31-avant-retours-sur-les-noms.sql.gz`, complète (« Dump completed »).
+  - Migration appliquée. `retours text NULL` est présente en production.
+  - La migration de la #171 (`maxLength`), embarquée par la même image, y était déjà.
 - [ ] 5.2 Merger la PR, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web`. Vérification : conteneurs `Up`, et une recherche avec retour réussit en production.
+  - Fait le 31/10/2026 : PR #177 mergée (`cef1cb5`), build `main` vert, déploiement à 17 h 34, rien d'autre de mergé entre-temps. Conteneurs `Up`, démarrage de l'API sans erreur ni avertissement.
+  - Le front servi contient la zone (`retours-zone`, `name_feedback_added`) et ses libellés (« Ces noms vous parlent ? »).
+  - Reste à vérifier : une recherche avec retour en production. Elle demande un compte avec un projet, et l'agent n'en a pas en production.
 
 ## Workflow follow-up
 
