@@ -655,6 +655,13 @@ avec `wizard_step_viewed` (étape 2) comme dénominateur.
 `bandeau` (5 rejets sans favori). Il dit si l'incitation sert, et donc si le défaut
 « noms inventés » doit être revu.
 
+La demande de retour automatique (voir « Demander un retour à un utilisateur ») émet
+`feedback_request_sent` (`delivered`, `langue`) à chaque envoi,
+`feedback_utility_answered` (`reponse` : `oui` ou `non`, `delaiDepuisEnvoiS`) à la
+première réponse en un clic, et `feedback_unsubscribed` à la désinscription — avec le
+seul `sub`, jamais l'adresse. Ensemble, ils donnent le taux de réponse, la part de
+« oui », et combien la demande fait fuir.
+
 `name_feedback_added` (`origine` : `suggestion` ou `saisie`, `actifs` : nombre de retours
 après ajout) marque un retour sur les noms enregistré — à la fin de la recherche qui le
 portait, pas au clic : un retour refusé faute de crédits n'en émet pas. Avec les champs
@@ -1018,21 +1025,83 @@ D'où **`visitor_session`** : une ligne par session de navigateur (`sessionStora
 
 ### Demander un retour à un utilisateur
 
-Depuis **Administration → Utilisateurs**, l'enveloppe d'une ligne ouvre un courriel
-de demande de retour, **rédigé par le modèle à partir de l'activité du compte** —
-projets et descriptions, noms aimés, rapports achetés, retours déjà donnés,
-courriels déjà reçus. Un destinataire à la fois, relu et confirmé avant chaque
-envoi ; **rien ne part automatiquement**, et c'est voulu.
+Deux voies, un même message en deux temps (chantier `demande-de-retour-automatique`,
+01/11/2026) :
+
+1. **« Namorama vous a-t-il été utile ? »** — deux liens, **Oui** et **Non**. L'une ou
+   l'autre réponse rapporte **100 crédits**, une seule fois par compte, sans connexion.
+2. **Le retour détaillé** — ce qui a plu, ce qui a bloqué, ce qui mérite d'être
+   amélioré — par réponse au courriel ou par `/app?avis=1`, contre **500 crédits**
+   validés à la main dans l'onglet Feedbacks.
+
+#### Envoi automatique, 24 h après l'inscription
+
+`DemandeDeRetourService` passe **toutes les heures** (premier passage 5 min après le
+démarrage) et écrit à chaque compte éligible, au plus 20 par passage. Avant, la
+demande s'écrivait à la main, compte par compte, souvent plusieurs jours après une
+visite qui n'avait duré que quelques minutes (70 comptes sur 75 sans activité après
+leur premier jour, relevé du 22/09/2026).
+
+- **Éligible** : adresse, ni admin ni interne, créé depuis `FEEDBACK_AUTO_DEPUIS` et
+  il y a plus de 24 h, jamais sollicité (ni automatiquement, ni par un courriel délivré
+  à la main), sans feedback déjà donné, non désinscrit. **Pas d'envoi rétroactif** :
+  les comptes antérieurs à la mise en service restent traités à la main.
+- **Un seul envoi par compte**, garanti par la ligne : `user.demandeRetourAt` est posé
+  par `UPDATE … WHERE demandeRetourAt IS NULL` **avant** l'envoi. Un refus SMTP laisse
+  la réservation — pas de relance en boucle — et se lit dans l'historique du dialogue.
+- **Aucun appel au modèle** : gabarit fixe, ouverture « vous avez créé votre compte
+  hier », signature de `FEEDBACK_SIGNATAIRE`. Une phrase générée partirait sans
+  relecture, sur un compte qui n'a souvent presque rien fait.
+- **Langue** : `locale` Keycloak, sinon `user.langueInscription` (premier
+  `Accept-Language` traduit, capté à la création du compte), sinon français.
+- **Désinscription** : lien dans le courriel et en-têtes `List-Unsubscribe` /
+  `List-Unsubscribe-Post` (RFC 8058). Un compte désinscrit (`desinscritRetoursAt`) ne
+  reçoit plus aucune demande — l'envoi manuel répond 409, le dialogue le dit.
+- **Sans `FEEDBACK_SIGNATAIRE`, `FEEDBACK_LINK_SECRET` ou `FEEDBACK_AUTO_DEPUIS`,
+  rien ne part** (avertissement au démarrage). Retirer `FEEDBACK_AUTO_DEPUIS` suffit à
+  tout arrêter. `POST /admin/demandes-de-retour/passage` lance un passage tout de suite.
+- Chaque passage journalise `demande_retour_passage` (`eligibles`, `envoyes`, `echecs`).
+
+#### Liens signés et réponse en un clic
+
+- Les liens portent le compte et l'action (`oui`, `non`, `desinscription`), signés par
+  HMAC-SHA256 avec `FEEDBACK_LINK_SECRET`, valables 90 jours (`liens-de-retour.ts`).
+  Changer le secret invalide les liens émis, sans autre effet.
+- **Le clic n'enregistre rien ; la page, si.** Les liens mènent au front (`/retour`,
+  `/desinscription`), qui appelle `POST /retours/utilite` ou `/retours/desinscription`
+  une fois exécuté. Les antivirus de messagerie suivent les liens : enregistrer au GET
+  aurait valu un « oui » et 100 crédits par courriel délivré. `delaiDepuisEnvoiS` dans
+  `feedback_utility_answered` signale un analyseur qui exécuterait la page.
+- **100 crédits une fois** : `utilite`/`utiliteAt` posés par `UPDATE … WHERE utiliteAt
+  IS NULL`, crédits ajoutés dans la même transaction. Un second clic, même sur l'autre
+  réponse, ne change rien. Oui et non rapportent pareil : récompenser le seul « oui »
+  fausserait la mesure (même règle que pour les avis publics, plus bas).
+- Les routes publiques utilisent le `@Public()` de **`nest-keycloak-connect`** — celui
+  de `common/decorators` n'a aucun effet sur le garde (401 relevé au navigateur).
+- Le tableau des utilisateurs marque chaque compte : `auto`, `oui` / `non`, `désinscrit`.
+
+> Migration `2026-11-01-demande-de-retour-automatique.sql`, avant l'image.
+> `FEEDBACK_LINK_SECRET` (aléatoire, 32 octets), `FEEDBACK_SIGNATAIRE`,
+> `FEEDBACK_AUTO_DEPUIS` (date de mise en service) et `API_PUBLIC_URL` (en-tête de
+> désinscription, défaut `https://api.namorama.com`) sont à reporter dans le
+> `docker-compose.yml` de prod.
+
+#### Courriel écrit à la main
+
+Depuis **Administration → Utilisateurs**, l'enveloppe d'une ligne ouvre le même
+courriel en deux temps, **avec une phrase rédigée par le modèle à partir de l'activité
+du compte** — projets et descriptions, noms aimés, rapports achetés, retours déjà
+donnés, courriels déjà reçus. Un destinataire à la fois, relu et confirmé avant chaque
+envoi. Il sert aux comptes antérieurs à l'envoi automatique et aux relances choisies.
 
 - **De la correspondance, pas de la prospection.** Un message qui pourrait partir
   tel quel à quelqu'un d'autre est un publipostage : les consignes exigent un ou
   deux faits concrets du compte et des questions adaptées à l'endroit où il s'est
-  arrêté. HTML nu, sans logo ni pied de page, avec une version texte. Un envoi
-  groupé demanderait, lui, un consentement et un lien de désinscription.
+  arrêté. HTML nu, sans logo ni pied de page, avec une version texte.
 - **Un gabarit fixe, une phrase personnalisée.** Le message est le texte de Nicolas,
-  traduit (`GABARITS`, sept langues) : présentation en une ligne, demande explicite
-  — ce que la personne a aimé, ce qui l'a bloquée, ce qui mérite d'être amélioré —,
-  les deux façons de répondre et les 500 crédits. Le modèle n'écrit qu'**une phrase**
+  traduit (`GABARITS`, sept langues) : présentation en une ligne, la question d'utilité
+  et ses liens signés pour le destinataire, puis la demande détaillée et les 500
+  crédits. Le modèle n'écrit qu'**une phrase**
   de 30 mots au plus, « J'ai vu que vous… », qui rappelle le sujet de sa recherche
   et au plus un nom (rapport acheté, sinon favori). Des faits, aucune hypothèse.
   **Jamais le nom du projet** : il est généré par `suggest_name`, l'utilisateur ne
@@ -1069,9 +1138,9 @@ envoi ; **rien ne part automatiquement**, et c'est voulu.
 - **`CONSIGNES_VERSION`** (`admin-mail.service.ts`) est gardée sur chaque envoi : à
   changer à chaque retouche du prompt ou du gabarit. L'historique signale les messages écrits avec
   d'anciennes consignes — ceux à qui il peut valoir la peine de réécrire.
-- `verifierBrouillon` contrôle mécaniquement le brouillon (lien du formulaire, mention
-  des 500 crédits, lien d'avis, **aucun lien inventé**) ; les alertes s'affichent au-dessus
-  du texte, qui reste modifiable.
+- `verifierBrouillon` contrôle mécaniquement le brouillon (liens « oui » / « non » et
+  100 crédits, lien du formulaire et 500 crédits, lien d'avis, **aucun lien inventé**) ;
+  les alertes s'affichent au-dessus du texte, qui reste modifiable.
 - Un brouillon coûte ~1 000 tokens en entrée et ~40 en sortie (`admin_mail_draft`,
   imputé à l'administrateur). Le dialogue ne rédige d'office que pour un compte jamais
   contacté ; sinon il attend le bouton.

@@ -553,7 +553,8 @@
   margin: 0 auto;
   padding: 64px 16px;
 }
-.retour-page__icone {
+/* `.pi` de PrimeIcons fixe sa propre taille : il faut le battre en spécificité. */
+.retour-page .pi.retour-page__icone {
   font-size: 3.5rem;
   color: var(--nm-app-text-2);
 }

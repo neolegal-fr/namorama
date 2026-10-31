@@ -1,5 +1,7 @@
 import { Body, Controller, HttpCode, Post, Query } from '@nestjs/common';
-import { Public } from '../common/decorators/public.decorator';
+// Le `Public` de nest-keycloak-connect, celui que lit le garde global — pas
+// celui de `common/decorators`, qui n'a aucun effet sur l'authentification.
+import { Public } from 'nest-keycloak-connect';
 import { RetoursService } from './retours.service';
 
 /**
