@@ -58,4 +58,25 @@ describe('AllExceptionsFilter — niveaux de journalisation', () => {
       expect.objectContaining({ reason: 'Maximum 50 mots-clés autorisés' }),
     );
   });
+
+  /**
+   * Le parseur de corps lève ses erreurs avant Nest, au format http-errors.
+   * Un corps trop gros n'est pas une panne : 413 en warn, sans pile — et le
+   * navigateur du rejeu, qui s'arrête sur un 4xx, cesse d'envoyer.
+   */
+  it('rend 413, en warn, un corps trop gros refusé par le parseur', () => {
+    const trop = Object.assign(new Error('request entity too large'), {
+      status: 413, statusCode: 413, expose: true, type: 'entity.too.large',
+    });
+    const { entry } = run(trop, '/replay');
+    expect(entry.status).toBe(413);
+    expect(entry.level).toBe('warn');
+    expect(entry.stack).toBeUndefined();
+  });
+
+  it('laisse en 500 une erreur interne qui porterait un statut sans expose', () => {
+    const interne = Object.assign(new Error('pool épuisé'), { status: 400 });
+    const { entry } = run(interne, '/replay');
+    expect(entry.status).toBe(500);
+  });
 });

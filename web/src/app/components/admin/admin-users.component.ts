@@ -17,6 +17,8 @@ import { AdminWeeklyChartComponent, ChartPoint } from './admin-weekly-chart.comp
 import { libelleOperation, parOperation, tokens, usd, usdUnitaire } from './couts-modele';
 import { UserService } from '../../services/user';
 import { KeycloakService } from 'keycloak-angular';
+import { Router } from '@angular/router';
+import { AdminReplayService } from '../../services/admin-replay.service';
 
 @Component({
   selector: 'app-admin-users',
@@ -169,6 +171,12 @@ import { KeycloakService } from 'keycloak-angular';
                   <p-button icon="pi pi-wallet" size="small" [text]="true" severity="secondary"
                             [pTooltip]="'ADMIN.ADJUST_CREDITS' | translate" tooltipPosition="top"
                             (onClick)="startEdit(user)">
+                  </p-button>
+                  <p-button icon="pi pi-video" size="small" [text]="true" severity="secondary"
+                            [disabled]="!comptesEnregistres().has(user.keycloakId)"
+                            [pTooltip]="comptesEnregistres().has(user.keycloakId) ? 'Revoir ses visites' : 'Aucune visite enregistrée'"
+                            tooltipPosition="top"
+                            (onClick)="revoirSesVisites(user)">
                   </p-button>
                   <p-button [icon]="user.isInternal ? 'pi pi-flag-fill' : 'pi pi-flag'"
                             size="small" [text]="true"
@@ -454,17 +462,30 @@ export class AdminUsersComponent implements OnInit {
   adjustNewValue = 0;
   adjustReason = '';
 
+  /** Comptes ayant au moins une visite enregistrée (rejeu) : le raccourci n'est actif que pour eux. */
+  comptesEnregistres = signal<Set<string>>(new Set());
+
   constructor(
     private adminService: AdminService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService,
     private keycloak: KeycloakService,
     private userService: UserService,
+    private adminReplay: AdminReplayService,
+    private router: Router,
   ) {}
 
   ngOnInit() {
     this.keycloak.loadUserProfile().then(p => this.currentKeycloakId.set((p as any).id ?? null));
     this.loadUsers();
+    this.adminReplay.comptes().subscribe({
+      next: ids => this.comptesEnregistres.set(new Set(ids)),
+      error: () => { /* raccourci désactivé : la page Sessions reste accessible */ },
+    });
+  }
+
+  revoirSesVisites(user: AdminUser) {
+    void this.router.navigate(['/admin/replays'], { queryParams: { compte: user.keycloakId } });
   }
 
   loadUsers() {

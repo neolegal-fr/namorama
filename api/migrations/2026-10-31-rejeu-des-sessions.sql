@@ -5,7 +5,7 @@
 -- pas à l'écran. Le navigateur enregistre la visite (saisies masquées AVANT
 -- envoi), l'envoie par lots, et l'administration la rejoue.
 --
--- Une ligne par LOT, pas par visite : un lot part toutes les 10 s ou tous les
+-- Une ligne par LOT, pas par visite : un lot part toutes les 3 s ou tous les
 -- 200 événements. `segment` change à chaque redémarrage dans la même visite
 -- (retour de Keycloak, rechargement), `seq` numérote les lots d'un segment.
 -- L'unicité (sessionId, segment, seq) fait ignorer un lot renvoyé.

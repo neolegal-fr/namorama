@@ -3,7 +3,7 @@ import { Column, Entity, Index, PrimaryGeneratedColumn, Unique } from 'typeorm';
 /**
  * Un lot d'événements rrweb d'une visite consentante.
  *
- * Une ligne par lot, pas par visite : le navigateur envoie toutes les 10 s ou
+ * Une ligne par lot, pas par visite : le navigateur envoie toutes les 3 s ou
  * tous les 200 événements. `segment` change à chaque redémarrage de
  * l'enregistrement dans la même visite (retour de Keycloak, rechargement),
  * `seq` numérote les lots d'un segment. Schéma : `2026-10-31-rejeu-des-sessions.sql`.

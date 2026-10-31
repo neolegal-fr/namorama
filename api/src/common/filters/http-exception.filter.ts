@@ -14,6 +14,15 @@ const BLOCKED_FUNNEL_ROUTES: ReadonlyArray<readonly [RegExp, string]> = [
   [/^\/domain\/search/, 'search_blocked_validation'],
 ];
 
+/**
+ * Erreur client au format `http-errors` (celui de body-parser) : un statut 4xx
+ * et `expose: true`, qui signifie que le message peut être montré au client.
+ */
+function erreurClientExpress(e: unknown): e is { status: number; message: string } {
+  const x = e as { status?: unknown; expose?: unknown } | null;
+  return !!x && typeof x.status === 'number' && x.status >= 400 && x.status < 500 && x.expose === true;
+}
+
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   constructor(private readonly logger: AppLoggerService) {}
@@ -30,6 +39,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = exception.getStatus();
       const res = exception.getResponse();
       message = typeof res === 'string' ? res : (res as any).message || message;
+    } else if (erreurClientExpress(exception)) {
+      // Erreur levée AVANT Nest, par le parseur de corps : corps trop gros
+      // (413), JSON illisible (400). Ce n'est pas une panne du serveur. En 500,
+      // elle se journalisait en erreur avec sa pile, et le navigateur du rejeu,
+      // qui ne s'arrête que sur un 4xx, aurait renvoyé ses lots en boucle.
+      status = exception.status;
+      message = exception.message;
     }
 
     const detail = Array.isArray(message) ? message.join(' | ') : String(message);

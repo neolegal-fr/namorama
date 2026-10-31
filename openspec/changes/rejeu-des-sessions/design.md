@@ -83,10 +83,20 @@ Réglages de capture :
   mots-clés, l'extrait de description des projets et toutes les adresses e-mail affichées
   (bannière propriétaire, partages, fiche compte, utilisateurs admin). Les références
   sont dans tasks.md, groupe 3 ;
-- `blockClass: 'nm-bloque'`, réservé à ce qui ne doit même pas montrer sa forme. Aucun
-  usage n'est prévu pour l'instant ;
+- `blockClass: 'nm-bloque'`, pour un élément dont un **attribut** porte une adresse et dont
+  on n'a pas besoin de voir le contenu. Seul usage : le bouton « retirer un partage » ;
 - `recordCanvas: false`, `collectFonts: false`, `inlineImages: false` ;
 - `sampling` : `mousemove` à 50 ms et `scroll` à 150 ms, pour contenir la taille.
+
+**Masquage des attributs** (ajouté à l'implémentation). rrweb masque le texte et les
+saisies, **jamais les attributs**. Or la puce PrimeNG d'un mot-clé recopie son libellé en
+`aria-label` : le mot-clé tapé partait en clair. `masquage-attributs.ts` suit les
+identifiants des nœuds sous `nm-prive`, dans l'instantané, les ajouts et les modifications
+d'attribut. Il remplace leurs attributs textuels (`aria-label`, `title`, `alt`, `value`,
+`label`) par des étoiles de même longueur, dans le callback `emit`, avant la mise en tampon.
+
+- *Rejeté : retirer l'`aria-label` des puces.* Il est posé par PrimeNG, pas par notre
+  gabarit, et sert à l'accessibilité. Un autre composant en ferait autant demain.
 
 Les noms de domaine générés **restent lisibles** : ce sont des sorties du service, et sans
 eux le rejeu ne dit rien.
@@ -97,8 +107,13 @@ eux le rejeu ne dit rien.
 
 ### D5. Lots envoyés par `fetch`, sans balise ni WebSocket
 
-On envoie un lot toutes les 10 s, ou dès 200 événements, et au `pagehide` par
-`fetch(..., { keepalive: true })`. Corps :
+On envoie un lot à trois moments :
+
+- **dès l'instantané complet** (type 2), sans attendre ;
+- puis **toutes les 3 s**, ou dès 200 événements ;
+- au `visibilitychange` (masquée) et au `pagehide`, par `fetch(..., { keepalive: true })`.
+
+Le type est **`text/plain`**, requête « simple » au sens de CORS. Corps :
 
 ```json
 { "sessionId": "...", "segment": 0, "seq": 3, "events": [ ... ] }
@@ -113,6 +128,13 @@ On envoie un lot toutes les 10 s, ou dès 200 événements, et au `pagehide` par
   inutile : on relit après coup.
 - Un `413` ou un `429` **arrête l'enregistrement** pour la visite. Une erreur réseau fait
   abandonner le lot sans réessai (best-effort, comme `track()`).
+- **Pourquoi pas 10 s, comme prévu d'abord.** Mesuré le 31/10/2026, l'instantané pèse 700
+  à 920 ko. Avec un envoi toutes les 10 s, il était encore dans le tampon quand la page
+  partait vers Keycloak. Trop gros pour `keepalive` (64 ko), il était annulé avec la page,
+  et tout le parcours avant la connexion était perdu.
+- **Pourquoi `text/plain`.** Avec `application/json`, chaque lot était précédé d'un
+  `OPTIONS`. Le lot de fermeture attendait sa réponse et se perdait une fois sur deux.
+  L'API lit `text/plain` comme du JSON sur cette seule route.
 
 ### D6. Stockage : une table de lots compressés en base, plutôt que des fichiers
 
@@ -143,10 +165,16 @@ Contrainte d'unicité sur (`sessionId`, `segment`, `seq`) : un lot renvoyé est 
 
 La route est `@Public()` : la plupart des visiteurs n'ont pas de compte.
 
-1. **Par requête** : `json({ limit: '1mb' })` monté **sur ce seul chemin** dans `main.ts`.
-   Les 100 ko par défaut restent en vigueur partout ailleurs. Le DTO valide le format de
-   `sessionId`, `segment` ≤ 50, `seq` ≤ 5 000, et `events` en tableau non vide d'au plus
-   5 000 éléments.
+1. **Par requête** : un parseur JSON limité à **4 Mo**, monté **sur ce seul chemin** dans
+   `main.ts` (`parseurDuRejeu()`), qui accepte aussi `text/plain`. Les 100 ko par défaut
+   restent en vigueur partout ailleurs. Le DTO valide le format de `sessionId`,
+   `segment` ≤ 50, `seq` ≤ 5 000, et `events` en tableau non vide d'au plus 5 000 éléments.
+   - **4 Mo plutôt que 1 Mo.** À 920 ko mesurés, une page plus chargée aurait dépassé 1 Mo,
+     et un seul refus arrête toute la visite. Le stocké, lui, est compressé (75 à 95 ko par
+     instantané) et borné par les deux couches suivantes.
+   - **Le parseur est enveloppé dans une fonction nommée autrement.** Nest ne pose son
+     parseur JSON global que s'il ne trouve **aucune couche nommée `jsonParser`**. Monté
+     tel quel, `json()` désactivait le parsage de toute l'API (`rejeu-corps.spec.ts`).
 2. **Par visite** : l'identifiant doit exister dans `visitor_session`, et la somme des
    `bytes` doit rester sous `REPLAY_MAX_SESSION_MB` (5 Mo par défaut). Au-delà : `413` et
    `replay_capped { scope: 'session' }`, journalisé une fois par visite. Un cache mémoire
@@ -185,16 +213,24 @@ navigateur, et le drapeau peut être coché après coup : la liste admin les éc
   n'existe, et l'interface affiche « enregistrement purgé ou absent ».
 - La protection vient de `@Roles({ roles: ['realm:admin'] })`, comme
   `admin.controller.ts:97-98`.
-- **Page `/admin/replays`** : un `p-table`, avec le lecteur dans un `p-dialog` plein écran.
-  `rrweb-player` est chargé dynamiquement à l'ouverture, avec sa CSS. Les segments
-  s'enchaînent : à la fin de l'un, le suivant se charge. La frise marque les événements
-  console d'erreur (`tags`/`insertStyleRules` du lecteur, ou des repères calculés).
+- **`GET /admin/replays/comptes`** renvoie les comptes rattachés à au moins une visite
+  enregistrée. Il sert au raccourci ci-dessous et doit être déclaré **avant**
+  `:sessionId`.
+- **Page `/admin/replays`** : un `p-table`, avec le lecteur dans un `p-dialog` large.
+  `rrweb-player` est chargé dynamiquement à l'ouverture, et sa CSS, bundle non injecté
+  d'`angular.json`, par un `<link>`.
+  - Les segments sont **mis bout à bout** dans un seul lecteur. Chacun commence par un
+    instantané complet que rrweb reconstruit, et `skipInactive` saute l'intervalle.
+  - Chaque erreur console devient un **événement personnalisé** (`tag: 'erreur'`), que la
+    frise du lecteur marque en rouge. Les erreurs sont aussi listées sous le lecteur, avec
+    un lien vers leur instant.
 - **Raccourci** : sur la ligne d'un utilisateur dans Administration → Utilisateurs, une
-  icône mène aux visites de ce compte (`?compte=`).
+  icône mène aux visites de ce compte (`?compte=`). Elle est désactivée pour un compte sans
+  visite.
 
 ### D10. `consent_recorded`
 
-Émis par `onConsent` et `onChange` via `AnalyticsService.track()`, avec
+Émis via `AnalyticsService.track()`, avec
 `meta: { analytics: bool, replay: bool, origine: 'premier' | 'modification' }`. `onConsent` revient à chaque
 chargement de page : on mesure donc `onFirstConsent` et `onChange`, pas `onConsent`. C'est le
 canal anonyme habituel, sans cookie. Il est nécessaire pour mesurer la portée de l'outil
@@ -203,12 +239,19 @@ audience seule, refusé, et « sans réponse » (visites `page_viewed` sans `con
 
 **Contrats ajoutés** :
 - `POST /replay` ;
-- `GET /admin/replays` et `GET /admin/replays/:sessionId` ;
+- `GET /admin/replays`, `GET /admin/replays/comptes` et `GET /admin/replays/:sessionId` ;
 - les événements `consent_recorded` et `replay_capped` ;
 - trois variables d'environnement.
 
-Aucun contrat existant ne change. La parité des requêtes OpenAI et les événements SSE ne
-sont pas concernés.
+**Contrat existant modifié** : `AllExceptionsFilter` respecte désormais le statut 4xx des
+erreurs levées par le parseur de corps (format `http-errors`, `expose: true`). Sur
+**toutes** les routes, un corps trop gros répond 413 au lieu de 500, et un JSON illisible
+400 au lieu de 500. Ces cas se journalisent en `warn` et non plus en `error` avec pile :
+ils disparaissent des erreurs serveur de `python3 - errors`, et apparaissent parmi les 4xx.
+Sans ce changement, le navigateur du rejeu, qui ne s'arrête que sur un 4xx, aurait renvoyé
+un lot trop gros en boucle.
+
+La parité des requêtes OpenAI et les événements SSE ne sont pas concernés.
 
 ## Risks / Trade-offs
 
@@ -219,9 +262,12 @@ sont pas concernés.
 - **[Peu de consentements, donc peu de sessions]** → C'est le biais déjà connu de GA.
   `consent_recorded` le chiffre en une semaine. S'il est trop faible, la réponse est un
   texte de bandeau plus clair, pas un enregistrement sans accord.
-- **[Instantané initial lourd (PrimeNG, styles en ligne)]** → On le mesure en local au
-  groupe 2. Si un lot dépasse 1 Mo, l'instantané est découpé (ou on passe `slimDOMOptions`)
-  avant tout relèvement de la limite.
+- **[Instantané initial lourd (PrimeNG, styles en ligne)]** → Mesuré : 700 à 920 ko de JSON,
+  75 à 95 ko compressés. L'instantané ne se découpe pas, c'est un seul événement. La limite
+  de corps passe donc à 4 Mo, et ce qui est stocké reste compressé et plafonné. Les
+  feuilles de style restent copiées dans l'instantané (`inlineStylesheet`) : leurs noms
+  changent à chaque build, et un rejeu qui les référencerait perdrait ses styles au
+  déploiement suivant.
 - **[Le lecteur ne restitue pas les styles PrimeNG]** → rrweb capture les feuilles de style
   en ligne. On vérifie au navigateur, avec des données non vides, que les cartes de
   résultats et les dialogues sont fidèles.

@@ -157,6 +157,18 @@ describe('SessionReplayService', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('envoie l’instantané complet sur-le-champ, sans attendre l’intervalle', async () => {
+    consenti.set(true);
+    await installer();
+    emit!({ type: 4, timestamp: 1 }); // méta
+    expect(fetchMock).not.toHaveBeenCalled();
+    emit!({ type: 2, timestamp: 2 }); // instantané complet : 700 à 900 ko en pratique
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(corps(0).events.map((e: any) => e.type)).toEqual([4, 2]);
+    // requête simple au sens de CORS : pas d'OPTIONS qui retarderait l'envoi de fermeture
+    expect(fetchMock.mock.calls[0][1].headers['Content-Type']).toMatch(/^text\/plain/);
+  });
+
   it('un 413 arrête l’enregistrement pour la visite', async () => {
     consenti.set(true);
     await installer();

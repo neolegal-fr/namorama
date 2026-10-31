@@ -4,6 +4,7 @@ import { NavigationStart, Router } from '@angular/router';
 import { AnalyticsService } from './analytics';
 import { ConfigService } from './config';
 import { CookieConsentService } from './cookie-consent';
+import { masquerLesAttributs } from './masquage-attributs';
 
 /** Ce que l'on utilise de rrweb : chargé à la demande, jamais dans le bundle initial. */
 export interface Enregistreur {
@@ -11,11 +12,23 @@ export interface Enregistreur {
   getRecordConsolePlugin: (options: Record<string, unknown>) => unknown;
 }
 
-/** Un lot part toutes les 10 s, ou dès 200 événements. */
-export const INTERVALLE_ENVOI_MS = 10_000;
+/**
+ * Un lot part toutes les 3 s, dès 200 événements, et IMMÉDIATEMENT après un
+ * instantané complet.
+ *
+ * Mesuré le 31/10/2026 : l'instantané pèse 700 à 900 ko de JSON (feuilles de
+ * style comprises). Avec un envoi toutes les 10 s, il restait dans le tampon
+ * quand la page partait vers Keycloak, trop gros pour `keepalive` (64 ko) : la
+ * navigation annulait l'envoi, et tout le parcours avant la connexion était
+ * perdu. Envoyé sur-le-champ, il part pendant que la page est ouverte ; ce qui
+ * reste à la fermeture, quelques secondes d'événements, tient en `keepalive`.
+ */
+export const INTERVALLE_ENVOI_MS = 3_000;
 export const EVENEMENTS_PAR_LOT = 200;
 /** Au-delà, `fetch(..., { keepalive })` est refusé par le navigateur (64 ko, partagés). */
 const LIMITE_KEEPALIVE = 60_000;
+/** Type rrweb de l'instantané complet. */
+const INSTANTANE_COMPLET = 2;
 const CLE_SEGMENT = 'nm_replay_seg';
 
 /**
@@ -68,6 +81,8 @@ export class SessionReplayService {
   private arreter?: () => void;
   private demarrage?: Promise<void>;
   private tampon: unknown[] = [];
+  /** Identifiants rrweb des nœuds sous `nm-prive` (cf. `masquerLesAttributs`). */
+  private readonly noeudsPrives = new Set<number>();
   private segment = 0;
   private seq = 0;
   private minuterie?: ReturnType<typeof setInterval>;
@@ -93,6 +108,10 @@ export class SessionReplayService {
       this.evaluer();
     }, { injector: this.injector });
 
+    // `visibilitychange` d'abord : sur mobile, `pagehide` n'arrive pas toujours.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') this.envoyer(true);
+    });
     window.addEventListener('pagehide', () => this.envoyer(true));
   }
 
@@ -126,8 +145,12 @@ export class SessionReplayService {
     try {
       this.arreter = rrweb.record({
         emit: (e: unknown) => {
+          // rrweb masque le texte privé, pas les attributs : on les masque ici, avant tout envoi.
+          masquerLesAttributs(e, this.noeudsPrives, CLASSE_PRIVEE);
           this.tampon.push(e);
-          if (this.tampon.length >= EVENEMENTS_PAR_LOT) this.envoyer(false);
+          if ((e as { type?: unknown })?.type === INSTANTANE_COMPLET || this.tampon.length >= EVENEMENTS_PAR_LOT) {
+            this.envoyer(false);
+          }
         },
         maskAllInputs: true,
         maskTextClass: CLASSE_PRIVEE,
@@ -184,9 +207,12 @@ export class SessionReplayService {
       return;
     }
     try {
+      // `text/plain` : requête « simple » au sens de CORS, sans OPTIONS préalable.
+      // Le lot envoyé à la fermeture (départ vers Keycloak) ne survit pas à un
+      // aller-retour de plus. L'API le lit comme du JSON (`parseurDuRejeu`).
       void fetch(`${this.config.apiUrl}/replay`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
         body,
         keepalive: fermeture && body.length < LIMITE_KEEPALIVE,
       })
