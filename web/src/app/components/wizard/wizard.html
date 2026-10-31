@@ -265,26 +265,37 @@
           <span class="text-500" style="font-size: 0.78rem">{{ ('WIZARD.STEP2.NAME_TYPE_HINT_' + typeDeNom().toUpperCase()) | translate }}</span>
         </div>
 
-        <!-- #1 : Longueur minimale des noms générés -->
+        <!-- Longueur : UN maximum. L'utilisateur raisonne en « pas trop long » ;
+             le minimum est notre plancher, dit dans la phrase d'aide
+             (chantier refondre-l-ecran-de-cadrage). Hors réglage, le sélecteur
+             montre ce que la recherche appliquera : brief ou défaut. -->
         <div class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.5rem">
-          <h4 class="section-label">{{ 'WIZARD.STEP2.MIN_LENGTH_TITLE' | translate }}</h4>
-          <p-selectButton
-            [options]="MIN_LENGTH_OPTIONS"
-            [ngModel]="minNameLength()"
-            (ngModelChange)="onMinLengthChange($event)"
-            optionLabel="label"
-            optionValue="value"
-            [allowEmpty]="false"
-            styleClass="select-btn-full">
-          </p-selectButton>
-          <span class="text-500" style="font-size: 0.78rem">{{ 'WIZARD.STEP2.MIN_LENGTH_HINT' | translate:{ n: DEFAULT_MIN_LENGTH } }}</span>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap">
+            <label class="section-label" for="longueur-max" style="margin: 0">{{ 'WIZARD.STEP2.LENGTH_TITLE' | translate }}</label>
+            <span class="longueur-origine" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-accent); background: var(--nm-app-accent-surface); border-radius: 999px; padding: 0.05rem 0.5rem">{{ lengthOriginKey() | translate }}</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap">
+            <span style="font-size: 0.9rem; color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.LENGTH_AT_MOST' | translate }}</span>
+            <p-select
+              inputId="longueur-max"
+              [options]="maxLengthOptions()"
+              [ngModel]="bornes().max"
+              (ngModelChange)="onMaxLengthChange($event)"
+              optionLabel="label"
+              optionValue="value"
+              style="min-width: 10rem"
+              appendTo="body">
+            </p-select>
+          </div>
+          <span class="text-500" style="font-size: 0.8rem; line-height: 1.45">{{ lengthHint().key | translate: lengthHint().params }}</span>
 
-          <!-- Avertissement chiffré : part de .com déjà déposés à cette longueur -->
+          <!-- Avertissement chiffré, seulement quand la plage devient étroite -->
           <div *ngIf="isRiskyLength()"
                style="display: flex; align-items: flex-start; gap: 0.5rem; background: var(--nm-app-verdict-unknown-bg); border: 1px solid var(--nm-app-verdict-unknown-bg); border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.78rem; color: var(--nm-app-verdict-unknown-fg); line-height: 1.45">
             <i class="pi pi-exclamation-triangle" style="font-size: 0.85rem; margin-top: 0.1rem; flex-shrink: 0"></i>
-            <span>{{ 'WIZARD.STEP2.MIN_LENGTH_WARNING' | translate:{ n: minNameLength(), pct: takenRate() } }}</span>
+            <span>{{ 'WIZARD.STEP2.LENGTH_NARROW_WARNING' | translate:{ n: bornes().min, pct: takenRate() } }}</span>
           </div>
+          <span style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-3)">{{ 'WIZARD.STEP2.LENGTH_INVENTED_ONLY' | translate }}</span>
 
           <!-- Contraintes comprises dans la description : retirables avant de payer la recherche -->
           <div *ngIf="contraintesComprises().length > 0 || briefReferenceBrands().length > 0"
@@ -586,11 +597,11 @@
             <span style="font-weight: 700; color: var(--nm-app-verdict-unknown-fg); font-size: 0.92rem">{{ 'WIZARD.STEP3.NO_RESULTS_TITLE' | translate }}</span>
           </div>
           <p style="margin: 0 0 0.875rem 0; font-size: 0.82rem; color: var(--nm-app-verdict-unknown-fg); line-height: 1.5">
-            {{ (ecartesParLeBrief() > 0 ? 'WIZARD.STEP3.NO_RESULTS_CONSTRAINTS' : isRiskyLength() ? 'WIZARD.STEP3.NO_RESULTS_SHORT' : 'WIZARD.STEP3.NO_RESULTS_EXPLAIN') | translate:{ n: minNameLength(), ecartes: ecartesParLeBrief() } }}
+            {{ (ecartesParLeBrief() > 0 ? 'WIZARD.STEP3.NO_RESULTS_CONSTRAINTS' : isRiskyLength() ? 'WIZARD.STEP3.NO_RESULTS_SHORT' : 'WIZARD.STEP3.NO_RESULTS_EXPLAIN') | translate:{ n: bornes().max, min: bornes().min, ecartes: ecartesParLeBrief() } }}
           </p>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
-            <p-button *ngIf="minNameLength() < MAX_LENGTH_SETTING"
-              [label]="'WIZARD.STEP3.NO_RESULTS_RELAX' | translate:{ n: relaxedLength() }"
+            <p-button *ngIf="bornes().max < UNLIMITED_LENGTH"
+              [label]="(relaxedLength() >= UNLIMITED_LENGTH ? 'WIZARD.STEP3.NO_RESULTS_RELAX_UNLIMITED' : 'WIZARD.STEP3.NO_RESULTS_RELAX') | translate:{ n: relaxedLength() }"
               icon="pi pi-arrow-up-right"
               size="small"
               (onClick)="relaxLengthAndRetry()">

@@ -28,6 +28,7 @@ import { Menu } from 'primeng/menu';
 import { Toast } from 'primeng/toast';
 import { MenuItem, ConfirmationService, MessageService } from 'primeng/api';
 import { lireNomsSaisis } from './noms-saisis';
+import { bornesAffichees, MAXIMUM_PAR_DEFAUT, PLANCHER_DE_LONGUEUR, SANS_LIMITE } from './bornes-affichees';
 import { UserService } from '../../services/user';
 import { ProjectService, ProjectShare, SharePermission } from '../../services/project';
 import { FeedbackService } from '../../services/feedback';
@@ -85,12 +86,20 @@ export class WizardComponent implements OnInit, OnDestroy {
   culturalNames = signal(false);
   // ────────────────────────────────────────────────────────────
 
-  // ─── #1 : Longueur minimale des noms générés ──────────────
-  /** En dessous de 5 caractères, quasiment tout est déjà déposé. */
-  readonly MIN_LENGTH_FLOOR = 5;
-  readonly DEFAULT_MIN_LENGTH = 7;
-  readonly MAX_LENGTH_SETTING = 7;
-  readonly MIN_LENGTH_OPTIONS = [5, 6, 7].map(v => ({ label: `≥ ${v}`, value: v }));
+  // ─── #1 : Longueur des noms — un maximum, au-dessus d'un plancher ──
+  /**
+   * L'utilisateur raisonne en « pas trop long » : l'écran ne règle qu'un
+   * maximum, « au plus N caractères ». Le minimum est le plancher du produit
+   * (chantier `refondre-l-ecran-de-cadrage`). Les bornes affichées viennent de
+   * `bornesAffichees`, double de `bornesDeLongueur` côté serveur.
+   */
+  readonly LENGTH_FLOOR = PLANCHER_DE_LONGUEUR;
+  readonly DEFAULT_MAX_LENGTH = MAXIMUM_PAR_DEFAUT;
+  readonly UNLIMITED_LENGTH = SANS_LIMITE;
+  /** Au-delà, l'assouplissement lève la limite. */
+  readonly MAX_LENGTH_OPTION = 12;
+  /** Plage étroite : à 6 ou 7 caractères au plus, la recherche peine. */
+  readonly NARROW_MAX_LENGTH = 7;
 
   /**
    * Part des .com déjà déposés, par longueur de nom.
@@ -108,13 +117,54 @@ export class WizardComponent implements OnInit, OnDestroy {
    */
   readonly TAKEN_RATE: Record<number, number> = { 5: 75, 6: 25 };
 
-  /** Part de .com déjà pris à afficher pour la longueur choisie (0 si non pertinent). */
-  takenRate = computed(() => this.TAKEN_RATE[this.minNameLength()] ?? 0);
-  minNameLength = signal(this.DEFAULT_MIN_LENGTH);
-  /** L'utilisateur a réglé la longueur à la main → l'extraction IA ne l'écrase plus. */
-  private minLengthTouched = signal(false);
-  /** Longueur déduite de la description libre (affichée comme « détecté »). */
-  minLengthFromBrief = signal<number | null>(null);
+  /** Maximum choisi à l'écran ; n'est envoyé que si `maxLengthTouched`. */
+  maxNameLength = signal(MAXIMUM_PAR_DEFAUT);
+  /** L'utilisateur a réglé le maximum → il prime sur le brief, et part à la recherche. */
+  private maxLengthTouched = signal(false);
+
+  /** Ce que la recherche appliquera, et d'où ça vient. */
+  bornes = computed(() => bornesAffichees(
+    { min: this.briefMinLength(), max: this.briefMaxLength() },
+    this.maxLengthTouched() ? { maxLength: this.maxNameLength() } : {},
+  ));
+
+  /** Valeurs du sélecteur : 6 à 12, « sans limite », et un maximum du brief hors liste. */
+  maxLengthOptions = computed(() => {
+    const t = (k: string, p?: Record<string, unknown>) => this.translate.instant(k, p) as string;
+    const valeurs = new Set([6, 7, 8, 9, 10, 11, 12, this.bornes().max]);
+    valeurs.delete(SANS_LIMITE);
+    return [
+      ...[...valeurs].sort((a, b) => a - b).map((v) => ({ value: v, label: t('WIZARD.STEP2.LENGTH_OPTION', { n: v }) })),
+      { value: SANS_LIMITE, label: t('WIZARD.STEP2.LENGTH_UNLIMITED') },
+    ];
+  });
+
+  /** Marque d'origine du réglage : par défaut, repris de la description, ou modifié. */
+  lengthOriginKey = computed(() => ({
+    utilisateur: 'WIZARD.STEP2.LENGTH_ORIGIN_USER',
+    brief: 'WIZARD.STEP2.LENGTH_ORIGIN_BRIEF',
+    defaut: 'WIZARD.STEP2.LENGTH_ORIGIN_DEFAULT',
+  })[this.bornes().origine]);
+
+  /**
+   * Phrase d'aide sous le réglage. Un brief qui demande moins que le plancher
+   * est ramené à 6 : on le dit ici, avant la recherche, plutôt que de le
+   * laisser découvrir sur des noms d'une lettre de plus que demandé.
+   */
+  lengthHint = computed((): { key: string; params: Record<string, number> } => {
+    const { min, max, origine } = this.bornes();
+    const briefMax = this.briefMaxLength();
+    if (origine === 'brief' && briefMax !== null && briefMax < PLANCHER_DE_LONGUEUR) {
+      return { key: 'WIZARD.STEP2.LENGTH_HINT_BELOW_FLOOR', params: { n: briefMax, floor: PLANCHER_DE_LONGUEUR } };
+    }
+    if (max >= SANS_LIMITE) return { key: 'WIZARD.STEP2.LENGTH_HINT_UNLIMITED', params: { min } };
+    if (min === max) return { key: 'WIZARD.STEP2.LENGTH_HINT_EXACT', params: { n: min } };
+    if (min > PLANCHER_DE_LONGUEUR) return { key: 'WIZARD.STEP2.LENGTH_HINT_BRIEF_MIN', params: { min, max } };
+    return { key: 'WIZARD.STEP2.LENGTH_HINT_RANGE', params: { min, max, floor: PLANCHER_DE_LONGUEUR } };
+  });
+
+  /** Part de .com pris au plancher, citée par l'alerte « plage étroite ». */
+  takenRate = computed(() => this.TAKEN_RATE[this.bornes().min] ?? this.TAKEN_RATE[PLANCHER_DE_LONGUEUR]);
   /** Autres contraintes devinées du brief, affichées pour transparence. */
   briefAvoidWords = signal<string[]>([]);
   briefReferenceBrands = signal<string[]>([]);
@@ -141,13 +191,8 @@ export class WizardComponent implements OnInit, OnDestroy {
     const retirees = new Set(this.contraintesRetirees());
     const t = (k: string, p?: Record<string, unknown>) => this.translate.instant(k, p) as string;
     const puces: { cle: string; libelle: string }[] = [];
-    const min = this.briefMinLength(), max = this.briefMaxLength();
-    if (min !== null || max !== null) {
-      const libelle = min !== null && max !== null
-        ? (min === max ? t('WIZARD.STEP2.BRIEF_LENGTH_EXACT', { n: min }) : t('WIZARD.STEP2.BRIEF_LENGTH_RANGE', { min, max }))
-        : min !== null ? t('WIZARD.STEP2.BRIEF_LENGTH_MIN', { n: min }) : t('WIZARD.STEP2.BRIEF_LENGTH_MAX', { n: max });
-      puces.push({ cle: 'longueur', libelle });
-    }
+    // La longueur comprise ne fait plus de puce : elle s'affiche DANS le
+    // réglage, marquée « repris de votre description ».
     for (const f of this.briefAvoidEndings()) puces.push({ cle: `fin:${f}`, libelle: t('WIZARD.STEP2.BRIEF_ENDING', { fin: f }) });
     for (const w of this.briefAvoidWords()) puces.push({ cle: `eviter:${w}`, libelle: t('WIZARD.STEP2.BRIEF_AVOID', { mot: w }) });
     for (const m of this.briefRequiredWords()) puces.push({ cle: `avec:${m}`, libelle: t('WIZARD.STEP2.BRIEF_REQUIRED', { mot: m }) });
@@ -156,7 +201,6 @@ export class WizardComponent implements OnInit, OnDestroy {
 
   retirerContrainte(cle: string) {
     this.contraintesRetirees.update((r) => (r.includes(cle) ? r : [...r, cle]));
-    if (cle === 'longueur' && !this.minLengthTouched()) this.minNameLength.set(this.DEFAULT_MIN_LENGTH);
   }
 
   // ─── Type de nom ──────────────────────────────────────────
@@ -218,14 +262,17 @@ export class WizardComponent implements OnInit, OnDestroy {
     if (parUtilisateur) this.typeDeNomTouched.set(true);
   }
 
-  /** Vrai dès que la longueur demandée passe sous le seuil « raisonnable ». */
-  isRiskyLength = computed(() => this.minNameLength() < this.DEFAULT_MIN_LENGTH);
-  /** Longueur proposée quand on assouplit la contrainte après un échec. */
-  relaxedLength = computed(() => Math.min(this.minNameLength() + 2, this.MAX_LENGTH_SETTING));
+  /** Plage étroite : « au plus 6 » ou « au plus 7 ». */
+  isRiskyLength = computed(() => this.bornes().max <= this.NARROW_MAX_LENGTH);
+  /** Maximum proposé quand on assouplit après un échec : +2, puis sans limite. */
+  relaxedLength = computed(() => {
+    const suivant = this.bornes().max + 2;
+    return suivant > this.MAX_LENGTH_OPTION ? SANS_LIMITE : suivant;
+  });
 
-  onMinLengthChange(value: number) {
-    this.minNameLength.set(value);
-    this.minLengthTouched.set(true);
+  onMaxLengthChange(value: number) {
+    this.maxNameLength.set(value);
+    this.maxLengthTouched.set(true);
   }
 
   // ─── #3 : Exemples de noms aimés / rejetés (saisie libre, étape réglages) ──
@@ -1545,9 +1592,10 @@ export class WizardComponent implements OnInit, OnDestroy {
       this.selectedExtensions.set(state.selectedExtensions || ['.com']);
       this.matchMode.set(state.matchMode || 'any');
       this.projectId.set(state.projectId || null);
-      if (state.minNameLength) {
-        this.minNameLength.set(Math.min(Math.max(state.minNameLength, this.MIN_LENGTH_FLOOR), this.MAX_LENGTH_SETTING));
-        this.minLengthTouched.set(state.minLengthTouched ?? true);
+      // Un état d'avant le chantier `refondre-l-ecran-de-cadrage` portait un
+      // minimum : il est ignoré, le maximum repart « non réglé ».
+      if (state.maxLengthTouched && typeof state.maxNameLength === 'number') {
+        this.onMaxLengthChange(Math.max(state.maxNameLength, PLANCHER_DE_LONGUEUR));
       }
       if (state.typeDeNom) this.choisirTypeDeNom(state.typeDeNom, state.typeDeNomTouched ?? false);
       if (Array.isArray(state.contraintesRetirees)) this.contraintesRetirees.set(state.contraintesRetirees);
@@ -1626,7 +1674,6 @@ export class WizardComponent implements OnInit, OnDestroy {
   private loadNamingConstraints(description: string) {
     this.domainService.extractConstraints(description).subscribe({
       next: (c) => {
-        this.minLengthFromBrief.set(c.briefMinLength ?? null);
         this.briefMinLength.set(c.briefMinLength ?? null);
         this.briefMaxLength.set(c.briefMaxLength ?? null);
         this.briefAvoidWords.set(c.avoidWords ?? []);
@@ -1636,10 +1683,6 @@ export class WizardComponent implements OnInit, OnDestroy {
         this.contraintesRetirees.set([]);
         // Affichage seulement : le réglage n'est envoyé que si l'utilisateur
         // le touche, et le serveur applique sinon les bornes du brief.
-        if (!this.minLengthTouched() && typeof c.briefMinLength === 'number') {
-          const clamped = Math.min(Math.max(c.briefMinLength, this.MIN_LENGTH_FLOOR), this.MAX_LENGTH_SETTING);
-          this.minNameLength.set(clamped);
-        }
         if (!this.typeDeNomTouched()) this.choisirTypeDeNom(c.nameType === 'descriptive' ? 'descriptifs' : 'inventes', false);
         this.cdr.detectChanges();
       },
@@ -1690,8 +1733,9 @@ export class WizardComponent implements OnInit, OnDestroy {
 
   /** #2 — relance en assouplissant la contrainte de longueur. */
   relaxLengthAndRetry() {
-    this.analytics.track('no_result_relax_clicked', { from: this.minNameLength() });
-    this.onMinLengthChange(Math.min(this.minNameLength() + 2, this.MAX_LENGTH_SETTING));
+    // `from` porte désormais le MAXIMUM (D9) : assouplir, c'est autoriser plus long.
+    this.analytics.track('no_result_relax_clicked', { from: this.bornes().max });
+    this.onMaxLengthChange(this.relaxedLength());
     this.showNoResultHelp.set(false);
     this.findDomains(false);
   }
@@ -1827,13 +1871,14 @@ export class WizardComponent implements OnInit, OnDestroy {
         this.selectedExtensions.set(project.extensions);
         this.matchMode.set(project.matchMode);
         // Réglages de génération enregistrés avec le projet (#1 / #3)
-        if (project.minLength) {
-          // Un projet ancien peut porter une longueur qui n'est plus proposée (8, 9…) :
-          // on la ramène dans la plage du sélecteur pour qu'il reste cohérent.
-          this.minNameLength.set(Math.min(Math.max(project.minLength, this.MIN_LENGTH_FLOOR), this.MAX_LENGTH_SETTING));
-          // La colonne vaut 7 par défaut : seule une autre valeur dit un choix
-          // explicite. Sinon, le brief garde la main sur la longueur.
-          this.minLengthTouched.set(project.minLength !== this.DEFAULT_MIN_LENGTH);
+        // `maxLength` à null : jamais réglé, le brief ou le défaut gardent la
+        // main. L'ancien `minLength` n'est plus lu : il valait 7 par défaut et
+        // ne disait presque jamais un choix.
+        if (typeof project.maxLength === 'number') {
+          this.onMaxLengthChange(Math.max(project.maxLength, PLANCHER_DE_LONGUEUR));
+        } else {
+          this.maxNameLength.set(MAXIMUM_PAR_DEFAUT);
+          this.maxLengthTouched.set(false);
         }
         this.likedExamplesInput.set((project.likedExamples ?? []).join(', '));
         this.dislikedExamplesInput.set((project.dislikedExamples ?? []).join(', '));
@@ -1916,9 +1961,8 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.newExtension.set('');
     this.matchMode.set('any');
     this.localeOverride.set('');
-    this.minNameLength.set(this.DEFAULT_MIN_LENGTH);
-    this.minLengthTouched.set(false);
-    this.minLengthFromBrief.set(null);
+    this.maxNameLength.set(MAXIMUM_PAR_DEFAUT);
+    this.maxLengthTouched.set(false);
     this.briefAvoidWords.set([]);
     this.briefReferenceBrands.set([]);
     this.briefAvoidEndings.set([]);
@@ -2820,8 +2864,8 @@ export class WizardComponent implements OnInit, OnDestroy {
         selectedExtensions: this.selectedExtensions(),
         matchMode: this.matchMode(),
         projectId: this.projectId(),
-        minNameLength: this.minNameLength(),
-        minLengthTouched: this.minLengthTouched(),
+        maxNameLength: this.maxNameLength(),
+        maxLengthTouched: this.maxLengthTouched(),
         typeDeNom: this.typeDeNom(),
         typeDeNomTouched: this.typeDeNomTouched(),
         contraintesRetirees: this.contraintesRetirees(),
@@ -2879,7 +2923,7 @@ export class WizardComponent implements OnInit, OnDestroy {
       dislikedNames: this.domains().filter(d => d.rating === 'disliked').map(d => d.name),
       // #1 — longueur envoyée seulement si l'utilisateur l'a réglée : sinon le
       // serveur applique les bornes du brief, sans les élargir.
-      ...(this.minLengthTouched() ? { minLength: this.minNameLength() } : {}),
+      ...(this.maxLengthTouched() ? { maxLength: this.maxNameLength() } : {}),
       contraintesRetirees: this.contraintesRetirees(),
       // #3 — références de style : saisie libre + domaines du marché aimés
       likedExamples: this.styleReferences(),
@@ -2936,9 +2980,6 @@ export class WizardComponent implements OnInit, OnDestroy {
 
           // #2 — rien trouvé : on propose d'assouplir la longueur ou de poursuivre
           if ((event.found ?? 0) === 0 && this.domains().length === 0) {
-            if (event.minLengthUsed && !this.minLengthTouched()) {
-              this.minNameLength.set(event.minLengthUsed);
-            }
             this.showNoResultHelp.set(true);
           }
 
