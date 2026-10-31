@@ -771,6 +771,62 @@ body {
     color: #03543f;
 }
 
+/* Retours sur les noms, sous la liste des résultats (chantier affiner-par-retour-libre).
+   Ici et non dans wizard.css, déjà au-delà de son budget ; et les survols
+   demandent une classe. */
+.retours-zone {
+    background: var(--nm-app-surface);
+    border: 1px solid var(--nm-app-border);
+    border-radius: 0.625rem;
+    padding: 0.875rem 1rem;
+}
+.retour-puce {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.25rem 0.2rem 0.625rem;
+    border-radius: 999px;
+    background: var(--nm-app-accent-surface);
+    color: var(--nm-app-accent);
+    font-size: 0.8rem;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+}
+.retour-puce__retirer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.65rem;
+}
+.retour-puce__retirer:hover:not(:disabled) {
+    background: var(--nm-app-accent-border);
+}
+.retour-suggestion {
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid var(--nm-app-border-strong);
+    background: transparent;
+    color: var(--nm-app-text, inherit);
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+.retour-suggestion:hover:not(:disabled) {
+    border-color: var(--nm-app-accent);
+    color: var(--nm-app-accent);
+}
+.retour-suggestion:disabled,
+.retour-puce__retirer:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
 @media print {
     .p-menubar,
     .p-toast,

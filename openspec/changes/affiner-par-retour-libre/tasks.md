@@ -61,12 +61,31 @@
 
 ## 4. Zone « Affiner » (web)
 
-- [ ] 4.1 Ajouter sous la liste des résultats le champ de retour et les cinq suggestions, masqués sans résultat et pour un invité en lecture seule. Styles de layout en inline (conventions PrimeNG). Vérification : au navigateur, avec un projet de 10 noms, la zone apparaît. Ouvert avec un compte invité en lecture, elle n'apparaît pas.
-- [ ] 4.2 Envoyer un retour : l'ajouter au signal `retours`, lancer la recherche en ajout avec `retours` et `excludeNames` (la recherche aboutie les enregistre sur le projet, D4), puis vider le champ. Sur refus faute de crédits, le texte reste dans le champ et n'est pas ajouté. Retirer une puce enregistre la liste par `PATCH /projects/:id`. Vérification : au navigateur, onglet réseau, la requête `search/stream` porte `retours` et les exclusions, les 10 premières cartes restent, et `GET /projects/:id` relu après la recherche porte `retours`.
-- [ ] 4.3 Afficher les retours actifs en puces retirables, refuser un onzième avec un message, et restaurer les puces à la réouverture du projet. Vérification : au navigateur, deux retours, fermeture, réouverture depuis le drawer → deux puces, description inchangée. Retrait d'une puce → la recherche suivante ne la porte plus.
-- [ ] 4.4 Émettre `name_feedback_added` (`origine`, `actifs`) par `AnalyticsService.track()` et le documenter dans CLAUDE.md, section « Nommage des événements ». Vérification : l'événement apparaît dans les logs locaux de l'API après un clic sur une suggestion et après une saisie libre.
-- [ ] 4.5 Libellés fr et en dans `web/public/assets/i18n/`. Vérification : au navigateur, en `fr-FR` et en `en-US`, aucune clé brute dans la zone.
-- [ ] 4.6 Vérifier le parcours de bout en bout sur le vrai modèle : une recherche, puis « je n'aime pas les noms composés », puis « plus francophone ». Vérification : noms notés sous cette tâche. La part de noms faits de deux racines collées baisse d'un lot à l'autre, et `search_completed` porte `retours: 2`.
+- [x] 4.1 Ajouter sous la liste des résultats le champ de retour et les cinq suggestions, masqués sans résultat et pour un invité en lecture seule. Styles de layout en inline (conventions PrimeNG). Vérification : au navigateur, avec un projet de 10 noms, la zone apparaît. Ouvert avec un compte invité en lecture, elle n'apparaît pas.
+  - Navigateur (worktree N=2, comptes de test) : la zone apparaît sous un projet de 10 noms. Ouvert par un invité en lecture seule (30 cartes visibles), elle est absente.
+  - Condition : `domains().length > 0 && !lectureSeule() && description()`. Sans résultat, la zone n'est pas rendue (condition dans le code, pas de relevé au navigateur).
+  - Titre à l'écran « Ces noms vous parlent ? » : « Affiner » désigne déjà un bloc de l'étape 2 depuis la #171.
+  - Styles dans `styles.css` (`.retours-zone`, `.retour-puce`, `.retour-suggestion`) : `wizard.css` dépasse déjà son budget, et les survols demandent une classe.
+  - Puces en simples éléments sous `nm-prive`, pas en `p-chip`, qui recopie son libellé dans un attribut. `masquage.spec.ts` surveille `texteDuRetour`.
+- [x] 4.2 Envoyer un retour : l'ajouter au signal `retours`, lancer la recherche en ajout avec `retours` et `excludeNames` (la recherche aboutie les enregistre sur le projet, D4), puis vider le champ. Sur refus faute de crédits, le texte reste dans le champ et n'est pas ajouté. Retirer une puce enregistre la liste par `PATCH /projects/:id`. Vérification : au navigateur, onglet réseau, la requête `search/stream` porte `retours` et les exclusions, les 10 premières cartes restent, et `GET /projects/:id` relu après la recherche porte `retours`.
+  - Retour saisi : la requête `search/stream` porte `retours: ["je n'aime pas les noms composés"]` et 23 exclusions. Les 10 cartes du lot 1 restent en tête, la puce apparaît et le champ se vide.
+  - Le retour ne rejoint les puces qu'à la réponse `done` (`confirmerRetourEnvoye`). Une recherche arrêtée ou en erreur le laisse hors des puces.
+  - Solde à 0 : le dialogue des crédits s'ouvre, le texte reste dans le champ, et les puces ne changent pas.
+  - `GET /projects/:id` après les recherches : `retours` contient les deux retours.
+- [x] 4.3 Afficher les retours actifs en puces retirables, refuser un onzième avec un message, et restaurer les puces à la réouverture du projet. Vérification : au navigateur, deux retours, fermeture, réouverture depuis le drawer → deux puces, description inchangée. Retrait d'une puce → la recherche suivante ne la porte plus.
+  - Réouverture du projet (par son URL, dans un nouvel onglet) : deux puces et description identique.
+  - Retrait d'une puce : `PATCH {"retours": ["Plus francophones"]}`, relu en base après rechargement. La recherche suivante porte `retours: ["plus francophones"]` seul.
+  - 10 retours : message « 10 retours au plus : retirez-en un pour en ajouter un autre. », saisie et suggestions désactivées.
+- [x] 4.4 Émettre `name_feedback_added` (`origine`, `actifs`) par `AnalyticsService.track()` et le documenter dans CLAUDE.md, section « Nommage des événements ». Vérification : l'événement apparaît dans les logs locaux de l'API après un clic sur une suggestion et après une saisie libre.
+  - Logs locaux : `{ origine: "saisie", actifs: 1 }`, puis `{ origine: "suggestion", actifs: 2 }`. Émis à l'enregistrement, pas au clic. Documenté dans CLAUDE.md.
+- [x] 4.5 Libellés fr et en dans `web/public/assets/i18n/`. Vérification : au navigateur, en `fr-FR` et en `en-US`, aucune clé brute dans la zone.
+  - `fr-FR` : « Ces noms vous parlent ? ». `en-US` : « How do these names feel? », et le message de plafond traduit. Aucune clé brute dans la zone, dans les deux langues.
+- [x] 4.6 Vérifier le parcours de bout en bout sur le vrai modèle : une recherche, puis « je n'aime pas les noms composés », puis « plus francophone ». Vérification : noms notés sous cette tâche. La part de noms faits de deux racines collées baisse d'un lot à l'autre, et `search_completed` porte `retours: 2`.
+  - Relevé du 31/10/2026, brief « méditation guidée pour soignants de nuit », modèles du `.env` local :
+    - lot 1 : Mielune, Pausera, Nuitelo, Soplune, Zenveille, Sommezen, Reposoin, Calminuit, Veillezen, Sereinuit — environ 6 sur 10 faits de deux racines collées ;
+    - après « je n'aime pas les noms composés » : Dormeya, Medilune, Reposel, Sommeva, Calmide, Luniva, Sophea, Zenaro, Reposo, Sereia — 1 sur 10 (Medilune) ;
+    - après « Plus francophones » : Serevin, Seregal, Soignel, Relaxi, Nuitrel, Havrine, Veilune, Rosedune, Florive, Nacrine.
+  - `search_completed` : `retours` à 0, 1 puis 2. `retoursCompris.formesRetirees` vaut 1, puis 1 avec `langue: true`.
 
 ## 5. Livraison
 

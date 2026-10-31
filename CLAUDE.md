@@ -655,6 +655,11 @@ avec `wizard_step_viewed` (étape 2) comme dénominateur.
 `bandeau` (5 rejets sans favori). Il dit si l'incitation sert, et donc si le défaut
 « noms inventés » doit être revu.
 
+`name_feedback_added` (`origine` : `suggestion` ou `saisie`, `actifs` : nombre de retours
+après ajout) marque un retour sur les noms enregistré — à la fin de la recherche qui le
+portait, pas au clic : un retour refusé faute de crédits n'en émet pas. Avec les champs
+`retours` de `search_completed`, il dit si la zone sert, et lesquelles des suggestions.
+
 `description_refine_shown` (`longueur` du texte saisi) et `description_refine_chosen`
 (`choix` : `reformulation` ou `originale`, `retouchee`) suivent la reformulation
 confirmée de l'étape 1 (chantier `reformulation-systematique`). Avant, la reformulation

@@ -54,6 +54,7 @@ describe('masquage des textes personnels (rejeu)', () => {
     for (const expression of [
       'proprietaireDuProjet()', // bannière « projet de … »
       'description()', // confirmation de la reformulation : le texte saisi
+      'texteDuRetour', // puces des retours sur les noms
       'project.description',
       'shared.ownerEmail',
       'p.email',
