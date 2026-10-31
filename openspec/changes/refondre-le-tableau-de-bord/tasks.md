@@ -22,10 +22,12 @@
 
 ## 3. Rétention et séries mensuelles (API)
 
-- [ ] 3.1 Dans `RetentionService`, écrire une fonction pure `decomposer(activites, comptes)` qui classe chaque mois en nouveaux / retenus / réactivés / perdus et construit le triangle de cohortes M+1…M+5 (mois en cours marqué incomplet, mois futurs absents) ; supprimer durée de vie et jours actifs. Vérifier dans `retention.service.spec.ts` sur le cas d'octobre : 51 nouveaux, 1 retenu, 0 réactivé, 39 perdus ; août (début du journal le 23) sans retenus ni perdus.
-- [ ] 3.2 Remplacer `getSeries(weeks)` par `getSeries(months)` (D7) : actifs décomposés, inscrits, revenu par devise, coût IA total via `cout-sql.ts` (`null` avant le relevé) ; route `GET /admin/series?months=` bornée à 1–24. Vérifier par test du contrôleur que `months=30` est ramené à 24, puis en local que la somme des inscrits mensuels égale le nombre de comptes mesurés créés sur la même fenêtre.
-- [ ] 3.3 Mettre à jour la section « Tableau de bord d'administration » de `CLAUDE.md` : définitions (MAU, DAU/MAU, taux de succès, décomposition, cohortes), indicateurs retirés et pourquoi (dont le 👍/👎 à 3,8 % du 31/10/2026), granularité mensuelle. Vérifier que chaque indicateur décrit existe dans la réponse de `/admin/stats` ou `/admin/series`.
-- [ ] 3.4 Lancer `cd api && npm test && npm run build` : tout passe.
+- [x] 3.1 Dans `RetentionService`, écrire une fonction pure `decomposer(activites, comptes)` qui classe chaque mois en nouveaux / retenus / réactivés / perdus et construit le triangle de cohortes M+1…M+5 (mois en cours marqué incomplet, mois futurs absents) ; supprimer durée de vie et jours actifs. Vérifier dans `retention.service.spec.ts` sur le cas d'octobre : 51 nouveaux, 1 retenu, 0 réactivé, 39 perdus ; août (début du journal le 23) sans retenus ni perdus.
+- [x] 3.2 Remplacer `getSeries(weeks)` par `getSeries(months)` (D7) : actifs décomposés, inscrits, revenu par devise, coût IA total via `cout-sql.ts` (`null` avant le relevé) ; route `GET /admin/series?months=` bornée à 1–24. Vérifier par test du contrôleur que `months=30` est ramené à 24, puis en local que la somme des inscrits mensuels égale le nombre de comptes mesurés créés sur la même fenêtre.
+  - Vérifié le 31/10/2026 (`admin.controller.spec.ts` : 30 → 24, 0 → 1). Base locale peuplée : 13 inscrits sur 12 mois = 13 comptes mesurés ; octobre 12 actifs (10 nouveaux, 2 retenus, 1 perdu), 9,90 €, coût IA 0,557 $ ; septembre marqué partiel pour le coût (relevé local commencé le 22).
+- [x] 3.3 Mettre à jour la section « Tableau de bord d'administration » de `CLAUDE.md` : définitions (MAU, DAU/MAU, taux de succès, décomposition, cohortes), indicateurs retirés et pourquoi (dont le 👍/👎 à 3,8 % du 31/10/2026), granularité mensuelle. Vérifier que chaque indicateur décrit existe dans la réponse de `/admin/stats` ou `/admin/series`.
+- [x] 3.4 Lancer `cd api && npm test && npm run build` : tout passe.
+  - 32 suites, 300 tests ; build sans erreur.
 
 ## 4. Période partagée et onglet Coûts IA (web)
 

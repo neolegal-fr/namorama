@@ -7,10 +7,11 @@ import { DomainSuggestion } from '../projects/entities/domain-suggestion.entity'
 import { CreditAdjustment } from './entities/credit-adjustment.entity';
 import { BrandReportRecord } from '../brand-report/entities/brand-report-record.entity';
 import { AppLoggerService } from '../common/logging/app-logger.service';
-import { comptesMesures, creditsGratuitsSql, jourISO, lundiDe, semaineSql } from './predicats';
+import { comptesMesures, creditsGratuitsSql, jourISO } from './predicats';
 import { FREE_MONTHLY_QUOTA, renouvellementDu } from '../users/users.service';
 import { ModelCostsService } from './model-costs.service';
-import { ActiviteCompte, Engagement, bornesDuMois, engagement, estUnMois, moisPrecedent } from './indicateurs';
+import { ActiviteCompte, Engagement, bornesDuMois, engagement, estUnMois, moisDe, moisPrecedent } from './indicateurs';
+import { MoisActif, RetentionService } from './retention.service';
 
 export interface AdminUserRow {
   id: number;
@@ -227,29 +228,30 @@ export interface AdminStats {
   pricingTrackingSince: string;
 }
 
-/** Un point de la série hebdomadaire. `week` est le LUNDI de la semaine. */
-export interface WeeklyPoint {
-  week: string;
+/** Un point de la série mensuelle. `month` est un mois civil, `AAAA-MM`. */
+export interface MonthlyPoint {
+  month: string;
+  /** Le mois n'est pas terminé : estompé, exclu des moyennes. */
+  current: boolean;
   newUsers: number;
-  /** `null` avant le démarrage du journal d'activité — un trou, pas un zéro. */
-  activeUsers: number | null;
-  /** Projets créés : une recherche aboutie, ou un nom soumis au test. */
-  projects: number;
-  creditsConsumed: number;
-  /** Visites de la semaine. `null` avant le démarrage du journal des visites. */
-  visits: number | null;
-  /** Suggestions de la semaine notées 👍 / 👎 (voir `PeriodMetrics.likes`). */
-  likes: number;
-  dislikes: number;
-  /** Visites de la semaine ayant ouvert le dialogue des packs. `null` : pas mesuré. */
-  pricingViewed: number | null;
+  /**
+   * Actifs du mois décomposés (nouveaux, retenus, réactivés, perdus), repris de
+   * la fidélité pour qu'un même chiffre n'ait qu'une source. `null` avant le
+   * journal d'activité.
+   */
+  active: MoisActif | null;
+  /** Encaissements par devise, en centimes. `null` : registre indisponible. */
+  revenue: { devise: string; centimes: number }[] | null;
+  /** Coût IA du mois. `null` avant le relevé : non mesuré, pas gratuit. */
+  aiCostUsd: number | null;
+  /** Premier mois du relevé, commencé en cours de mois. */
+  aiCostPartial: boolean;
 }
 
 export interface AdminSeries {
-  weeks: WeeklyPoint[];
+  months: MonthlyPoint[];
   activityTrackingSince: string | null;
-  visitTrackingSince: string | null;
-  pricingTrackingSince: string;
+  aiCostTrackingSince: string | null;
 }
 
 /**
@@ -273,6 +275,7 @@ export class AdminService {
     private dataSource: DataSource,
     private readonly logger: AppLoggerService,
     private readonly modelCosts: ModelCostsService,
+    private readonly retention: RetentionService,
   ) {}
 
   /**
@@ -549,8 +552,6 @@ export class AdminService {
     return j;
   }
 
-  /** Voir `lundiDe`. */
-  private static lundiDe = lundiDe;
 
   /** Tolérance sur « la fenêtre se termine maintenant » : le temps d'un aller-retour. */
   private static readonly MAINTENANT_MS = 5 * 60 * 1000;
@@ -657,29 +658,6 @@ export class AdminService {
       pricingViewed: Number(r.tarifs ?? 0),
       checkoutStarted: Number(r.paiements ?? 0),
     };
-  }
-
-  /**
-   * Visites par semaine, ou `null` si la requête échoue.
-   *
-   * Même raison que {@link entonnoir} : cette jointure est la plus récente du
-   * service, et un échec doit hachurer UNE courbe, pas vider les cinq autres.
-   */
-  private async visitesParSemaine(depuis: string): Promise<any[] | null> {
-    try {
-      return await this.dataSource.query(
-        `SELECT ${AdminService.SEMAINE('v.firstSeenAt')} AS semaine, COUNT(*) AS n,
-                COALESCE(SUM(v.pricingViewed), 0) AS tarifs
-           FROM visitor_session v
-           LEFT JOIN user u ON u.keycloakId = v.keycloakId
-          WHERE ${AdminService.VISITES_MESUREES} AND v.firstSeenAt >= ?
-          GROUP BY semaine`,
-        [depuis],
-      );
-    } catch (e) {
-      this.logger.error(`Visites hebdomadaires non calculées : ${e}`, undefined, AdminService.name);
-      return null;
-    }
   }
 
   // ─── Comptes actifs ────────────────────────────────────────────────────────
@@ -1042,150 +1020,80 @@ export class AdminService {
     };
   }
 
-  // ─── Série hebdomadaire ────────────────────────────────────────────────────
-
-  /** Semaine ISO en SQL. Voir `semaineSql`. */
-  private static readonly SEMAINE = semaineSql;
-
-  private static parSemaine(rows: any[]): Map<string, number> {
-    return new Map(rows.map((r) => [String(r.semaine), Number(r.n)]));
-  }
+  // ─── Série mensuelle ───────────────────────────────────────────────────────
 
   /**
-   * Historique hebdomadaire des indicateurs de flux.
+   * Historique au mois civil, indépendant de la période choisie.
    *
-   * La semaine, pas le mois : à ce volume, six points mensuels ne dessinent
-   * rien. Et pas le jour : le produit ne reçoit pas assez de monde pour qu'un
-   * point quotidien porte autre chose que du bruit.
+   * Le mois, plus la semaine : relevé le 31/10/2026, ~10 inscriptions par
+   * semaine et 2 comptes actifs par jour — chaque barre hebdomadaire était du
+   * bruit. Le mois en cours est renvoyé, marqué `current` : l'interface
+   * l'estompe et l'exclut des moyennes.
    *
-   * Ne porte que des FLUX (ce qui s'est produit pendant la semaine). Les stocks
-   * — solde de crédits, moyennes par projet — n'ont pas d'historique et n'en
-   * auraient pas le sens.
+   * Chaque source échoue seule : un registre des paiements absent ne vide pas
+   * la courbe des inscrits.
    */
-  async getSeries(weeks: number): Promise<AdminSeries> {
-    const nb = Math.min(Math.max(Math.trunc(weeks) || 26, 2), 104);
+  async getSeries(months: number): Promise<AdminSeries> {
+    const nb = Math.min(Math.max(Math.trunc(months) || 12, 1), 24);
+    const courant = moisDe(new Date());
+    const [a, m] = courant.split('-').map(Number);
+    const mois: string[] = [];
+    for (let k = nb - 1; k >= 0; k--) mois.push(moisDe(new Date(a, m - 1 - k, 1)));
+    const depuis = `${mois[0]}-01`;
 
-    const lundiCourant = AdminService.lundiDe(new Date());
-    const lundis: string[] = [];
-    for (let k = nb - 1; k >= 0; k--) {
-      const d = new Date(lundiCourant);
-      d.setDate(d.getDate() - 7 * k);
-      lundis.push(AdminService.jourISO(d));
-    }
-    const depuis = lundis[0];
-
-    const [debutJournal, debutVisites, inscrits, projets, suggestions, creditsRapports, actifs, visites, notes] = await Promise.all([
-      this.debutDuJournal(),
-      this.debutDesVisites(),
-
+    const [inscrits, revenus, couts, retention] = await Promise.all([
       this.dataSource.query(
-        `SELECT ${AdminService.SEMAINE('u.createdAt')} AS semaine, COUNT(*) AS n
+        `SELECT DATE_FORMAT(u.createdAt, '%Y-%m') AS mois, COUNT(*) AS n
            FROM user u
           WHERE ${AdminService.comptesMesures()} AND u.createdAt >= ?
-          GROUP BY semaine`,
+          GROUP BY mois`,
         [depuis],
       ),
-
-      this.dataSource.query(
-        `SELECT ${AdminService.SEMAINE('p.createdAt')} AS semaine, COUNT(*) AS n
-           FROM project p
-           INNER JOIN user u ON u.id = p.userId
-          WHERE ${AdminService.comptesMesures()} AND p.createdAt >= ?
-          GROUP BY semaine`,
-        [depuis],
-      ),
-
-      this.dataSource.query(
-        `SELECT ${AdminService.SEMAINE('COALESCE(ds.createdAt, p.createdAt)')} AS semaine, COUNT(*) AS n
-           FROM domain_suggestion ds
-           INNER JOIN project p ON p.id = ds.projectId
-           INNER JOIN user u ON u.id = p.userId
-          WHERE ${AdminService.comptesMesures()} AND COALESCE(ds.createdAt, p.createdAt) >= ?
-          GROUP BY semaine`,
-        [depuis],
-      ),
-
-      this.dataSource.query(
-        `SELECT ${AdminService.SEMAINE('r.createdAt')} AS semaine, COALESCE(SUM(r.costCredits), 0) AS n
-           FROM brand_report_record r
-           INNER JOIN user u ON u.keycloakId = r.keycloakId
-          WHERE ${AdminService.comptesMesures()} AND r.createdAt >= ?
-          GROUP BY semaine`,
-        [depuis],
-      ),
-
-      this.dataSource.query(
-        `SELECT ${AdminService.SEMAINE('a.day')} AS semaine, COUNT(DISTINCT a.userId) AS n
-           FROM user_activity_day a
-           INNER JOIN user u ON u.id = a.userId
-          WHERE ${AdminService.comptesMesures()} AND a.day >= ?
-          GROUP BY semaine`,
-        [depuis],
-      ),
-
-      this.visitesParSemaine(depuis),
-
-      // Même date que les suggestions : la semaine où le nom a été produit.
-      this.dataSource.query(
-        `SELECT ${AdminService.SEMAINE('COALESCE(ds.createdAt, p.createdAt)')} AS semaine,
-                COALESCE(SUM(ds.rating = 'liked'), 0)    AS likes,
-                COALESCE(SUM(ds.rating = 'disliked'), 0) AS dislikes
-           FROM domain_suggestion ds
-           INNER JOIN project p ON p.id = ds.projectId
-           INNER JOIN user u ON u.id = p.userId
-          WHERE ${AdminService.comptesMesures()} AND ds.rating <> 'neutral'
-            AND COALESCE(ds.createdAt, p.createdAt) >= ?
-          GROUP BY semaine`,
-        [depuis],
-      ),
+      this.revenusParMois(depuis),
+      this.modelCosts.parMois(mois[0]),
+      this.retention.getRetention(),
     ]);
 
-    const mInscrits = AdminService.parSemaine(inscrits);
-    const mProjets = AdminService.parSemaine(projets);
-    const mSugg = AdminService.parSemaine(suggestions);
-    const mRapports = AdminService.parSemaine(creditsRapports);
-    const mActifs = AdminService.parSemaine(actifs);
-    const mVisites = visites === null ? null : AdminService.parSemaine(visites);
-    const mTarifs = visites === null ? null : new Map<string, number>(visites.map((r: any) => [String(r.semaine), Number(r.tarifs)]));
-    const mNotes = new Map<string, { likes: number; dislikes: number }>(
-      notes.map((r: any) => [String(r.semaine), { likes: Number(r.likes), dislikes: Number(r.dislikes) }]),
-    );
-
-    // Le journal ne couvre une semaine que si son premier jour la précède. Une
-    // semaine à cheval sur son démarrage compterait les seuls jours mesurés et
-    // se lirait comme un creux : elle reste « non mesurée ».
-    const premiereSemaineMesuree = debutJournal
-      ? AdminService.jourISO(AdminService.lundiDe(new Date(`${debutJournal}T00:00:00`)))
-      : null;
-    const journalCouvre = (lundi: string) =>
-      premiereSemaineMesuree !== null && lundi > premiereSemaineMesuree;
-
-    // Même règle pour les visites : une semaine à cheval sur le démarrage du
-    // journal n'a que ses derniers jours mesurés et se lirait comme un creux.
-    const premiereSemaineVisitee = debutVisites
-      ? AdminService.jourISO(AdminService.lundiDe(new Date(`${debutVisites}T00:00:00`)))
-      : null;
-    const visitesCouvertes = (lundi: string) =>
-      mVisites !== null && premiereSemaineVisitee !== null && lundi > premiereSemaineVisitee;
-
-    const premiereSemaineTarifs = AdminService.jourISO(AdminService.lundiDe(new Date(`${TARIFS_MESURES_DEPUIS}T00:00:00`)));
+    const mInscrits = new Map<string, number>(inscrits.map((r: any) => [String(r.mois), Number(r.n)]));
+    const mActifs = new Map(retention.mensuel.map((x) => [x.mois, x]));
 
     return {
-      activityTrackingSince: debutJournal,
-      visitTrackingSince: debutVisites,
-      pricingTrackingSince: TARIFS_MESURES_DEPUIS,
-      weeks: lundis.map((lundi) => ({
-        week: lundi,
-        newUsers: mInscrits.get(lundi) ?? 0,
-        activeUsers: journalCouvre(lundi) ? (mActifs.get(lundi) ?? 0) : null,
-        projects: mProjets.get(lundi) ?? 0,
-        creditsConsumed: (mSugg.get(lundi) ?? 0) + (mRapports.get(lundi) ?? 0),
-        visits: visitesCouvertes(lundi) ? (mVisites!.get(lundi) ?? 0) : null,
-        likes: mNotes.get(lundi)?.likes ?? 0,
-        dislikes: mNotes.get(lundi)?.dislikes ?? 0,
-        // Avant TARIFS_MESURES_DEPUIS, les semaines vaudraient zéro sans l'être.
-        pricingViewed: visitesCouvertes(lundi) && lundi > premiereSemaineTarifs ? (mTarifs!.get(lundi) ?? 0) : null,
+      activityTrackingSince: retention.journalDepuis,
+      aiCostTrackingSince: couts.since,
+      months: mois.map((mo) => ({
+        month: mo,
+        current: mo === courant,
+        newUsers: mInscrits.get(mo) ?? 0,
+        active: mActifs.get(mo) ?? null,
+        revenue: revenus === null ? null : (revenus.get(mo) ?? []),
+        aiCostUsd: couts.mois.get(mo)?.costUsd ?? null,
+        aiCostPartial: couts.mois.get(mo)?.partiel ?? false,
       })),
     };
+  }
+
+  /** Encaissements par mois et par devise, ou `null` si le registre ne répond pas. */
+  private async revenusParMois(depuis: string): Promise<Map<string, { devise: string; centimes: number }[]> | null> {
+    try {
+      const rows = await this.dataSource.query(
+        `SELECT DATE_FORMAT(pa.payeLe, '%Y-%m') AS mois, pa.devise AS devise,
+                COALESCE(SUM(pa.montantCentimes), 0) AS centimes
+           FROM paiement pa
+           INNER JOIN user u ON u.keycloakId = pa.keycloakId
+          WHERE ${AdminService.comptesMesures()} AND pa.payeLe >= ?
+          GROUP BY mois, pa.devise ORDER BY pa.devise`,
+        [depuis],
+      );
+      const parMois = new Map<string, { devise: string; centimes: number }[]>();
+      for (const r of rows) {
+        const liste = parMois.get(String(r.mois)) ?? [];
+        liste.push({ devise: String(r.devise), centimes: Number(r.centimes) });
+        parMois.set(String(r.mois), liste);
+      }
+      return parMois;
+    } catch (e) {
+      this.logger.error(`Chiffre d'affaires mensuel non calculé : ${e}`, undefined, AdminService.name);
+      return null;
+    }
   }
 }

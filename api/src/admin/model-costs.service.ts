@@ -226,6 +226,40 @@ export class ModelCostsService {
     });
   }
 
+  /**
+   * Coût total par mois civil, du mois `depuis` (`AAAA-MM`) à aujourd'hui.
+   *
+   * Un mois antérieur au relevé vaut `null` — non mesuré, pas gratuit. Le mois
+   * où le relevé commence est marqué `partiel` : ses premiers jours manquent.
+   * Les appels sans tarif sont absents des totaux, comme partout ailleurs.
+   */
+  async parMois(depuis: string): Promise<{ since: string | null; mois: Map<string, { costUsd: number | null; partiel: boolean }> }> {
+    const [since, rows] = await Promise.all([
+      this.debutDuReleve(),
+      this.dataSource.query(
+        `SELECT DATE_FORMAT(m.createdAt, '%Y-%m') AS mois, SUM(${COUT_DE_L_APPEL}) AS cost
+           ${ModelCostsService.AVEC_COMPTE}
+          WHERE ${ModelCostsService.MESURES} AND m.createdAt >= ?
+          GROUP BY mois`,
+        [`${depuis}-01`],
+      ),
+    ]);
+    const couts = new Map<string, number>(rows.map((r: any) => [String(r.mois), ModelCostsService.usd(r.cost)]));
+    const premierMois = since ? since.slice(0, 7) : null;
+    const resultat = new Map<string, { costUsd: number | null; partiel: boolean }>();
+    const [a, m] = depuis.split('-').map(Number);
+    const courant = new Date();
+    for (let d = new Date(a, m - 1, 1); d <= courant; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+      const mois = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const mesure = premierMois !== null && mois >= premierMois;
+      resultat.set(mois, {
+        costUsd: mesure ? (couts.get(mois) ?? 0) : null,
+        partiel: mois === premierMois && !since!.endsWith('-01'),
+      });
+    }
+    return { since, mois: resultat };
+  }
+
   private async debutDuReleve(): Promise<string | null> {
     const rows = await this.dataSource.query(
       `SELECT DATE_FORMAT(MIN(createdAt), '%Y-%m-%d') AS d FROM model_usage`,

@@ -224,17 +224,18 @@ export class AdminController {
   }
 
   /**
-   * Historique hebdomadaire, pour les courbes du tableau de bord.
+   * Historique mensuel, pour les courbes du tableau de bord : 12 mois par
+   * défaut, entre 1 et 24.
    *
-   * Séparé de `/stats` : la série balaie six mois et ne change qu'une fois par
-   * semaine, alors que les indicateurs se recalculent à chaque changement de
-   * période. Les fusionner ferait rejouer six mois d'agrégats à chaque clic.
+   * Séparé de `/stats` : la série balaie un an et ne change qu'une fois par
+   * jour, alors que les indicateurs se recalculent à chaque changement de
+   * période. Les fusionner ferait rejouer un an d'agrégats à chaque clic.
    */
   @Get('series')
   async getSeries(
-    @Query('weeks', new DefaultValuePipe(26), ParseIntPipe) weeks: number,
+    @Query('months', new DefaultValuePipe(12), ParseIntPipe) months: number,
   ) {
-    return this.adminService.getSeries(weeks);
+    return this.adminService.getSeries(Math.min(Math.max(months, 1), 24));
   }
 
   /**
