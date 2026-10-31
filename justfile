@@ -7,12 +7,14 @@ start:
     sleep 5
     (cd api && npm run start:dev) & (cd web && npm start)
 
-# Arrêter tous les services (Docker et processus Node)
-# Le motif [n] évite que pkill ne se tue lui-même : sa propre ligne de commande
-# contient « [n]est »/« [n]g serve », qui ne correspond pas au motif « nest »/« ng serve ».
+# Arrêter les serveurs de la copie principale (ports 3001 et 4200) et Docker.
+# Par port, pas par motif : `pkill -f nest` tuait aussi les serveurs des
+# worktrees d'agents (just agent-*), et Docker n'est arrêté que si aucun
+# d'eux ne tourne encore — la base et Keycloak leur sont communs.
 stop:
-    docker-compose -f infra/docker-compose.yml stop
-    @bash -c 'pkill -f "[n]est" 2>/dev/null; pkill -f "[n]g serve" 2>/dev/null; true'
+    @scripts/agent-env.sh stop-port 3001
+    @scripts/agent-env.sh stop-port 4200
+    @bash -c 'if ss -Hltn | grep -qE ":(300[2-9]|3010|420[1-9]) "; then echo "Docker laissé en marche : un worktree d agent tourne encore (just agent-status)"; else docker-compose -f infra/docker-compose.yml stop; fi'
 
 # Redémarrer l'écosystème
 restart: stop start
@@ -29,7 +31,9 @@ install:
     cd api && npm install --legacy-peer-deps
     cd web && npm install
 
-# Nettoyer les dépendances, les builds et les volumes Docker
+# ⚠ `down -v` efface le volume MariaDB : la base de la copie principale ET celles
+# de tous les worktrees d'agents. Jamais depuis un agent.
+# Nettoyer les dépendances, les builds et les volumes Docker (toutes les bases)
 clean:
     docker-compose -f infra/docker-compose.yml down -v
     rm -rf api/node_modules api/dist web/node_modules web/dist web/.angular
@@ -57,3 +61,34 @@ dev-api-url-reset:
     @bash -c 'git update-index --no-skip-worktree web/public/assets/config.json 2>/dev/null || true; \
       git checkout -- web/public/assets/config.json; \
       echo "config.json → localhost:3001 (suivi Git réarmé)"'
+
+# ─── Plusieurs agents en parallèle ─────────────────────────────────────────
+#
+# Chaque agent travaille dans son worktree ; ces recettes lui donnent aussi sa
+# base (`namorama_wN`), son API (3001+N) et son front (4200+N). Sans elles, deux
+# branches partagent la base `namorama` et DB_SYNCHRONIZE y fait s'écraser leurs
+# schémas. Détails dans scripts/agent-env.sh et dans CLAUDE.md.
+
+# Préparer le worktree courant (N de 1 à 9, choisi libre si omis)
+agent-env n="":
+    @scripts/agent-env.sh env {{n}}
+
+# Lancer l'API et le front de ce worktree en arrière-plan (.agent-run/*.log)
+agent-start:
+    @scripts/agent-env.sh start
+
+# Arrêter les serveurs de ce worktree, et eux seuls
+agent-stop:
+    @scripts/agent-env.sh stop
+
+# Lister les worktrees, leurs ports et ce qui tourne
+agent-status:
+    @scripts/agent-env.sh status
+
+# Avant de supprimer un worktree : arrêter, supprimer sa base, libérer N
+agent-clean:
+    @scripts/agent-env.sh clean
+
+# Autoriser les ports 4201-4209 dans le Keycloak local déjà initialisé
+agent-realm:
+    @scripts/agent-env.sh realm
