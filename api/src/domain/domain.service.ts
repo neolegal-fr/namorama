@@ -982,9 +982,15 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
     const shortHi = Math.min(minLen + 2, maxLen);
     const compoundLo = Math.min(minLen + 1, maxLen);
     const metaHi = Math.min(minLen + 3, maxLen);
+    // Mesuré le 31/10/2026 sur claude-haiku-5-5 : à [6, 6], 11 noms sur 30
+    // sortaient des bornes, payés puis écartés par le filtre. Faire compter les
+    // lettres les y ramène en partie (55 à 80 % dans les bornes selon les passes) ;
+    // « EXACTLY 6 characters » faisait pire (43 %). Le filtre reste la garantie.
+    const bornesDites = `minimum ${minLen}, maximum ${maxLen} characters`;
+    const compter = `Count the letters of every name before writing it: any name outside ${minLen}-${maxLen} characters is discarded.`;
     const lengthRule = wantsShort
-      ? `- LENGTH: minimum ${minLen}, maximum ${maxLen} characters. The user EXPLICITLY wants SHORT, invented, premium names (in the spirit of Qonto, Stripe, Figma, Notion). Favor rare / uncommon letter combinations and unusual sounds to maximize the chance the domain is still available at this short length.`
-      : `- MINIMUM ${minLen} characters, MAXIMUM ${maxLen} characters. CRITICAL: names under ${minLen} characters are almost always already registered and must NOT be generated.`;
+      ? `- LENGTH: ${bornesDites}. ${compter} The user EXPLICITLY wants SHORT, invented, premium names (in the spirit of Qonto, Stripe, Figma, Notion). Favor rare / uncommon letter combinations and unusual sounds to maximize the chance the domain is still available at this short length.`
+      : `- MINIMUM ${minLen} characters, MAXIMUM ${maxLen} characters. ${compter} CRITICAL: names under ${minLen} characters are almost always already registered and must NOT be generated.`;
     // Les exemples de 4-5 caractères du mode court sont sous le plancher : le
     // filtre les écarterait, et la consigne ressort ses exemples tels quels.
     // Pas de remplaçant, pour ne pas ajouter de noms recopiés.

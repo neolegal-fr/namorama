@@ -15,6 +15,10 @@
 - [x] 2.5 Mettre à jour `requetes-openai.spec.ts` pour les nouvelles bornes par défaut. Dans CLAUDE.md, section « Fournisseur du modèle », mentionner l'écart de parité ; section « Cahier des charges du nom », remplacer « Plancher technique : 5 » et « sans jamais élargir un maximum demandé » par les règles de D1 et D2. Vérification : `cd api && npx jest && npm run build` passent, et le diff de CLAUDE.md porte les deux sections.
   - 36 suites et 370 tests passent, `nest build` aussi. `requetes-openai.spec.ts` passe sans retouche : il ne vérifie pas le texte des bornes.
 - [ ] 2.6 Vérifier sur `claude-haiku-5-5` réel, par un script jetable hors dépôt, la génération pour trois briefs paraphrasés : « nom court, 4-5 lettres » ; « pas plus de 8 lettres » ; aucun brief de longueur. Vérification : bornes de `search_completed` notées sous cette tâche ([6, 6], [6, 8], [6, 10]), et au moins 8 noms sur 10 dans les bornes avant filtrage.
+  - Relevé du 31/10/2026, script jetable hors dépôt. **Bornes conformes dans les trois cas** : [6, 6] (brief « 4-5 lettres », origine `brief`), [6, 8] et [6, 10] (`defaut`).
+  - `gpt-5.6-terra` (fournisseur du `.env` local) : 97 %, 93 % et 100 % des noms inventés dans les bornes avant filtrage.
+  - `claude-haiku-5-5` avant retouche : 63 %, 73 % et 94 %. La consigne dit désormais de compter les lettres (« EXACTLY 6 », essayé aussi, donnait 43 %). Après retouche, deux passes : [6, 6] 55 % puis 80 %, [6, 8] 83 % puis 77 %, [6, 10] 93 % puis 100 %.
+  - **Critère non tenu de façon stable sur [6, 6] avec Haiku** : le filtre garantit le résultat, mais jusqu'à la moitié des noms d'une tentative sont générés puis écartés. Tâche laissée ouverte, décision demandée : accepter, ou traiter la longueur exacte dans le chantier « diversité ».
 
 ## 3. Longueur maximale persistée
 
