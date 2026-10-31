@@ -195,7 +195,8 @@ navigateur, et le drapeau peut être coché après coup : la liste admin les éc
 ### D10. `consent_recorded`
 
 Émis par `onConsent` et `onChange` via `AnalyticsService.track()`, avec
-`meta: { analytics: bool, replay: bool, origine: 'bandeau' | 'preferences' }`. C'est le
+`meta: { analytics: bool, replay: bool, origine: 'premier' | 'modification' }`. `onConsent` revient à chaque
+chargement de page : on mesure donc `onFirstConsent` et `onChange`, pas `onConsent`. C'est le
 canal anonyme habituel, sans cookie. Il est nécessaire pour mesurer la portée de l'outil
 lui-même. Le résumé `python3 - consentement` affiche la répartition : accepté tout,
 audience seule, refusé, et « sans réponse » (visites `page_viewed` sans `consent_recorded`).
@@ -232,7 +233,7 @@ sont pas concernés.
 
 ## Migration Plan
 
-1. Appliquer `api/migrations/2026-11-xx-rejeu-des-sessions.sql` (création de table
+1. Appliquer `api/migrations/2026-10-31-rejeu-des-sessions.sql` (création de table
    idempotente). Retour arrière : `DROP TABLE session_replay_chunk`.
 2. Déployer l'image. Le rejeu reste inactif tant que personne n'a accepté la nouvelle
    catégorie.

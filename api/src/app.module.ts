@@ -24,6 +24,7 @@ import { FunnelModule } from './common/funnel/funnel.module';
 import { ModelUsageModule } from './common/model-usage/model-usage.module';
 import { ModeleIAModule } from './common/modele-ia/modele-ia.module';
 import { EventsController } from './events/events.controller';
+import { ReplayModule } from './replay/replay.module';
 import { HorlogeService } from './common/horloge.service';
 
 @Module({
@@ -75,6 +76,7 @@ import { HorlogeService } from './common/horloge.service';
     AdminModule,
     FeedbackModule,
     BrandReportModule,
+    ReplayModule,
   ],
   controllers: [AppController, EventsController],
   providers: [

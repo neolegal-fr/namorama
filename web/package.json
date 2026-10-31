@@ -36,11 +36,13 @@
     "@ngx-translate/http-loader": "^18.0.0",
     "@primeng/themes": "^21.0.4",
     "@primeuix/themes": "^2.0.3",
+    "@rrweb/rrweb-plugin-console-record": "2.1.7",
     "keycloak-angular": "^21.0.0",
     "keycloak-js": "^26.2.4",
     "primeflex": "^4.0.0",
     "primeicons": "^8.0.0",
     "primeng": "^21.1.9",
+    "rrweb": "2.1.7",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "vanilla-cookieconsent": "^3.1.0"
