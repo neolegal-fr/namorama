@@ -82,6 +82,17 @@ export class SearchDomainsDto {
   @IsOptional()
   minLength?: number;
 
+  /**
+   * Longueur maximale, envoyée seulement si l'utilisateur l'a réglée. Absente,
+   * la borne vient du brief, ou du défaut. Inférieure au minimum, elle est
+   * relevée au minimum.
+   */
+  @IsInt()
+  @Min(5)
+  @Max(30)
+  @IsOptional()
+  maxLength?: number;
+
   /** Exemples de noms/domaines que l'utilisateur aime — servent de références de style. */
   @IsArray()
   @ArrayMaxSize(10)

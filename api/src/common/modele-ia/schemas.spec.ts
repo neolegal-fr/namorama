@@ -18,7 +18,9 @@ function conforme(v: unknown, s: any, chemin = '$'): string[] {
   if (s.anyOf) return s.anyOf.some((x: any) => conforme(v, x, chemin).length === 0) ? [] : [`${chemin} : aucune branche`];
   switch (s.type) {
     case 'null': return v === null ? [] : [`${chemin} : null attendu`];
-    case 'string': return typeof v === 'string' ? [] : [`${chemin} : chaîne attendue`];
+    case 'string':
+      if (typeof v !== 'string') return [`${chemin} : chaîne attendue`];
+      return s.enum && !s.enum.includes(v) ? [`${chemin} : hors énumération`] : [];
     case 'integer': return Number.isInteger(v) ? [] : [`${chemin} : entier attendu`];
     case 'array':
       return Array.isArray(v) ? v.flatMap((x, i) => conforme(x, s.items, `${chemin}[${i}]`)) : [`${chemin} : liste attendue`];
@@ -53,10 +55,17 @@ const notice = {
 
 describe('Schémas de sortie structurée', () => {
   it('constraints', async () => {
-    const ex = { minLength: 5, maxLength: null, avoidWords: ['tech'], referenceBrands: ['Qonto'] };
+    const ex = {
+      minLength: 5, maxLength: null, avoidWords: ['tech'], referenceBrands: ['Qonto'],
+      avoidEndings: ['ora'], requiredWords: ['bloom'], nameType: 'invented',
+    };
     expect(conforme(ex, SCHEMA_CONTRAINTES)).toEqual([]);
-    const c = await service(ex).svc.extractNamingConstraints('desc');
-    expect(c).toMatchObject({ minLength: 5, avoidWords: ['tech'], referenceBrands: ['Qonto'] });
+    expect(conforme({ ...ex, nameType: 'autre' }, SCHEMA_CONTRAINTES)).not.toEqual([]);
+    const c = await service(ex).svc.extractNamingConstraints('un nom composé avec Bloom, sans -ora');
+    expect(c).toMatchObject({
+      minLength: 5, avoidWords: ['tech'], referenceBrands: ['Qonto'],
+      avoidEndings: ['ora'], requiredWords: ['bloom'], nameType: 'invented', briefMinLength: 5, briefMaxLength: null,
+    });
   });
 
   it('competitors (repli sans outil)', async () => {

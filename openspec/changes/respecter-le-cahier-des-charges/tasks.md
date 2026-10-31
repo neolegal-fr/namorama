@@ -2,17 +2,25 @@
 
 ## 1. Contraintes du brief : extraction enrichie (API)
 
-- [ ] 1.1 Dans `schemas.ts`, ajouter à `SCHEMA_CONTRAINTES` les champs `avoidEndings`, `requiredWords` et `nameType` (D2), et compléter `schemas.spec.ts` pour qu'un exemple passe par le parseur. Vérification : `npx jest src/common/modele-ia/schemas.spec.ts` passe.
-- [ ] 1.2 Dans `extractNamingConstraints`, étendre la consigne (terminaisons à éviter, mots ou prénoms à inclure, type de nom) et nettoyer la sortie selon D2. En particulier, un mot imposé absent de la description normalisée est écarté. Vérification : un nouveau `contraintes.spec.ts`, avec un modèle simulé, couvre « sans -ora ni -ia », « composé avec BLOOM », un mot imposé inventé par le modèle (écarté), un `nameType` hors énumération (`null`), et des descriptions paraphrasées des cas relevés.
-- [ ] 1.3 Vérifier sur `claude-haiku-5-5` réel, par un script jetable hors dépôt, l'extraction sur cinq descriptions paraphrasées : « 4-5 lettres », « 6 lettres exactement », « sans terminaisons ora/ia », « nom composé avec bloom », « avoid descriptive words ». Vérification : résultats notés sous cette tâche, champs conformes dans au moins 4 cas sur 5.
+- [x] 1.1 Dans `schemas.ts`, ajouter à `SCHEMA_CONTRAINTES` les champs `avoidEndings`, `requiredWords` et `nameType` (D2), et compléter `schemas.spec.ts` pour qu'un exemple passe par le parseur. Vérification : `npx jest src/common/modele-ia/schemas.spec.ts` passe.
+- [x] 1.2 Dans `extractNamingConstraints`, étendre la consigne (terminaisons à éviter, mots ou prénoms à inclure, type de nom) et nettoyer la sortie selon D2. En particulier, un mot imposé absent de la description normalisée est écarté. Vérification : un nouveau `contraintes.spec.ts`, avec un modèle simulé, couvre « sans -ora ni -ia », « composé avec BLOOM », un mot imposé inventé par le modèle (écarté), un `nameType` hors énumération (`null`), et des descriptions paraphrasées des cas relevés.
+- [x] 1.3 Vérifier sur `claude-haiku-5-5` réel, par un script jetable hors dépôt, l'extraction sur cinq descriptions paraphrasées : « 4-5 lettres », « 6 lettres exactement », « sans terminaisons ora/ia », « nom composé avec bloom », « avoid descriptive words ». Vérification : résultats notés sous cette tâche, champs conformes dans au moins 4 cas sur 5.
+  - Relevé du 31/10/2026, 5 cas conformes sur 5 :
+    - « 4-5 lettres » → min 4, max 5, `invented` ;
+    - « 6 lettres exactement » → min 6, max 6 ;
+    - « sans ora/ia » → terminaisons `ora`, `ia`, `invented` ;
+    - « avec BLOOM » → mot imposé `bloom` ;
+    - « avoid descriptive, 5-8 letters » → min 5, max 8, `invented`.
+  - Aucun mot imposé ni aucun mot à éviter inventé.
 
 ## 2. Contraintes appliquées : priorité et filtre (API)
 
-- [ ] 2.1 Rendre `minLength` optionnel et ajouter `maxLength` à `SearchDomainsDto` (bornes 5 à 30, min ≤ max). Dans `findAvailableDomains`, appliquer D1 : une valeur reçue prime, sinon celle du brief, sans réélargir un maximum connu ; plancher à 5. Vérification : tests de `recherche-boucle.spec.ts`. Sans `minLength` et avec un brief « 6 lettres exactement », les bornes valent [6, 6]. Avec `minLength = 7` reçu, le minimum vaut 7.
-- [ ] 2.2 Extraire `respecteLesContraintes(nom, style, contraintes)` (D3) et l'utiliser dans `generateDomainIdeas`, en comptant les rejets par motif. Vérification : un nouveau `filtre-contraintes.spec.ts` couvre chaque scénario de `recherche/cahier-des-charges` sur la longueur, les terminaisons, les mots à éviter et les mots imposés, y compris pour un nom descriptif qui finit par une terminaison interdite.
-- [ ] 2.3 Reprendre `avoidEndings` et `requiredWords` dans la consigne de génération. Vérification : un test sur la consigne construite, sur le modèle du test `excludeNames.slice(-200)`, y trouve les deux listes.
-- [ ] 2.4 Journaliser dans `search_started` les bornes appliquées et leur origine (`brief`, `utilisateur` ou `defaut`), les décomptes de terminaisons, de mots à éviter et de mots imposés, et le type de nom. Journaliser dans `search_completed` l'objet `ecartes` par motif. Ni description ni mots en clair. Vérification : test du contrôleur sur le modèle de `recherche-flux.controller.spec.ts`.
-- [ ] 2.5 Lancer `cd api && npx jest` puis `npm run build`. Vérification : tout passe.
+- [x] 2.1 Rendre `minLength` optionnel et ajouter `maxLength` à `SearchDomainsDto` (bornes 5 à 30, min ≤ max). Dans `findAvailableDomains`, appliquer D1 : une valeur reçue prime, sinon celle du brief, sans réélargir un maximum connu ; plancher à 5. Vérification : tests de `recherche-boucle.spec.ts`. Sans `minLength` et avec un brief « 6 lettres exactement », les bornes valent [6, 6]. Avec `minLength = 7` reçu, le minimum vaut 7.
+- [x] 2.2 Extraire `respecteLesContraintes(nom, style, contraintes)` (D3) et l'utiliser dans `generateDomainIdeas`, en comptant les rejets par motif. Vérification : un nouveau `filtre-contraintes.spec.ts` couvre chaque scénario de `recherche/cahier-des-charges` sur la longueur, les terminaisons, les mots à éviter et les mots imposés, y compris pour un nom descriptif qui finit par une terminaison interdite.
+- [x] 2.3 Reprendre `avoidEndings` et `requiredWords` dans la consigne de génération. Vérification : un test sur la consigne construite, sur le modèle du test `excludeNames.slice(-200)`, y trouve les deux listes.
+- [x] 2.4 Journaliser dans `search_started` les bornes appliquées et leur origine (`brief`, `utilisateur` ou `defaut`), les décomptes de terminaisons, de mots à éviter et de mots imposés, et le type de nom. Journaliser dans `search_completed` l'objet `ecartes` par motif. Ni description ni mots en clair. Vérification : test du contrôleur sur le modèle de `recherche-flux.controller.spec.ts`.
+  - Écart assumé : tout part dans `search_completed`, comme le dit la spec. Les contraintes ne sont connues qu'une fois la recherche lancée, et `search_started` part avant. Champs ajoutés : `maxLengthUsed`, `origineDesBornes`, `terminaisonsInterdites`, `motsAEviter`, `motsImposes`, `typeDuBrief`, `styles`, `ecartes`.
+- [x] 2.5 Lancer `cd api && npx jest` puis `npm run build`. Vérification : tout passe.
 
 ## 3. Mots-clés limités à l'activité (API)
 

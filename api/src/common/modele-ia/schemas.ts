@@ -26,6 +26,9 @@ export const SCHEMA_CONTRAINTES = objet({
   maxLength: entierOuNul,
   avoidWords: listeDe(chaine),
   referenceBrands: listeDe(chaine),
+  avoidEndings: listeDe(chaine),
+  requiredWords: listeDe(chaine),
+  nameType: { anyOf: [{ type: 'string', enum: ['invented', 'descriptive', 'any'] }, { type: 'null' }] },
 });
 
 export const SCHEMA_CONCURRENTS = objet({

@@ -1,5 +1,5 @@
 import { modeleOpenAiFactice } from '../common/modele-ia/modele-ia.testing';
-import { DomainService } from './domain.service';
+import { bornesDeLongueur, DomainService } from './domain.service';
 import { MatchMode } from './dto/search-domains.dto';
 
 /**
@@ -20,7 +20,7 @@ describe('DomainService — boucle de recherche', () => {
     const unSurN = opts.unSurN ?? 30;
     const service = Object.create(DomainService.prototype) as any;
     let compteur = 0;
-    service.extractNamingConstraints = jest.fn().mockResolvedValue({ minLength: 7, maxLength: 12, avoidWords: [], referenceBrands: [] });
+    service.extractNamingConstraints = jest.fn().mockResolvedValue({ minLength: 7, maxLength: 12, avoidWords: [], referenceBrands: [], avoidEndings: [], requiredWords: [], nameType: null, briefMinLength: null, briefMaxLength: null });
     service.generateDomainIdeas = jest.fn().mockImplementation(async () =>
       Array.from({ length: parTentative }, () => ({ name: `nom${++compteur}`, style: 'standard' })),
     );
@@ -109,5 +109,74 @@ describe('DomainService — consigne de génération', () => {
     expect(consigne).toContain('exclu100');
     expect(consigne).not.toMatch(/\bexclu0\b/);
     expect(consigne).not.toMatch(/\bexclu99\b/);
+  });
+
+  it('transmet les terminaisons interdites et les mots imposés', async () => {
+    const service = Object.create(DomainService.prototype) as any;
+    service.logger = { error: jest.fn(), warn: jest.fn(), log: jest.fn() };
+    const create = jest.fn().mockResolvedValue({ choices: [{ message: { content: '{"names": []}' } }] });
+    service.modele = modeleOpenAiFactice(create);
+    const c = { minLength: 7, maxLength: 12, avoidWords: [], referenceBrands: [], avoidEndings: ['ora', 'ia'], requiredWords: ['bloom'], nameType: null, briefMinLength: null, briefMaxLength: null };
+
+    await service.generateDomainIdeas('desc', ['mot'], undefined, [], false, false, [], [], c);
+
+    const consigne: string = create.mock.calls[0][0].messages[0].content;
+    expect(consigne).toContain('-ora, -ia');
+    expect(consigne).toMatch(/MUST contain this word as written: bloom/);
+  });
+});
+
+describe('bornes de longueur : réglage, puis brief, puis défaut', () => {
+  const brief = (min: number | null, max: number | null) => ({ briefMinLength: min, briefMaxLength: max });
+
+  it('« 6 lettres exactement », réglage intact : [6, 6]', () => {
+    expect(bornesDeLongueur(brief(6, 6))).toEqual({ min: 6, max: 6, origine: 'brief' });
+  });
+
+  it('« 4-5 lettres » : plancher à 5, maximum jamais élargi', () => {
+    expect(bornesDeLongueur(brief(4, 5))).toEqual({ min: 5, max: 5, origine: 'brief' });
+  });
+
+  it('un réglage explicite prime sur le brief', () => {
+    expect(bornesDeLongueur(brief(5, 5), { minLength: 7 })).toEqual({ min: 7, max: 12, origine: 'utilisateur' });
+  });
+
+  it('un maximum du brief compatible avec le réglage est gardé', () => {
+    expect(bornesDeLongueur(brief(null, 9), { minLength: 6 })).toEqual({ min: 6, max: 9, origine: 'utilisateur' });
+  });
+
+  it('sans brief ni réglage : les défauts', () => {
+    expect(bornesDeLongueur(brief(null, null))).toEqual({ min: 7, max: 12, origine: 'defaut' });
+  });
+
+  it('un maximum réglé sous le minimum est relevé au minimum', () => {
+    expect(bornesDeLongueur(brief(null, null), { minLength: 8, maxLength: 6 })).toEqual({ min: 8, max: 8, origine: 'utilisateur' });
+  });
+});
+
+describe('boucle de recherche : les bornes du brief arrivent jusqu’à la génération', () => {
+  it('sans minLength reçu, un brief « 6 lettres exactement » donne [6, 6]', async () => {
+    const service = Object.create(DomainService.prototype) as any;
+    service.extractNamingConstraints = jest.fn().mockResolvedValue({
+      minLength: 6, maxLength: 6, avoidWords: [], referenceBrands: [], avoidEndings: [], requiredWords: [],
+      nameType: null, briefMinLength: 6, briefMaxLength: 6,
+    });
+    service.generateDomainIdeas = jest.fn().mockResolvedValue([]);
+    service.checkExtensions = jest.fn();
+    await service.findAvailableDomains('desc', ['mot'], { extensions: ['.com'], matchMode: MatchMode.ANY, maxAttempts: 1 });
+    const contraintes = service.generateDomainIdeas.mock.calls[0][8];
+    expect([contraintes.minLength, contraintes.maxLength]).toEqual([6, 6]);
+  });
+
+  it('avec minLength = 7 reçu, le minimum vaut 7', async () => {
+    const service = Object.create(DomainService.prototype) as any;
+    service.extractNamingConstraints = jest.fn().mockResolvedValue({
+      minLength: 5, maxLength: 5, avoidWords: [], referenceBrands: [], avoidEndings: [], requiredWords: [],
+      nameType: null, briefMinLength: 5, briefMaxLength: 5,
+    });
+    service.generateDomainIdeas = jest.fn().mockResolvedValue([]);
+    service.checkExtensions = jest.fn();
+    await service.findAvailableDomains('desc', ['mot'], { extensions: ['.com'], matchMode: MatchMode.ANY, maxAttempts: 1, minLength: 7 });
+    expect(service.generateDomainIdeas.mock.calls[0][8].minLength).toBe(7);
   });
 });
