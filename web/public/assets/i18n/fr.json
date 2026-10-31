@@ -157,7 +157,9 @@
       "MIN_LENGTH_ERROR": "Décrivez votre projet en {{count}} caractères au minimum.",
       "ERROR_SUMMARY": "Erreur",
       "REFINE_ERROR": "Impossible de reformuler la description. Réessayez.",
-      "KEYWORDS_ERROR": "Impossible de générer les mots-clés. Réessayez."
+      "KEYWORDS_ERROR": "Impossible de générer les mots-clés. Réessayez.",
+      "KEYWORDS_EMPTY_SUMMARY": "Aucun mot-clé trouvé",
+      "KEYWORDS_EMPTY": "Votre description est trop courte pour en tirer des mots-clés. Ajoutez-en quelques-uns ci-dessous, ou revenez préciser votre projet."
     },
     "STEP2": {
       "TITLE": "Vos préférences",
@@ -414,7 +416,9 @@
       "REPORT_SHARE_BY_MAIL": "Envoyer par e-mail",
       "REPORT_SHARE_COPY_LINK": "Copier le lien public",
       "SEARCH_COST_HINT": "1 crédit par suggestion trouvée, 10 au maximum.",
-      "CREDITS_LOW": "Plus que {{n}} crédits — 1 par suggestion, {{report}} pour un rapport de marque."
+      "CREDITS_LOW": "Plus que {{n}} crédits — 1 par suggestion, {{report}} pour un rapport de marque.",
+      "SEARCH_ERROR_SUMMARY": "Recherche impossible",
+      "SEARCH_ERROR": "La recherche a échoué. Réessayez dans un instant."
     },
     "TIMEOUT": {
       "MESSAGE": "La recherche prend plus de temps que prévu. Voulez-vous continuer à attendre ?",

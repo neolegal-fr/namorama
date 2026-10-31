@@ -177,6 +177,13 @@ sur l'organisation Console liée à l'abonnement : c'est ce qui rend Claude int�
 - **`reasoning_effort: none` n'existe pas tel quel chez Claude** : `thinking` désactivé
   sur Haiku 5.5, `between_tools` sur Sonnet 5.5 (`disabled` y rend un 400), `effort: low`
   sur Opus 5.5, qui ne désactive pas sa réflexion (`parametresDeRaisonnement`).
+- **Une réponse en texte libre ne se découpe jamais à l'aveugle.** Haiku 5.5 ajoute un
+  préambule ou, devant une description vague, pose une question : découpée sur les
+  virgules, la phrase devenait un mot-clé de plus de 100 caractères, et l'API refusait
+  **toutes** les recherches du projet — 100 refus muets du 22 au 29/10/2026, quatre
+  comptes repartis sans un seul nom. `lireMotsCles` et `lireNomDeProjet` écartent ce qui
+  a la forme d'une phrase ; le wizard filtre les mots-clés trop longs des projets
+  enregistrés et affiche désormais le motif d'un refus de recherche.
 - **Une réponse tronquée ou refusée arrive vide** à l'opération, qui applique son repli,
   et se journalise (`<operation> : réponse tronquée par …`). Le budget de sortie est
   majoré de 30 % chez Claude (`MAJORATION_SORTIE`), à recalibrer sur mesures.

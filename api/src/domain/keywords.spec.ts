@@ -1,4 +1,4 @@
-import { dedupeKeywords, KEYWORD_LIMIT } from './domain.service';
+import { dedupeKeywords, KEYWORD_LIMIT, lireMotsCles, lireNomDeProjet, MOT_CLE_MAX_CARACTERES } from './domain.service';
 
 describe('mots-clés proposés', () => {
   it('dédoublonne sans tenir compte de la casse ni des espaces', () => {
@@ -15,5 +15,68 @@ describe('mots-clés proposés', () => {
 
   it('le plafond laisse de quoi couvrir plusieurs angles sans lasser', () => {
     expect(KEYWORD_LIMIT).toBe(15);
+  });
+});
+
+/**
+ * Réponses réelles de claude-haiku-5-5, relevées le 31/10/2026 avec la
+ * consigne de production. Chacune, découpée sur les virgules, donnait un
+ * mot-clé que l'API refusait — et avec lui toutes les recherches du projet.
+ */
+describe('lecture de la réponse du modèle', () => {
+  it('une liste propre passe telle quelle', () => {
+    expect(lireMotsCles('Cybersécurité, PME, audit, pentest, tests d\'intrusion')).toEqual([
+      'Cybersécurité', 'PME', 'audit', 'pentest', 'tests d\'intrusion',
+    ]);
+  });
+
+  it('retire le préambule', () => {
+    const texte =
+      'Les 15 mots-clés les plus pertinents pour cette description, par ordre de pertinence :\n\n' +
+      'audit de sécurité, test d\'intrusion, cybersécurité PME';
+    expect(lireMotsCles(texte)).toEqual(['audit de sécurité', 'test d\'intrusion', 'cybersécurité PME']);
+  });
+
+  it('retire le préambule même collé à la liste', () => {
+    const texte =
+      'Voici une liste de 15 mots-clés pertinents pour une agence immobilière, classés du plus au moins pertinent :\n' +
+      'agence immobilière, immobilier';
+    expect(lireMotsCles(texte)).toEqual(['agence immobilière', 'immobilier']);
+  });
+
+  it('une question du modèle ne rend aucun mot-clé', () => {
+    const texte =
+      'Pour trouver le bon nom, j\'ai besoin d\'un peu plus de contexte. Pourriez-vous me dire :\n\n' +
+      '- **Votre activité** : que fait votre entreprise, quels produits ou services proposez-vous ?\n' +
+      '- **Votre cible** : qui sont vos clients ?';
+    expect(lireMotsCles(texte)).toEqual([]);
+  });
+
+  it('une phrase sans question ne devient pas un mot-clé', () => {
+    const texte = 'You sent "test" with no description, so I don\'t have a topic to generate keywords for. Once I have it, I will help.';
+    expect(lireMotsCles(texte)).toEqual([]);
+  });
+
+  it('lit une liste à puces ou numérotée, une entrée par ligne', () => {
+    expect(lireMotsCles('1. **vélo**\n2. mobilité douce\n- roue libre')).toEqual(['vélo', 'mobilité douce', 'roue libre']);
+  });
+
+  it('aucun mot-clé rendu ne dépasse ce que l\'API accepte', () => {
+    const long = 'x'.repeat(120);
+    const rendus = lireMotsCles(`court, ${long}, ${'mot '.repeat(30)}`);
+    expect(rendus).toEqual(['court']);
+    expect(MOT_CLE_MAX_CARACTERES).toBeLessThanOrEqual(100);
+  });
+});
+
+describe('nom de projet suggéré', () => {
+  it('un mot passe, débarrassé de sa ponctuation', () => {
+    expect(lireNomDeProjet('Nexova')).toBe('Nexova');
+    expect(lireNomDeProjet('**Expensio**.')).toBe('Expensio');
+  });
+
+  it('une phrase ne devient pas un nom', () => {
+    expect(lireNomDeProjet('Pour te proposer le bon nom, j\'ai besoin de savoir un peu plus.')).toBe('');
+    expect(lireNomDeProjet('')).toBe('');
   });
 });

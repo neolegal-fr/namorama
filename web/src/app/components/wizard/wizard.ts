@@ -404,6 +404,8 @@ export class WizardComponent implements OnInit, OnDestroy {
    * toute affectation passe donc par `setKeywords`.
    */
   readonly MAX_KEYWORDS = 50;
+  /** Longueur d'un mot-clé acceptée par l'API (`SearchDomainsDto`). */
+  readonly MAX_KEYWORD_LENGTH = 100;
   keywordsFull = computed(() => this.keywords().length >= this.MAX_KEYWORDS);
 
   newExtension = signal('');
@@ -2038,9 +2040,16 @@ export class WizardComponent implements OnInit, OnDestroy {
    * Seul point d'affectation des mots-clés : dédoublonne et tronque au plafond
    * accepté par l'API. Les listes venant de l'IA, d'un projet enregistré ou du
    * localStorage ne sont pas bornées à la source.
+   *
+   * Un mot-clé plus long que ce qu'accepte l'API est écarté : un seul suffisait
+   * à faire refuser TOUTES les recherches du projet. Fin octobre 2026, des
+   * projets ont enregistré des phrases du modèle en guise de mots-clés ; ce
+   * filtre les rend de nouveau utilisables à leur réouverture.
    */
   private setKeywords(list: string[] | null | undefined) {
-    const unique = [...new Set((list ?? []).filter(k => !!k))];
+    const unique = [...new Set((list ?? [])
+      .map(k => (typeof k === 'string' ? k.trim() : ''))
+      .filter(k => !!k && k.length <= this.MAX_KEYWORD_LENGTH))];
     this.keywords.set(unique.slice(0, this.MAX_KEYWORDS));
   }
 
@@ -2518,6 +2527,17 @@ export class WizardComponent implements OnInit, OnDestroy {
 
     if (keywordsResult) {
       this.setKeywords(keywordsResult.keywords);
+      // Description trop vague pour en tirer des mots-clés : on avance quand
+      // même — on peut les saisir à la main —, mais on dit pourquoi la liste
+      // est vide plutôt que de laisser un bouton de recherche grisé sans raison.
+      if (this.keywords().length === 0) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: this.translate.instant('WIZARD.STEP1.KEYWORDS_EMPTY_SUMMARY'),
+          detail: this.translate.instant('WIZARD.STEP1.KEYWORDS_EMPTY'),
+          life: 8000,
+        });
+      }
       this.nextStep();
     } else {
       // Sans ce message, l'échec était indistinguable d'un clic sans effet :
@@ -2840,7 +2860,18 @@ export class WizardComponent implements OnInit, OnDestroy {
         this.streamProgress.set(null);
         this.loading.set(false);
         this.clearSearchTimeout();
-        if (err.status === 403) this.ouvrirCredits('recherche_refusee');
+        if (err.status === 403) {
+          this.ouvrirCredits('recherche_refusee');
+        } else {
+          // Tout autre refus se dit. Un 400 muet a valu, fin octobre 2026,
+          // jusqu'à trente clics de suite sur « Rechercher » avant abandon.
+          this.messageService.add({
+            severity: 'error',
+            summary: this.translate.instant('WIZARD.STEP3.SEARCH_ERROR_SUMMARY'),
+            detail: (err.status === 400 && err.message) || this.translate.instant('WIZARD.STEP3.SEARCH_ERROR'),
+            life: 8000,
+          });
+        }
         this.cdr.detectChanges();
       },
     });

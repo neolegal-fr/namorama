@@ -106,7 +106,11 @@ export class DomainService {
           });
 
           if (!response.ok) {
-            observer.error({ status: response.status });
+            // Le message de l'API dit pourquoi la recherche est refusée ; sans
+            // lui, un 400 ne laissait au wizard qu'un code à taire.
+            const corps = await response.json().catch(() => null);
+            const message = Array.isArray(corps?.message) ? corps.message[0] : corps?.message;
+            observer.error({ status: response.status, message: typeof message === 'string' ? message : undefined });
             return;
           }
 
