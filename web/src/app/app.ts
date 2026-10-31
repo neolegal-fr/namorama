@@ -5,6 +5,7 @@ import { ProjectService } from './services/project';
 import { PaymentService, PackType } from './services/payment';
 import { FeedbackService } from './services/feedback';
 import { CookieConsentService } from './services/cookie-consent';
+import { SessionReplayService } from './services/session-replay';
 import { AnalyticsService } from './services/analytics';
 import { ThemeService } from './services/theme';
 import { KeycloakService } from 'keycloak-angular';
@@ -159,7 +160,8 @@ const THEME_ICONS: Record<'system' | 'light' | 'dark', string> = {
                 [style]="{ height: 'auto', maxHeight: '85vh' }">
         <div class="account-sheet__grab"></div>
 
-        <div class="account-sheet__identity">
+        <!-- nm-prive : masqué à l'enregistrement de session (rejeu). -->
+        <div class="account-sheet__identity nm-prive">
           <div class="account-sheet__name">{{ userName() }}</div>
           <div class="account-sheet__email">{{ userEmail() }}</div>
         </div>
@@ -445,6 +447,9 @@ const THEME_ICONS: Record<'system' | 'light' | 'dark', string> = {
           <button type="button" (click)="openFeedback()">{{ 'APP.FEEDBACK' | translate }}</button>
           <a routerLink="/legal">{{ 'APP.LEGAL' | translate }}</a>
           <a routerLink="/privacy">{{ 'APP.PRIVACY' | translate }}</a>
+          <!-- Le seul chemin pour retirer un consentement : sans lui, le choix
+               fait sur le bandeau devenait définitif. -->
+          <button type="button" (click)="gererLesCookies()">{{ 'APP.MANAGE_COOKIES' | translate }}</button>
         </nav>
       </footer>
       <p-toast key="app" position="top-right"></p-toast>
@@ -565,8 +570,14 @@ export class AppComponent implements OnInit {
     private feedbackService: FeedbackService,
     private messageService: MessageService,
     private analytics: AnalyticsService,
+    private sessionReplay: SessionReplayService,
     @Inject(PLATFORM_ID) private platformId: Object,
   ) {}
+
+  /** Rouvre les préférences de cookies (retrait ou ajout d'un consentement). */
+  gererLesCookies(): void {
+    this.cookieConsent.ouvrirLesPreferences();
+  }
 
   async ngOnInit() {
     // Langue (sans accès navigateur) — utile au prerender SSG de la landing.
@@ -582,6 +593,9 @@ export class AppComponent implements OnInit {
     this.cookieConsent.init();
     this.isLoggedIn.set(await this.keycloak.isLoggedIn());
     this.isAdmin.set(this.keycloak.isUserInRole('admin'));
+    // Une fois le rôle connu, pas avant : sinon un administrateur serait
+    // enregistré le temps que Keycloak réponde.
+    this.sessionReplay.installer(() => this.isAdmin());
 
     this.suivreLesPages();
 
@@ -687,6 +701,7 @@ export class AppComponent implements OnInit {
       this.profileMenuItems = [
         {
           label: this.userName(),
+          styleClass: 'nm-prive',
           items: [
             {
               label: `${res['APP.CREDITS']}: ${this.credits()}`,

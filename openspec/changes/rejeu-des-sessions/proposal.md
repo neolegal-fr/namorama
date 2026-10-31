@@ -108,7 +108,7 @@ Hors périmètre :
   - limite de corps dédiée à la route dans `main.ts` ;
   - variables `REPLAY_RETENTION_DAYS`, `REPLAY_MAX_SESSION_MB` et `REPLAY_MAX_DAY_MB`.
 - **Base** : nouvelle table `session_replay_chunk`. Migration
-  `api/migrations/2026-11-xx-rejeu-des-sessions.sql`, à appliquer avant de déployer l'image.
+  `api/migrations/2026-10-31-rejeu-des-sessions.sql`, à appliquer avant de déployer l'image.
   La taille des sauvegardes `mysqldump` augmente du volume conservé.
 - **Contrats** :
   - nouvelle route publique `POST /replay` ;

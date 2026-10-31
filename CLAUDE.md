@@ -46,6 +46,12 @@ api/src/
 - **PrimeNG écrase les classes Tailwind** dans ses composants (Card, Table, Drawer, Dialog, etc.). Utiliser des **inline styles** pour les propriétés de layout critiques (`display`, `flex-direction`, `align-items`, `justify-content`, `gap`, `text-align`, `margin`, `max-width`).
 - Tailwind reste utilisable pour les éléments hors PrimeNG et pour les propriétés décoratives.
 - Les hover effects nécessitent des classes CSS dans `styles.css` (pas d'inline styles possibles).
+- **`nm-prive` sur tout texte affiché qui reprend une saisie ou une adresse e-mail**
+  (description, mots-clés, adresses). L'enregistrement de session masque d'office les
+  champs de saisie, pas ce qu'on en réaffiche. Une adresse portée par un **attribut**
+  (`aria-label`, `title`) demande `nm-bloque` : le masquage de texte ne couvre pas les
+  attributs. `masquage.spec.ts` vérifie les gabarits ; toute nouvelle expression
+  personnelle s'y ajoute. Les pages `/admin` ne sont jamais enregistrées.
 
 ### Angular
 - Composants standalone avec **signals** (`signal()`, `.set()`, `.update()`)
@@ -465,6 +471,42 @@ Deux canaux complémentaires :
 
 Côté front, passer par `AnalyticsService.track()`, qui alimente les deux et n'échoue jamais.
 
+### Rejeu des sessions
+
+Les logs disent **où** un visiteur s'arrête, jamais **ce qu'il a vu** : les 100 recherches
+refusées sans message du 22 au 29/10/2026 se lisaient dans le journal, pas à l'écran.
+`SessionReplayService` enregistre la visite avec rrweb (auto-hébergé, sans sous-traitant),
+et **Administration → Sessions** (`/admin/replays`) la rejoue.
+
+- **Consentement dédié** : la catégorie `replay` du bandeau, désactivée par défaut, est
+  distincte de `analytics`. Accepter « pages consultées » ne vaut pas accord pour
+  enregistrer ses gestes. Sans elle, rrweb n'est même pas téléchargé (chunk paresseux,
+  absent du prérendu). Le lien « Gérer les cookies » du pied de page est le seul moyen
+  de retirer un consentement, et le retrait arrête la capture sur-le-champ.
+- **`consent_recorded`** mesure chaque choix (`onFirstConsent`, `onChange` — pas
+  `onConsent`, qui revient à chaque page). `python3 - consentement` donne la part des
+  visites enregistrables : le rejeu ne voit qu'elles, comme GA.
+- **Masquage dans le navigateur**, avant tout envoi. Les saisies sont masquées d'office
+  (`maskAllInputs`), les textes réaffichés le sont par `nm-prive` (voir « CSS / Styles »).
+  Les pages `/admin` et les administrateurs ne sont jamais enregistrés. Ni réseau, ni
+  canvas.
+- **Trois plafonds**, parce que `POST /replay` est `@Public()` et sans limite de débit :
+  le corps (limite propre à la route dans `main.ts`), la visite
+  (`REPLAY_MAX_SESSION_MB`, 5 Mo compressés, 413) et le jour (`REPLAY_MAX_DAY_MB`,
+  200 Mo, 429). Chaque plafond atteint journalise `replay_capped` une fois. Un 4xx
+  arrête la capture pour la visite. Une visite inconnue de `visitor_session` est
+  refusée.
+- **Stockage en base**, table `session_replay_chunk` (lots gzippés, jointe à
+  `visitor_session`), purgée après `REPLAY_RETENTION_DAYS` (30 jours). Les sauvegardes
+  `mysqldump` grossissent d'autant.
+- **Les feuilles de style sont copiées dans l'instantané** (`inlineStylesheet`, défaut de
+  rrweb) : les noms de fichiers CSS changent à chaque build, et un rejeu qui les
+  référencerait perdrait ses styles au déploiement suivant.
+
+> Migration `2026-10-31-rejeu-des-sessions.sql`, à appliquer **avant** de déployer l'image.
+> Les trois variables ont des défauts : rien à reporter dans le `docker-compose.yml` de
+> prod tant qu'on les garde.
+
 ### Consulter les logs en prod
 
 Le serveur n'a **pas** `jq`, mais il a python3. Un script d'analyse est fourni et s'envoie par stdin :
@@ -487,6 +529,9 @@ ssh namorama-prod "python3 - nom"      < scripts/analyze-logs.py
 
 # Recherches qui rendent moins que demandé : seuil d'arrêt et tentatives
 ssh namorama-prod "python3 - ajouts"   < scripts/analyze-logs.py
+
+# Réponses au bandeau de cookies : part des visites enregistrables (rejeu)
+ssh namorama-prod "python3 - consentement" < scripts/analyze-logs.py
 
 # Requêtes les plus lentes / codes de statut par route / lignes brutes
 ssh namorama-prod "python3 - slow"   < scripts/analyze-logs.py

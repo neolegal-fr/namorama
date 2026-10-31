@@ -53,7 +53,7 @@
          demandent pas la même vigilance. -->
     <div *ngIf="projetPartage()" class="partage-bandeau" [class.partage-bandeau--lecture]="lectureSeule()">
       <i class="pi" [class.pi-eye]="lectureSeule()" [class.pi-wallet]="!lectureSeule()" aria-hidden="true"></i>
-      <span>{{ (lectureSeule() ? 'PROJECTS.READ_ONLY_BANNER' : 'PROJECTS.WRITE_BANNER') | translate:{ email: proprietaireDuProjet() } }}</span>
+      <span class="nm-prive">{{ (lectureSeule() ? 'PROJECTS.READ_ONLY_BANNER' : 'PROJECTS.WRITE_BANNER') | translate:{ email: proprietaireDuProjet() } }}</span>
     </div>
 
     <div class="w-full mb-5" style="text-align: center">
@@ -150,7 +150,7 @@
 
         <div *ngIf="refinedDescription()" class="mt-4 p-3 border-left-4 border-solid border-round" style="max-width: 48rem; width: 100%; text-align: left; background: var(--nm-app-accent-surface); border-color: var(--nm-app-accent)">
           <h4 class="font-bold mb-2" style="color: var(--nm-app-accent)">{{ 'WIZARD.STEP1.SUGGESTION_TITLE' | translate }}</h4>
-          <p class="font-italic text-800" style="white-space: pre-line">{{ refinedDescription() }}</p>
+          <p class="font-italic text-800 nm-prive" style="white-space: pre-line">{{ refinedDescription() }}</p>
           <div class="mt-2 text-right">
              <p-button [label]="'WIZARD.STEP1.USE_VERSION' | translate" size="small" (onClick)="description.set(refinedDescription()); refinedDescription.set('')"></p-button>
           </div>
@@ -221,7 +221,7 @@
             <p-button icon="pi pi-plus" [disabled]="keywordsFull()" (onClick)="addKeyword()"></p-button>
           </div>
           <div class="chips-container">
-            <p-chip *ngFor="let keyword of keywords()" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
+            <p-chip *ngFor="let keyword of keywords()" class="nm-prive" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
           </div>
           <span *ngIf="keywordsFull()" class="text-500" style="font-size: var(--nm-text-ui-sm)">{{ 'WIZARD.STEP2.KEYWORDS_FULL' | translate:{ max: MAX_KEYWORDS } }}</span>
         </div>
@@ -707,7 +707,7 @@
           -->
           <span class="project-item__meta">
             {{ project.updatedAt | date:'d MMM yyyy' }}
-            <span *ngIf="project.description">· {{ project.description | slice:0:60 }}</span>
+            <span *ngIf="project.description" class="nm-prive">· {{ project.description | slice:0:60 }}</span>
           </span>
         </button>
 
@@ -741,7 +741,7 @@
               {{ shared.name }}
               <span *ngIf="shared.permission === 'read'" class="project-item__tag">{{ 'PROJECTS.READ_ONLY' | translate }}</span>
             </span>
-            <span class="project-item__meta">
+            <span class="project-item__meta nm-prive">
               {{ 'PROJECTS.SHARED_BY' | translate:{ email: shared.ownerEmail || '—' } }}
             </span>
           </button>
@@ -808,14 +808,15 @@
       <p *ngIf="partages().length === 0" class="partage__hint">{{ 'PROJECTS.SHARE_NONE' | translate }}</p>
       <div *ngFor="let p of partages()" class="partage__ligne">
         <span class="partage__qui">
-          {{ p.email }}
+          <span class="nm-prive">{{ p.email }}</span>
           <span class="partage__etat">
             {{ (p.permission === 'write' ? 'PROJECTS.SHARE_PERM_WRITE' : 'PROJECTS.SHARE_PERM_READ') | translate }}
             · {{ (p.acceptedAt ? 'PROJECTS.SHARE_ACTIVE' : 'PROJECTS.SHARE_PENDING') | translate }}
             <span *ngIf="p.emailSent === false" class="partage__alerte">· {{ 'PROJECTS.SHARE_NO_MAIL_TAG' | translate }}</span>
           </span>
         </span>
-        <button type="button" class="partage__retirer" (click)="retirerPartage(p)"
+        <!-- nm-bloque : l'adresse est dans un ATTRIBUT, que le masquage de texte ne couvre pas. -->
+        <button type="button" class="partage__retirer nm-bloque" (click)="retirerPartage(p)"
                 [attr.aria-label]="('PROJECTS.SHARE_REVOKE' | translate) + ' — ' + p.email">
           <i class="pi pi-times" aria-hidden="true"></i>
         </button>
