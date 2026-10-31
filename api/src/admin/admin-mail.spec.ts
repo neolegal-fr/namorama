@@ -1,7 +1,14 @@
 import { composer, construireContexte, consignes, langueDe, prenomLisible, lireBrouillon, mettreEnPage, signature, verifierBrouillon, versionTexte } from './admin-mail.service';
 
 const qui = { prenom: 'Nicolas', nomComplet: 'Nicolas Riousset' };
-const liens = { site: 'https://namorama.com', formulaire: 'https://namorama.com/app?avis=1', avis: 'https://fr.trustpilot.com/review/namorama.com' };
+const liens = {
+  site: 'https://namorama.com',
+  formulaire: 'https://namorama.com/app?avis=1',
+  avis: 'https://fr.trustpilot.com/review/namorama.com',
+  oui: 'https://namorama.com/retour?j=jeton-oui',
+  non: 'https://namorama.com/retour?j=jeton-non',
+};
+const desinscription = 'https://namorama.com/desinscription?j=jeton-desinscription';
 
 describe('mettreEnPage', () => {
   it('échappe le HTML : le corps est du texte, pas du balisage', () => {
@@ -56,7 +63,7 @@ describe('lireBrouillon', () => {
 });
 
 describe('verifierBrouillon', () => {
-  const complet = `Répondez ici ou via ${liens.formulaire} — jusqu'à 500 crédits. Avis : ${liens.avis}`;
+  const complet = `Utile ? ${liens.oui} ${liens.non} — 100 crédits. Répondez ici ou via ${liens.formulaire} — 500 crédits. Avis : ${liens.avis}`;
 
   it('ne signale rien sur un brouillon complet', () => {
     expect(verifierBrouillon(complet, liens)).toEqual([]);
@@ -64,11 +71,12 @@ describe('verifierBrouillon', () => {
 
   it('signale un lien ou une promesse manquants', () => {
     const alertes = verifierBrouillon('Bonjour, dites-nous tout.', liens);
-    expect(alertes).toHaveLength(3);
+    // oui, non, 100 crédits, formulaire, 500 crédits, avis
+    expect(alertes).toHaveLength(6);
   });
 
   it('reconnaît les liens nommés et le lien du site', () => {
-    const nomme = `[Namorama](${liens.site}) — [ce formulaire](${liens.formulaire}), 500 crédits, [avis](${liens.avis}).`;
+    const nomme = `[Namorama](${liens.site}) — [Oui](${liens.oui}) · [Non](${liens.non}), 100 crédits — [ce formulaire](${liens.formulaire}), 500 crédits, [avis](${liens.avis}).`;
     expect(verifierBrouillon(nomme, liens)).toEqual([]);
   });
 
@@ -78,7 +86,16 @@ describe('verifierBrouillon', () => {
   });
 
   it("n'exige pas de lien d'avis tant qu'aucun profil n'est configuré", () => {
-    expect(verifierBrouillon(`${liens.formulaire} 500`, { ...liens, avis: null })).toEqual([]);
+    expect(verifierBrouillon(`${liens.oui} ${liens.non} 100 ${liens.formulaire} 500`, { ...liens, avis: null })).toEqual([]);
+  });
+
+  it('signale un brouillon privé du lien « non » : la question d\'utilité serait boiteuse', () => {
+    expect(verifierBrouillon(complet.replace(liens.non, ''), liens)).toEqual(['Le lien de réponse « non » manque.']);
+  });
+
+  it('signale l\'absence de liens de réponse quand le secret manque', () => {
+    const sansSecret = { ...liens, oui: null, non: null };
+    expect(verifierBrouillon(complet, sansSecret)[0]).toMatch(/FEEDBACK_LINK_SECRET absent/);
   });
 });
 
@@ -94,14 +111,32 @@ describe('consignes', () => {
 describe('composer', () => {
   const ctx = "J'ai vu que vous aviez cherché un nom pour une boulangerie bio à Nantes.";
 
-  it('assemble le gabarit, la phrase du modèle et la signature', () => {
+  it('manuel : présentation et phrase du modèle, puis les deux temps, puis la signature', () => {
     const m = composer('fr', 'Léa', ctx, qui, liens);
-    expect(m.startsWith('Bonjour Léa,\n\nJe suis Nicolas, le créateur de [namorama.com](https://namorama.com)')).toBe(true);
-    expect(m).toContain(`${ctx} Pourriez-vous me dire ce que vous avez aimé`);
-    expect(m).toContain('500 crédits gratuits');
-    expect(m).toContain(`[ce court formulaire](${liens.formulaire})`);
+    expect(m.startsWith(`Bonjour Léa,\n\nJe suis Nicolas, le créateur de [namorama.com](https://namorama.com). ${ctx}`)).toBe(true);
+    expect(m).toContain(`Namorama vous a-t-il été utile ? [Oui](${liens.oui}) · [Non](${liens.non})`);
+    expect(m).toContain('100 crédits');
+    expect(m).toContain(`[ce court formulaire](${liens.formulaire}). Je vous offrirai 500 crédits de plus.`);
+    // Ordre : la question d'utilité avant la demande détaillée.
+    expect(m.indexOf(liens.oui)).toBeLessThan(m.indexOf(liens.formulaire));
     expect(m.endsWith("Merci d'avance,\n\nNicolas Riousset\nCréateur de Namorama")).toBe(true);
+    expect(m).not.toContain('désinscrire');
     expect(verifierBrouillon(m, liens)).toEqual([]);
+  });
+
+  it('automatique : aucune phrase du modèle, ouverture « hier », pied de désinscription en dernier', () => {
+    const m = composer('fr', 'Léa', null, qui, { ...liens, desinscription });
+    expect(m).toContain('Vous avez créé votre compte hier');
+    expect(m).not.toContain("J'ai vu que");
+    expect(m.endsWith(`[Se désinscrire](${desinscription})`)).toBe(true);
+    expect(m.indexOf('Créateur de Namorama')).toBeLessThan(m.indexOf('Se désinscrire'));
+    expect(verifierBrouillon(m, { ...liens, desinscription })).toEqual([]);
+  });
+
+  it('sans liens de réponse, la question d\'utilité disparaît', () => {
+    const m = composer('fr', 'Léa', ctx, qui, { ...liens, oui: null, non: null });
+    expect(m).not.toContain('utile ?');
+    expect(m).toContain('500 crédits');
   });
 
   it("n'ajoute la phrase Trustpilot que si une page d'avis est configurée", () => {
@@ -113,6 +148,7 @@ describe('composer', () => {
   it('existe dans chaque langue qu’on sait signer, liens et promesse compris', () => {
     for (const l of ['fr', 'en', 'de', 'es', 'pt', 'it', 'nl']) {
       expect(verifierBrouillon(composer(l, 'Kim', 'X.', qui, liens), liens)).toEqual([]);
+      expect(verifierBrouillon(composer(l, 'Kim', null, qui, { ...liens, desinscription }), { ...liens, desinscription })).toEqual([]);
     }
   });
 });

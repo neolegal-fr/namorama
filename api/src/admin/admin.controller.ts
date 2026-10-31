@@ -6,6 +6,7 @@ import { ModelCostsService } from './model-costs.service';
 import { ModelPricesService } from './model-prices.service';
 import { RetentionService } from './retention.service';
 import { AdminMailService, Signataire } from './admin-mail.service';
+import { DemandeDeRetourService } from './demande-de-retour.service';
 import { FeedbackService } from '../feedback/feedback.service';
 import { UsersService } from '../users/users.service';
 
@@ -105,7 +106,21 @@ export class AdminController {
     private readonly modelPrices: ModelPricesService,
     private readonly retention: RetentionService,
     private readonly adminMail: AdminMailService,
+    private readonly demandesDeRetour: DemandeDeRetourService,
   ) {}
+
+  /**
+   * Lance tout de suite un passage de la demande de retour automatique, sans
+   * attendre la minuterie horaire : contrôle après un déploiement, ou après
+   * une panne. N'envoie qu'aux comptes éligibles, comme la minuterie.
+   */
+  @Post('demandes-de-retour/passage')
+  @HttpCode(200)
+  async passageDemandesDeRetour() {
+    const manque = this.demandesDeRetour.configurationManquante();
+    if (manque.length) return { inactive: manque };
+    return this.demandesDeRetour.passage();
+  }
 
   @Get('users')
   async getUsers(

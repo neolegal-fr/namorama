@@ -6,6 +6,7 @@ import { ModelCostsService } from './model-costs.service';
 import { ModelPricesService } from './model-prices.service';
 import { RetentionService } from './retention.service';
 import { AdminMailService } from './admin-mail.service';
+import { DemandeDeRetourService } from './demande-de-retour.service';
 import { AdminMail } from './entities/admin-mail.entity';
 import { ModelPrice } from '../common/model-usage/model-price.entity';
 import { CreditAdjustment } from './entities/credit-adjustment.entity';
@@ -25,6 +26,6 @@ import { MailModule } from '../mail/mail.module';
     MailModule,
   ],
   controllers: [AdminController],
-  providers: [AdminService, ModelCostsService, ModelPricesService, RetentionService, AdminMailService],
+  providers: [AdminService, ModelCostsService, ModelPricesService, RetentionService, AdminMailService, DemandeDeRetourService],
 })
 export class AdminModule {}

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -12,13 +12,14 @@ import { AppLoggerService } from '../common/logging/app-logger.service';
 import { jourISO } from './predicats';
 import { BRAND_REPORT_COST } from '../brand-report/brand-report.service';
 import { FREE_MONTHLY_QUOTA } from '../users/users.service';
+import { ActionDeRetour, signerLien } from '../retours/liens-de-retour';
 
 /**
  * Version des consignes de rédaction. À CHANGER à chaque modification du
  * prompt : chaque envoi la garde, et c'est ce qui dit, après coup, à qui
  * l'ancienne version a écrit.
  */
-export const CONSIGNES_VERSION = '2026-09-25.5';
+export const CONSIGNES_VERSION = '2026-11-01.1';
 
 /** Ce que le modèle sait du destinataire — et rien de plus. */
 export interface ContexteDestinataire {
@@ -89,6 +90,15 @@ export interface Liens {
   formulaire: string;
   /** Page d'avis publics — absente tant qu'aucun profil n'est configuré. */
   avis: string | null;
+  /**
+   * Réponses en un clic à « Namorama vous a-t-il été utile ? », signées pour
+   * le destinataire (chantier `demande-de-retour-automatique`). Absentes sans
+   * `FEEDBACK_LINK_SECRET` : le bloc disparaît, et `verifierBrouillon` le dit.
+   */
+  oui?: string | null;
+  non?: string | null;
+  /** Désinscription en un clic : posée sur l'envoi automatique seulement. */
+  desinscription?: string | null;
 }
 
 export interface Brouillon {
@@ -211,10 +221,17 @@ export function lireBrouillon(contenu: string | null | undefined): { langue: str
  */
 export function verifierBrouillon(body: string, liens: Liens): string[] {
   const alertes: string[] = [];
+  if (!liens.oui || !liens.non) {
+    alertes.push('Liens « oui » / « non » indisponibles (FEEDBACK_LINK_SECRET absent) : la question d\'utilité manque.');
+  } else {
+    if (!body.includes(liens.oui)) alertes.push('Le lien de réponse « oui » manque.');
+    if (!body.includes(liens.non)) alertes.push('Le lien de réponse « non » manque.');
+    if (!/100/.test(body)) alertes.push('Les 100 crédits de la réponse en un clic ne sont pas mentionnés.');
+  }
   if (!body.includes(liens.formulaire)) alertes.push('Le lien vers le formulaire de retour manque.');
   if (!/500/.test(body)) alertes.push('Les 500 crédits promis ne sont pas mentionnés.');
   if (liens.avis && !body.includes(liens.avis)) alertes.push("Le lien vers la page d'avis manque.");
-  const connus = new Set([liens.site, liens.formulaire, liens.avis].filter(Boolean));
+  const connus = new Set([liens.site, liens.formulaire, liens.avis, liens.oui, liens.non, liens.desinscription].filter(Boolean));
   const inconnus = (body.match(URL_HTTPS) ?? []).filter((u) => !connus.has(u));
   if (inconnus.length) alertes.push(`Lien(s) non fourni(s) au modèle : ${[...new Set(inconnus)].join(', ')}`);
   return alertes;
@@ -223,114 +240,136 @@ export function verifierBrouillon(body: string, liens: Liens): string[] {
 interface Gabarit {
   bonjour: (prenom: string | null) => string;
   presentation: (prenom: string, site: string) => string;
+  /** Ouverture de l'envoi automatique, à la place de la phrase du modèle. */
+  hier: string;
+  /** Premier temps : une question, deux liens, 100 crédits. */
+  utilite: (oui: string, non: string) => string;
+  /** Second temps : le retour détaillé, 500 crédits. */
   question: string;
   reponse: (formulaire: string) => string;
   avis: (url: string) => string;
   merci: string;
+  desinscription: (url: string) => string;
 }
 
 /**
- * Le message, écrit par Nicolas et traduit. Le modèle n'en rédige qu'UNE
- * phrase, celle qui rappelle à la personne ce qu'elle a fait : le reste dit
- * exactement ce qu'on demande, et ne doit pas varier d'un tirage à l'autre.
+ * Le message, écrit par Nicolas et traduit. Deux temps (chantier
+ * `demande-de-retour-automatique`) : d'abord une question en un clic,
+ * « Namorama vous a-t-il été utile ? », récompensée de 100 crédits quelle que
+ * soit la réponse ; ensuite, pour qui veut en dire plus, le retour détaillé à
+ * 500 crédits. Le modèle n'écrit au plus qu'UNE phrase, dans le courriel
+ * manuel ; l'envoi automatique n'en contient aucune.
  */
 export const GABARITS: Record<string, Gabarit> = {
   fr: {
     bonjour: (p) => (p ? `Bonjour ${p},` : 'Bonjour,'),
-    presentation: (p, site) =>
-      `Je suis ${p}, le créateur de [namorama.com](${site}), et j'apprécierais beaucoup votre aide pour améliorer l'outil.`,
-    question: "Pourriez-vous me dire ce que vous avez aimé, ce qui vous a bloqué, ou n'importe quel point qui mériterait d'être amélioré dans l'application ?",
-    reponse: (f) =>
-      `Vous pouvez simplement répondre à ce courriel, ou passer par [ce court formulaire](${f}). Vos commentaires m'aideront ` +
-      "à améliorer l'outil, et comme mentionné sur le site, je serai ravi de vous offrir 500 crédits gratuits pour que " +
-      'vous puissiez prolonger votre expérience.',
+    presentation: (p, site) => `Je suis ${p}, le créateur de [namorama.com](${site}).`,
+    hier: 'Vous avez créé votre compte hier, et j\'ai une seule question à vous poser.',
+    utilite: (oui, non) =>
+      `Namorama vous a-t-il été utile ? [Oui](${oui}) · [Non](${non})\n\nUn clic suffit, et il vous rapporte 100 crédits.`,
+    question: 'Si vous avez deux minutes de plus, dites-moi ce que vous avez aimé, ce qui vous a bloqué ou ce qui mériterait d\'être amélioré :',
+    reponse: (f) => `répondez simplement à ce courriel, ou passez par [ce court formulaire](${f}). Je vous offrirai 500 crédits de plus.`,
     avis: (u) => `Si vous le souhaitez, vous pouvez aussi partager votre expérience, quelle qu'elle soit, dans [un avis sur Trustpilot](${u}).`,
     merci: "Merci d'avance,",
+    desinscription: (u) => `Vous ne souhaitez plus recevoir ces messages ? [Se désinscrire](${u})`,
   },
   en: {
     bonjour: (p) => (p ? `Hello ${p},` : 'Hello,'),
-    presentation: (p, site) =>
-      `I'm ${p}, the creator of [namorama.com](${site}), and I would really appreciate your help to improve the tool.`,
-    question: 'Could you tell me what you liked, what got in your way, or anything else that should be improved in the app?',
-    reponse: (f) =>
-      `You can simply reply to this email, or use [this short form](${f}). Your comments will help me improve the tool, ` +
-      "and as mentioned on the site, I'll be happy to give you 500 free credits so you can keep exploring.",
+    presentation: (p, site) => `I'm ${p}, the creator of [namorama.com](${site}).`,
+    hier: 'You created your account yesterday, and I have just one question.',
+    utilite: (oui, non) =>
+      `Was Namorama useful to you? [Yes](${oui}) · [No](${non})\n\nOne click is all it takes, and it earns you 100 credits.`,
+    question: 'If you have two more minutes, tell me what you liked, what got in your way, or what should be improved:',
+    reponse: (f) => `simply reply to this email, or use [this short form](${f}). I'll give you 500 more credits.`,
     avis: (u) => `If you'd like, you can also share your experience, whatever it was, in [a Trustpilot review](${u}).`,
     merci: 'Thanks in advance,',
+    desinscription: (u) => `Don't want to receive these messages anymore? [Unsubscribe](${u})`,
   },
   de: {
     bonjour: (p) => (p ? `Hallo ${p},` : 'Guten Tag,'),
-    presentation: (p, site) =>
-      `ich bin ${p}, der Gründer von [namorama.com](${site}), und ich würde mich sehr über Ihre Hilfe freuen, um das Tool zu verbessern.`,
-    question: 'Könnten Sie mir sagen, was Ihnen gefallen hat, was Sie gebremst hat oder was an der Anwendung verbessert werden sollte?',
-    reponse: (f) =>
-      `Sie können einfach auf diese E-Mail antworten oder [dieses kurze Formular](${f}) nutzen. Ihre Rückmeldung hilft mir, ` +
-      'das Tool zu verbessern, und wie auf der Website angekündigt, schenke ich Ihnen gerne 500 kostenlose Credits, damit Sie weiter ausprobieren können.',
+    presentation: (p, site) => `ich bin ${p}, der Gründer von [namorama.com](${site}).`,
+    hier: 'Sie haben gestern Ihr Konto erstellt, und ich habe nur eine Frage.',
+    utilite: (oui, non) =>
+      `War Namorama für Sie nützlich? [Ja](${oui}) · [Nein](${non})\n\nEin Klick genügt, und er bringt Ihnen 100 Credits.`,
+    question: 'Wenn Sie zwei Minuten mehr haben, sagen Sie mir, was Ihnen gefallen hat, was Sie gebremst hat oder was verbessert werden sollte:',
+    reponse: (f) => `antworten Sie einfach auf diese E-Mail oder nutzen Sie [dieses kurze Formular](${f}). Ich schenke Ihnen weitere 500 Credits.`,
     avis: (u) => `Wenn Sie möchten, können Sie Ihre Erfahrung, wie auch immer sie war, auch in [einer Bewertung auf Trustpilot](${u}) teilen.`,
     merci: 'Vielen Dank im Voraus,',
+    desinscription: (u) => `Sie möchten diese Nachrichten nicht mehr erhalten? [Abmelden](${u})`,
   },
   es: {
     bonjour: (p) => (p ? `Hola, ${p}:` : 'Hola:'),
-    presentation: (p, site) =>
-      `Soy ${p}, el creador de [namorama.com](${site}), y le agradecería mucho su ayuda para mejorar la herramienta.`,
-    question: '¿Podría decirme qué le gustó, qué le frenó o cualquier aspecto de la aplicación que debería mejorarse?',
-    reponse: (f) =>
-      `Puede simplemente responder a este correo o usar [este breve formulario](${f}). Sus comentarios me ayudarán a mejorar ` +
-      'la herramienta y, como se indica en el sitio, estaré encantado de regalarle 500 créditos gratuitos para que pueda seguir explorando.',
+    presentation: (p, site) => `Soy ${p}, el creador de [namorama.com](${site}).`,
+    hier: 'Creó su cuenta ayer y solo tengo una pregunta.',
+    utilite: (oui, non) =>
+      `¿Le ha sido útil Namorama? [Sí](${oui}) · [No](${non})\n\nBasta con un clic, y le reporta 100 créditos.`,
+    question: 'Si dispone de dos minutos más, dígame qué le gustó, qué le frenó o qué debería mejorarse:',
+    reponse: (f) => `responda simplemente a este correo o use [este breve formulario](${f}). Le regalaré 500 créditos más.`,
     avis: (u) => `Si lo desea, también puede compartir su experiencia, sea cual sea, en [una reseña en Trustpilot](${u}).`,
     merci: 'Gracias de antemano,',
+    desinscription: (u) => `¿No desea recibir más estos mensajes? [Darse de baja](${u})`,
   },
   pt: {
     bonjour: (p) => (p ? `Olá ${p},` : 'Olá,'),
-    presentation: (p, site) =>
-      `Sou o ${p}, criador do [namorama.com](${site}), e agradeceria muito a sua ajuda para melhorar a ferramenta.`,
-    question: 'Poderia dizer-me o que gostou, o que o impediu de avançar ou qualquer ponto da aplicação que deveria ser melhorado?',
-    reponse: (f) =>
-      `Pode simplesmente responder a este e-mail ou usar [este breve formulário](${f}). Os seus comentários vão ajudar-me a ` +
-      'melhorar a ferramenta e, como indicado no site, terei todo o gosto em oferecer-lhe 500 créditos gratuitos para continuar a explorar.',
+    presentation: (p, site) => `Sou o ${p}, criador do [namorama.com](${site}).`,
+    hier: 'Criou a sua conta ontem e tenho apenas uma pergunta.',
+    utilite: (oui, non) =>
+      `O Namorama foi-lhe útil? [Sim](${oui}) · [Não](${non})\n\nBasta um clique, e vale-lhe 100 créditos.`,
+    question: 'Se tiver mais dois minutos, diga-me o que gostou, o que o impediu de avançar ou o que deveria ser melhorado:',
+    reponse: (f) => `responda simplesmente a este e-mail ou use [este breve formulário](${f}). Ofereço-lhe mais 500 créditos.`,
     avis: (u) => `Se quiser, também pode partilhar a sua experiência, seja ela qual for, numa [avaliação no Trustpilot](${u}).`,
     merci: 'Obrigado desde já,',
+    desinscription: (u) => `Não quer voltar a receber estas mensagens? [Cancelar a subscrição](${u})`,
   },
   it: {
     bonjour: (p) => (p ? `Buongiorno ${p},` : 'Buongiorno,'),
-    presentation: (p, site) =>
-      `sono ${p}, il creatore di [namorama.com](${site}), e apprezzerei molto il suo aiuto per migliorare lo strumento.`,
-    question: "Potrebbe dirmi cosa le è piaciuto, cosa non ha funzionato per lei o qualsiasi aspetto dell'applicazione che andrebbe migliorato?",
-    reponse: (f) =>
-      `Può semplicemente rispondere a questa email o usare [questo breve modulo](${f}). I suoi commenti mi aiuteranno a ` +
-      'migliorare lo strumento e, come indicato sul sito, sarò felice di offrirle 500 crediti gratuiti per continuare a esplorare.',
+    presentation: (p, site) => `sono ${p}, il creatore di [namorama.com](${site}).`,
+    hier: 'Ha creato il suo account ieri, e ho una sola domanda.',
+    utilite: (oui, non) =>
+      `Namorama le è stato utile? [Sì](${oui}) · [No](${non})\n\nBasta un clic, e le vale 100 crediti.`,
+    question: 'Se ha due minuti in più, mi dica cosa le è piaciuto, cosa non ha funzionato o cosa andrebbe migliorato:',
+    reponse: (f) => `risponda semplicemente a questa email o usi [questo breve modulo](${f}). Le offrirò altri 500 crediti.`,
     avis: (u) => `Se lo desidera, può anche condividere la sua esperienza, qualunque sia stata, in [una recensione su Trustpilot](${u}).`,
     merci: 'Grazie in anticipo,',
+    desinscription: (u) => `Non desidera più ricevere questi messaggi? [Annulla l'iscrizione](${u})`,
   },
   nl: {
     bonjour: (p) => (p ? `Hallo ${p},` : 'Hallo,'),
-    presentation: (p, site) =>
-      `Ik ben ${p}, de maker van [namorama.com](${site}), en ik zou uw hulp om de tool te verbeteren erg waarderen.`,
-    question: 'Zou u mij willen vertellen wat u goed vond, waar u op vastliep, of wat er in de applicatie beter kan?',
-    reponse: (f) =>
-      `U kunt gewoon op deze e-mail antwoorden of [dit korte formulier](${f}) gebruiken. Uw opmerkingen helpen mij de tool ` +
-      'te verbeteren, en zoals op de site vermeld, geef ik u graag 500 gratis credits om verder te ontdekken.',
+    presentation: (p, site) => `Ik ben ${p}, de maker van [namorama.com](${site}).`,
+    hier: 'U hebt gisteren uw account aangemaakt, en ik heb maar één vraag.',
+    utilite: (oui, non) =>
+      `Was Namorama nuttig voor u? [Ja](${oui}) · [Nee](${non})\n\nEén klik is genoeg, en levert u 100 credits op.`,
+    question: 'Hebt u twee minuten meer? Vertel me wat u goed vond, waar u op vastliep of wat er beter kan:',
+    reponse: (f) => `antwoord gewoon op deze e-mail of gebruik [dit korte formulier](${f}). Ik geef u 500 extra credits.`,
     avis: (u) => `Als u wilt, kunt u uw ervaring, hoe die ook was, ook delen in [een review op Trustpilot](${u}).`,
     merci: 'Alvast bedankt,',
+    desinscription: (u) => `Wilt u deze berichten niet meer ontvangen? [Uitschrijven](${u})`,
   },
 };
 
-/** Le message complet : le gabarit de la langue, la phrase du modèle, la signature. */
+/**
+ * Le message complet, en deux temps.
+ *
+ * `contexte` est la phrase du modèle pour le courriel manuel ; `null` pour
+ * l'envoi automatique, qui ouvre sur « vous avez créé votre compte hier ».
+ * Sans liens de réponse (secret absent), la question d'utilité disparaît.
+ */
 export function composer(
   langue: string,
   prenom: string | null,
-  contexte: string,
+  contexte: string | null,
   qui: Signataire,
   liens: Liens,
 ): string {
   const g = GABARITS[langue] ?? GABARITS.fr;
   return [
     g.bonjour(prenom),
-    g.presentation(qui.prenom, liens.site),
-    `${contexte} ${g.question}`,
-    g.reponse(liens.formulaire),
+    `${g.presentation(qui.prenom, liens.site)} ${contexte ?? g.hier}`,
+    ...(liens.oui && liens.non ? [g.utilite(liens.oui, liens.non)] : []),
+    `${g.question} ${g.reponse(liens.formulaire)}`,
     ...(liens.avis ? [g.avis(liens.avis)] : []),
     `${g.merci}\n\n${signature(qui, langue)}`,
+    ...(liens.desinscription ? [g.desinscription(liens.desinscription)] : []),
   ].join('\n\n');
 }
 
@@ -342,7 +381,8 @@ export function composer(
 export function consignes(langue: string | null): string {
   return [
     "Tu écris UNE phrase qui sera insérée dans un courriel du créateur de Namorama à l'un de ses utilisateurs, " +
-      'juste avant la question « ce que vous avez aimé, ce qui vous a bloqué, ce qui mériterait d’être amélioré ». ' +
+      'juste après sa présentation et avant la question « Namorama vous a-t-il été utile ? » (oui / non), ' +
+      'elle-même suivie de la demande « ce que vous avez aimé, ce qui vous a bloqué, ce qui mériterait d’être amélioré ». ' +
       "Namorama aide à trouver un nom de marque et un domaine disponibles à partir de la description d'un produit ; " +
       'un rapport de marque payant vérifie domaines, réseaux sociaux et dépôts INPI.',
     '',
@@ -502,13 +542,36 @@ export class AdminMailService {
     private readonly config: ConfigService,
   ) {}
 
-  liens(): Liens {
+  /**
+   * Les liens du message. Pour un destinataire donné, et si
+   * `FEEDBACK_LINK_SECRET` est configuré, les réponses « oui » / « non »
+   * signées pour son compte ; et, pour l'envoi automatique, la désinscription.
+   * Les liens mènent au front, qui enregistre la réponse en s'exécutant : un
+   * antivirus qui suit le lien n'enregistre rien (design D3).
+   */
+  liens(keycloakId?: string, avecDesinscription = false): Liens {
     const site = this.config.get<string>('FRONTEND_URL', 'https://namorama.com').replace(/\/+$/, '');
+    const secret = this.config.get<string>('FEEDBACK_LINK_SECRET') ?? '';
+    const signe = (action: ActionDeRetour) => (keycloakId && secret ? signerLien(secret, keycloakId, action) : null);
+    const oui = signe('oui');
+    const non = signe('non');
+    const desinscription = avecDesinscription ? signe('desinscription') : null;
     return {
       site,
       formulaire: `${site}/app?avis=1`,
       avis: this.config.get<string>('REVIEW_URL')?.trim() || null,
+      oui: oui && `${site}/retour?j=${oui}`,
+      non: non && `${site}/retour?j=${non}`,
+      desinscription: desinscription && `${site}/desinscription?j=${desinscription}`,
     };
+  }
+
+  /** Désinscription en un clic des messageries (RFC 8058) : un POST direct sur l'API. */
+  enteteDesinscription(keycloakId: string): string | null {
+    const secret = this.config.get<string>('FEEDBACK_LINK_SECRET') ?? '';
+    if (!secret) return null;
+    const api = this.config.get<string>('API_PUBLIC_URL', 'https://api.namorama.com').replace(/\/+$/, '');
+    return `${api}/retours/desinscription?j=${signerLien(secret, keycloakId, 'desinscription')}`;
   }
 
   /** Les envois passés à ce compte, du plus récent au plus ancien. */
@@ -575,7 +638,9 @@ export class AdminMailService {
    */
   async rediger(userId: number, qui: Signataire, note?: string): Promise<Brouillon> {
     const ctx = await this.contexte(userId);
-    const liens = this.liens();
+    const destinataire = await this.users.findOne({ where: { id: userId }, select: { id: true, keycloakId: true } });
+    // Liens oui / non signés pour CE compte : le courriel manuel suit la même structure en deux temps.
+    const liens = this.liens(destinataire?.keycloakId);
     const demande = [
       note ? `Consigne de ${qui.prenom} pour ce message : ${note}\n` : '',
       `Compte :\n${JSON.stringify(ctx, null, 2)}`,
@@ -612,6 +677,9 @@ export class AdminMailService {
     const user = await this.users.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException(`User ${userId} not found`);
     if (!user.email) throw new BadRequestException("Ce compte n'a pas d'adresse e-mail");
+    // Désinscrit depuis un courriel automatique : plus aucune demande de retour,
+    // pas même écrite à la main.
+    if (user.desinscritRetoursAt) throw new ConflictException('Ce compte s\'est désinscrit des demandes de retour');
 
     const subject = message.subject.replace(/\s+/g, ' ').trim();
     const body = message.body.trim();

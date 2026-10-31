@@ -126,6 +126,12 @@ export class MailService {
     fromName?: string;
     replyTo?: string;
     attachments?: { filename: string; content: string | Buffer; contentType?: string }[];
+    /**
+     * En-têtes supplémentaires — `List-Unsubscribe` et `List-Unsubscribe-Post`
+     * pour la désinscription en un clic des messageries (RFC 8058), sur l'envoi
+     * automatique des demandes de retour.
+     */
+    headers?: Record<string, string>;
   }): Promise<boolean> {
     const adresse = this.config.get<string>('SMTP_FROM', 'support@namorama.com');
     const { fromName, ...reste } = options;

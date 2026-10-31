@@ -5,6 +5,8 @@ import { EntityManager, Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { UserActivityDay } from './entities/user-activity-day.entity';
 import { Project } from '../projects/entities/project.entity';
+import { contexteCourant } from '../common/model-usage/contexte-appel';
+import { langueDuNavigateur } from '../retours/langues';
 
 /** Quota mensuel de crédits gratuits */
 export const FREE_MONTHLY_QUOTA = 100;
@@ -148,6 +150,9 @@ export class UsersService {
         credits: FREE_MONTHLY_QUOTA,
         extraCredits: 0,
         lastFreeReset: new Date(),
+        // La langue du navigateur à l'inscription : la demande de retour, 24 h
+        // plus tard, en a besoin, et `locale` (Keycloak) est presque toujours vide.
+        langueInscription: langueDuNavigateur(contexteCourant()?.req?.headers?.['accept-language']),
       });
       try {
         user = await this.usersRepository.save(nouveau);

@@ -143,6 +143,13 @@ import { AdminReplayService } from '../../services/admin-replay.service';
                   <i *ngIf="user.lastMailReplied" class="pi pi-reply" style="font-size: 0.65rem; color: var(--nm-accent-text-light, #0d7a4e)"></i>
                 </button>
                 <ng-template #jamaisEcrit><span class="text-400">—</span></ng-template>
+                <!-- Demande de retour automatique (chantier demande-de-retour-automatique). -->
+                <span *ngIf="user.demandeRetourAt" class="nm-retour-marque" pTooltip="Demande de retour automatique envoyée" tooltipPosition="top">auto</span>
+                <span *ngIf="user.utilite" class="nm-retour-marque"
+                      [class.nm-retour-marque--oui]="user.utilite === 'oui'" [class.nm-retour-marque--non]="user.utilite === 'non'"
+                      pTooltip="Réponse à « Namorama vous a-t-il été utile ? »" tooltipPosition="top">{{ user.utilite }}</span>
+                <span *ngIf="user.desinscritRetoursAt" class="nm-retour-marque nm-retour-marque--desinscrit"
+                      pTooltip="Désinscrit des demandes de retour" tooltipPosition="top">désinscrit</span>
               </td>
               <td style="white-space: nowrap; padding: 0.25rem 0.5rem">
                 <ng-container *ngIf="editingUserId() === user.id; else showEditBtn">
@@ -287,6 +294,12 @@ import { AdminReplayService } from '../../services/admin-replay.service';
               [style]="{ width: '44rem', maxWidth: '95vw' }">
       <div style="display: flex; flex-direction: column; gap: 0.9rem">
 
+        <!-- Désinscrit depuis un courriel automatique : le serveur refuse l'envoi (409). -->
+        <div *ngIf="mailPour()?.desinscritRetoursAt" class="nm-retour-alerte">
+          <i class="pi pi-ban" aria-hidden="true"></i>
+          Ce compte s'est désinscrit des demandes de retour le {{ mailPour()?.desinscritRetoursAt | date:'dd/MM/yy' }} : aucun courriel ne peut lui être envoyé.
+        </div>
+
         <div *ngIf="historiqueMails().length" class="nm-m-historique">
           <div class="nm-d-label" style="margin-bottom: 0.35rem">Déjà écrit</div>
           <div *ngFor="let m of historiqueMails()" class="nm-m-envoi">
@@ -356,7 +369,7 @@ import { AdminReplayService } from '../../services/admin-replay.service';
 
         <div style="display: flex; justify-content: flex-end; gap: 0.5rem">
           <p-button label="Annuler" severity="secondary" [text]="true" (onClick)="fermerMail()"></p-button>
-          <p-button label="Envoyer" icon="pi pi-send"
+          <p-button *ngIf="!mailPour()?.desinscritRetoursAt" label="Envoyer" icon="pi pi-send"
                     [loading]="envoi()" [disabled]="!objet.trim() || !corps.trim() || redaction()"
                     (onClick)="confirmerEnvoi()">
           </p-button>
@@ -605,7 +618,8 @@ export class AdminUsersComponent implements OnInit {
       next: (m) => this.historiqueMails.set(m),
       error: () => this.historiqueMails.set([]),
     });
-    if (!reprise && !u.lastMailAt) this.rediger();
+    // Pas de brouillon payé pour un compte qui ne peut plus rien recevoir.
+    if (!reprise && !u.lastMailAt && !u.desinscritRetoursAt) this.rediger();
   }
 
   fermerMail() {

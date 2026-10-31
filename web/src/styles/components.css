@@ -541,3 +541,64 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* Pages des liens de la demande de retour (`/retour`, `/desinscription`). */
+.retour-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 18px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 64px 16px;
+}
+.retour-page__icone {
+  font-size: 3.5rem;
+  color: var(--nm-app-text-2);
+}
+.retour-page__icone--ok { color: var(--nm-app-accent); }
+.retour-page__icone--ko { color: var(--nm-app-verdict-unknown-fg); }
+.retour-page__titre {
+  margin: 0;
+  font-family: var(--nm-font-display);
+  font-size: var(--nm-text-h3);
+  color: var(--nm-app-text);
+}
+.retour-page__credits {
+  margin: 0;
+  font-size: var(--nm-text-body);
+  font-weight: 700;
+  color: var(--nm-app-accent);
+}
+.retour-page__texte {
+  margin: 0;
+  font-size: var(--nm-text-body-sm);
+  color: var(--nm-app-text-2);
+}
+.retour-page__accueil { font-size: var(--nm-text-ui-sm); }
+
+/* Administration : état de la demande de retour d'un compte (colonne « Courriel »). */
+.nm-retour-marque {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: var(--nm-radius-pill);
+  background: var(--nm-app-divider);
+  color: var(--nm-app-text-2);
+  font-size: var(--nm-text-overline-sm);
+  vertical-align: middle;
+}
+.nm-retour-marque--oui { background: var(--nm-app-accent-surface); color: var(--nm-app-accent); }
+.nm-retour-marque--non,
+.nm-retour-marque--desinscrit { background: var(--nm-app-verdict-unknown-bg); color: var(--nm-app-verdict-unknown-fg); }
+.nm-retour-alerte {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--nm-radius-sm);
+  background: var(--nm-app-verdict-unknown-bg);
+  color: var(--nm-app-verdict-unknown-fg);
+  font-size: var(--nm-text-ui-sm);
+}

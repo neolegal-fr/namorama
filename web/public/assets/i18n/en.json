@@ -122,6 +122,22 @@
     "PACK_PRO_NAME": "Pro",
     "PACK_MAX_NAME": "Max"
   },
+  "RETOUR": {
+    "LOADING": "One moment…",
+    "THANKS_TITLE": "Thanks for your answer!",
+    "CREDITS_ADDED": "{{n}} credits have been added to your account.",
+    "ALREADY_TITLE": "Your answer was already recorded, thank you.",
+    "MORE_YES": "Got two minutes? Tell me what you liked or what could be improved: I'll give you 500 more credits.",
+    "MORE_NO": "What got in your way, or what was missing? Tell me in two minutes and I'll give you 500 more credits.",
+    "MORE_CTA": "Tell me more",
+    "UNSUBSCRIBED_TITLE": "You're unsubscribed",
+    "UNSUBSCRIBED_TEXT": "You won't receive feedback requests from us anymore. Your account and projects are unchanged.",
+    "INVALID_TITLE": "This link isn't valid",
+    "INVALID_TEXT": "It may have expired or been copied incorrectly. You can still write to us by replying to the email.",
+    "ERROR_TITLE": "Something went wrong",
+    "ERROR_TEXT": "Your answer couldn't be recorded. Please try again in a moment from the link in the email.",
+    "HOME": "Back to Namorama"
+  },
   "PAYMENT": {
     "SUCCESS_TITLE": "Payment confirmed!",
     "SUCCESS_MESSAGE": "Your credits have been added to your account. You can resume your searches.",

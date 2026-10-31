@@ -71,6 +71,28 @@ export class User {
   @Column({ nullable: true, type: 'datetime' })
   lastLogin: Date | null;
 
+  // ─── Demande de retour automatique (migration 2026-11-01-demande-de-retour-automatique) ───
+
+  /** Envoi automatique réservé : posé AVANT l'envoi, il garantit un seul envoi par compte. */
+  @Column({ nullable: true, type: 'datetime' })
+  demandeRetourAt: Date | null;
+
+  /** Réponse au « Namorama vous a-t-il été utile ? » du courriel. */
+  @Column({ nullable: true, type: 'varchar', length: 3 })
+  utilite: 'oui' | 'non' | null;
+
+  /** Date de cette réponse : posée une seule fois, c'est le verrou des 100 crédits. */
+  @Column({ nullable: true, type: 'datetime' })
+  utiliteAt: Date | null;
+
+  /** Désinscrit des demandes de retour, automatiques comme manuelles. */
+  @Column({ nullable: true, type: 'datetime' })
+  desinscritRetoursAt: Date | null;
+
+  /** Langue du navigateur à la création du compte, parmi les langues traduites. */
+  @Column({ nullable: true, type: 'varchar', length: 5 })
+  langueInscription: string | null;
+
   @OneToMany('Project', 'user')
   projects: Project[];
 
