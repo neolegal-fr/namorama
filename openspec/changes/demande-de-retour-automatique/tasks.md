@@ -78,8 +78,19 @@
 
 ## 7. Livraison
 
-- [ ] 7.1 Appliquer la migration en production après sauvegarde datée, et vérifier les colonnes. Vérification : `SHOW COLUMNS` en production.
-- [ ] 7.2 Ajouter `FEEDBACK_LINK_SECRET`, `FEEDBACK_SIGNATAIRE` et `FEEDBACK_AUTO_DEPUIS` au `docker-compose.yml` de prod (sauvegarde datée du fichier avant), merger, attendre le build, puis déployer. Vérification : conteneurs `Up`, et `demande_retour_passage` journalisé dans les 10 minutes avec `eligibles: 0`, puisque aucun compte n'a encore 24 h depuis la mise en service.
+- [x] 7.1 Appliquer la migration en production après sauvegarde datée, et vérifier les colonnes. Vérification : `SHOW COLUMNS` en production.
+  - 31/10/2026 : sauvegarde `backups/namorama-2026-10-31-avant-demande-de-retour-automatique.sql.gz`, complète.
+  - Migration appliquée : les cinq colonnes de `user` sont présentes en production, `admin_mail.automatique` aussi, et `adminSub` est nullable.
+- [x] 7.2 Ajouter `FEEDBACK_LINK_SECRET`, `FEEDBACK_SIGNATAIRE` et `FEEDBACK_AUTO_DEPUIS` au `docker-compose.yml` de prod (sauvegarde datée du fichier avant), merger, attendre le build, puis déployer. Vérification : conteneurs `Up`, et `demande_retour_passage` journalisé dans les 10 minutes avec `eligibles: 0`, puisque aucun compte n'a encore 24 h depuis la mise en service.
+  - `docker-compose.yml` de prod sauvegardé (`backups/docker-compose-20261031-224625.yml`), puis quatre variables ajoutées et le YAML validé (`docker compose config -q`) :
+    - `FEEDBACK_LINK_SECRET`, généré sur le serveur et jamais affiché ;
+    - `FEEDBACK_SIGNATAIRE` : « Nicolas Riousset » ;
+    - `FEEDBACK_AUTO_DEPUIS` : `2026-10-31 22:46:25` ;
+    - `API_PUBLIC_URL`.
+  - PR #181 mergée (`a3dba5a`), build vert, rien d'autre de mergé. Déploiement à 22:50, heure de Paris.
+  - Conteneurs `Up`, démarrage sans erreur ni avertissement : la minuterie est active.
+  - `POST https://api.namorama.com/retours/utilite` avec un jeton invalide : 400 « Ce lien n'est pas valide, ou a expiré. ».
+  - Premier passage à 22:55 (Paris) : `{"eligibles":0,"envoyes":0,"echecs":0}`.
 
 ## Workflow follow-up
 
