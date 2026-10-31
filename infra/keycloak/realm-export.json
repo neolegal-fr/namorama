@@ -872,13 +872,31 @@
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
         "http://localhost:4200/*",
+        "http://localhost:4201/*",
+        "http://localhost:4202/*",
+        "http://localhost:4203/*",
+        "http://localhost:4204/*",
+        "http://localhost:4205/*",
+        "http://localhost:4206/*",
+        "http://localhost:4207/*",
+        "http://localhost:4208/*",
+        "http://localhost:4209/*",
         "https://namorama.com/*",
         "https://www.namorama.com/*"
       ],
       "webOrigins": [
         "https://www.namorama.com",
         "https://namorama.com",
-        "http://localhost:4200"
+        "http://localhost:4200",
+        "http://localhost:4201",
+        "http://localhost:4202",
+        "http://localhost:4203",
+        "http://localhost:4204",
+        "http://localhost:4205",
+        "http://localhost:4206",
+        "http://localhost:4207",
+        "http://localhost:4208",
+        "http://localhost:4209"
       ],
       "notBefore": 0,
       "bearerOnly": false,

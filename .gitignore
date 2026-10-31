@@ -18,3 +18,7 @@ package.json
 api/.env
 web/.env
 *.env
+
+# Environnement d'un worktree d'agent (scripts/agent-env.sh)
+.agent-env
+.agent-run/
