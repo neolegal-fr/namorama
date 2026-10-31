@@ -55,7 +55,8 @@
 
 - [x] 6.1 En local, avec une copie anonymisée des agrégats ou la base de développement peuplée, comparer chaque carte du bandeau aux requêtes de contrôle de 2.2 et 2.3 : écart nul.
   - Vérifié le 31/10/2026, octobre, mesures prises au même instant (la base locale est partagée avec d'autres sessions et bougeait) : API = contrôle sur actifs 11 / 18 jours / 9 nouveaux, projets 12 dont 4 réussis par 8 comptes, 2 multi, 2 retours, 1 paiement 990 c, 9 inscrits, 12 comptes. Le bandeau rend ces champs sans recalcul (vérifié au navigateur en 5.2).
-- [ ] 6.2 Appliquer en production la migration de 1.1, après sauvegarde datée dans `backups/`. Vérifier `SHOW CREATE TABLE paiement`.
+- [x] 6.2 Appliquer en production la migration de 1.1, après sauvegarde datée dans `backups/`. Vérifier `SHOW CREATE TABLE paiement`.
+  - Fait le 31/10/2026 à 11:23 : sauvegarde `backups/namorama-2026-10-31-avant-registre-paiements.sql` (5,8 Mo), migration appliquée, `paiement.keycloakId` en `utf8mb4_unicode_ci` comme `user` (et `feedback`), index unique sur `sessionId`, 0 ligne.
 - [ ] 6.3 Déployer l'image (après le build GitHub Actions), puis lancer le rattrapage de 1.4 deux fois dans le conteneur. Vérifier : 2 lignes dans `paiement` (ou 0 si les sessions de mars sont en mode test, noté ici), soldes de crédits inchangés.
 
 ## Workflow follow-up
