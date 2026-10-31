@@ -586,7 +586,7 @@
             <span style="font-weight: 700; color: var(--nm-app-verdict-unknown-fg); font-size: 0.92rem">{{ 'WIZARD.STEP3.NO_RESULTS_TITLE' | translate }}</span>
           </div>
           <p style="margin: 0 0 0.875rem 0; font-size: 0.82rem; color: var(--nm-app-verdict-unknown-fg); line-height: 1.5">
-            {{ (isRiskyLength() ? 'WIZARD.STEP3.NO_RESULTS_SHORT' : 'WIZARD.STEP3.NO_RESULTS_EXPLAIN') | translate:{ n: minNameLength() } }}
+            {{ (ecartesParLeBrief() > 0 ? 'WIZARD.STEP3.NO_RESULTS_CONSTRAINTS' : isRiskyLength() ? 'WIZARD.STEP3.NO_RESULTS_SHORT' : 'WIZARD.STEP3.NO_RESULTS_EXPLAIN') | translate:{ n: minNameLength(), ecartes: ecartesParLeBrief() } }}
           </p>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
             <p-button *ngIf="minNameLength() < MAX_LENGTH_SETTING"

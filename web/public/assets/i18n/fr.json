@@ -434,7 +434,8 @@
       "WIDEN_CTA": "Inclure les noms descriptifs",
       "WIDEN_DISMISS": "Masquer cette suggestion",
       "MANUAL_SENTENCE_SUMMARY": "Ceci ressemble à une phrase",
-      "MANUAL_SENTENCE": "« {{entree}} » n’a pas été vérifié : saisissez des noms séparés par des virgules (ex : goldelis, neo legal)."
+      "MANUAL_SENTENCE": "« {{entree}} » n’a pas été vérifié : saisissez des noms séparés par des virgules (ex : goldelis, neo legal).",
+      "NO_RESULTS_CONSTRAINTS": "Votre description impose des contraintes que les noms proposés n'ont pas pu tenir : {{ecartes}} noms ont été écartés avant toute vérification. Retirez une contrainte à l'étape précédente, ou élargissez aux noms descriptifs."
     },
     "TIMEOUT": {
       "MESSAGE": "La recherche prend plus de temps que prévu. Voulez-vous continuer à attendre ?",

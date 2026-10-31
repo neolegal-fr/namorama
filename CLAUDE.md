@@ -294,6 +294,39 @@ La disponibilité a **trois états** : libre, pris, et **non vérifiable** (`nul
 
 > Ne jamais faire retomber un doute sur `true` ou `false` : « pris » masque des noms libres, « libre » fait payer un crédit pour un domaine inachetable.
 
+### Cahier des charges du nom
+
+Les utilisateurs écrivent un cahier des charges autant qu'une description : relevé du
+31/10/2026, 18 projets sur 133 fixaient une longueur, 18 des mots ou terminaisons à
+éviter, 13 des marques de référence. Les noms rendus les contredisaient
+(« 4-5 lettres » → `duopawear`). Chantier OpenSpec `respecter-le-cahier-des-charges`.
+
+- **Le brief fixe la longueur, sauf réglage explicite.** Le front n'envoie `minLength`
+  ou `maxLength` que si l'utilisateur les a touchés ; sinon le serveur applique les
+  bornes du brief (`briefMinLength`, `briefMaxLength`), **sans jamais élargir un
+  maximum demandé** (`bornesDeLongueur`). Plancher technique : 5.
+- **Le filtre garantit, la consigne aide** : `respecteLesContraintes` écarte après
+  génération, pour tous les styles, les noms hors longueur (noms inventés), à
+  terminaison interdite, contenant un mot à éviter, ou sans le mot imposé. Un mot
+  imposé n'est retenu que s'il figure dans la description : le modèle ne doit pas
+  inventer d'obligation.
+- **Noms inventés par défaut**, quelle que soit la région. Les styles descriptif et
+  culturel, autrefois activés d'office en mode local, sont un choix de l'étape 2,
+  pré-sélectionné d'après le brief (`nameType`), et suggéré quand les noms inventés
+  déçoivent (`naming_style_widened`).
+- **Les contraintes comprises s'affichent en puces retirables** ; une puce retirée part
+  dans `contraintesRetirees`, car le serveur réextrait le brief à chaque recherche.
+- `search_completed` porte les bornes et leur origine, les décomptes de contraintes
+  (jamais les mots) et `ecartes` par motif. L'événement `done` porte aussi `ecartes` :
+  une recherche vide après 300 noms écartés ne doit pas dire « tout est pris ».
+- Les mots-clés ne décrivent que l'activité (`estVocabulaireDeNommage`), et le champ de
+  test manuel lit une liste séparée par des virgules, jamais une phrase
+  (`lireNomsSaisis`).
+
+> Limite connue : le filtre compare des chaînes. « Éviter calm » laisse passer
+> `inkalm`, et les exemples de la consigne de génération (`navioq`, `pivoxen`)
+> ressortent tels quels — c'est le chantier suivant, sur la diversité.
+
 ### Suggestions supplémentaires (« 10 de plus »)
 
 Deux retours du 20/10/2026 : « 10 de plus » en rendait parfois 2 à 4. En `.com` seul,
@@ -457,6 +490,11 @@ serveur à la création de la session Stripe) : le tableau de bord la compte au-
 poser : ce dernier ne part qu'au clic sur « Analyser », donc uniquement quand l'analyse
 n'a PAS été pré-calculée. Un seul exemplaire en sept jours pour 409 analyses produites —
 l'absence de signal mesurait l'efficacité du pré-calcul, pas la lecture.
+
+`naming_style_widened` (depuis le 31/10/2026) marque l'acceptation de la suggestion
+« inclure les noms descriptifs », avec `origine` : `note` (recherche incomplète) ou
+`bandeau` (5 rejets sans favori). Il dit si l'incitation sert, et donc si le défaut
+« noms inventés » doit être revu.
 
 ### Parcours utilisateur
 

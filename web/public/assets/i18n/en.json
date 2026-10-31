@@ -434,7 +434,8 @@
       "WIDEN_CTA": "Include descriptive names",
       "WIDEN_DISMISS": "Hide this suggestion",
       "MANUAL_SENTENCE_SUMMARY": "This looks like a sentence",
-      "MANUAL_SENTENCE": "“{{entree}}” was not checked: enter names separated by commas (e.g. goldelis, neo legal)."
+      "MANUAL_SENTENCE": "“{{entree}}” was not checked: enter names separated by commas (e.g. goldelis, neo legal).",
+      "NO_RESULTS_CONSTRAINTS": "Your description sets constraints the suggested names could not meet: {{ecartes}} names were discarded before any check. Remove a constraint in the previous step, or include descriptive names."
     },
     "TIMEOUT": {
       "MESSAGE": "The search is taking longer than expected. Do you want to keep waiting?",

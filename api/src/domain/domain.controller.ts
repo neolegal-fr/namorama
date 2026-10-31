@@ -370,6 +370,9 @@ export class DomainController {
           // Le front les exclura des prochains « 10 de plus » : un nom trouvé
           // pris n'a pas à être revérifié.
           checkedNames: verifiedNames,
+          // Noms écartés par le cahier des charges : sans eux, une recherche
+          // vide se lirait « tout est pris » alors que rien n'a été testé.
+          ecartes,
           minLengthUsed,
           requested: limit,
           found: results.length,

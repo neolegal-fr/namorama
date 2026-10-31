@@ -71,6 +71,7 @@ describe('DomainController.searchStream — débit et noms vérifiés', () => {
     expect(decrementCredits).toHaveBeenCalledWith('kc-123', 6, expect.anything());
     const done = res.ecrits.find((e: any) => e.type === 'done');
     expect(done.checkedNames).toEqual(['pris1', 'pris2', 'nom0']);
+    expect(done.ecartes).toEqual({ longueur: 4, terminaison: 2, mot_a_eviter: 0, mot_impose: 0 });
     expect(done.found).toBe(6);
     const fin = event.mock.calls.find((c: any[]) => c[0] === 'search_completed')[1];
     expect(fin).toMatchObject({ attempts: 7, stopReason: 'time', found: 6 });

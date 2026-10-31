@@ -178,6 +178,8 @@ export class WizardComponent implements OnInit, OnDestroy {
   derniereRechercheIncomplete = signal<{ found: number; requested: number } | null>(null);
   /** Bandeau « aucun nom ne vous plaît » fermé : il ne revient pas de la session. */
   bandeauElargirFerme = signal(false);
+  /** Noms générés que le cahier des charges a écartés lors de la dernière recherche. */
+  ecartesParLeBrief = signal(0);
   readonly REJETS_AVANT_SUGGESTION = 5;
 
   /**
@@ -2942,6 +2944,7 @@ export class WizardComponent implements OnInit, OnDestroy {
 
           // Issue #3 — moins de suggestions trouvées que demandé dans le temps imparti
           // (le panneau dédié prend le relais quand on n'a strictement rien trouvé)
+          this.ecartesParLeBrief.set(Object.values(event.ecartes ?? {}).reduce((a: number, n: any) => a + (Number(n) || 0), 0));
           this.derniereRechercheIncomplete.set(
             event.requested > 0 && (event.found ?? 0) < event.requested
               ? { found: event.found ?? 0, requested: event.requested }
