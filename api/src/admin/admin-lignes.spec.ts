@@ -35,6 +35,7 @@ describe('AdminService — lignes de la liste des utilisateurs', () => {
       dataSource as any,
       { error: jest.fn() } as any,
       { coutsParCompte: jest.fn().mockResolvedValue(new Map([[utilisateur.keycloakId, { costUsd: 0.42, calls: 7, unpricedCalls: 0 }]])) } as any,
+      {} as any,
     );
   };
 

@@ -186,6 +186,36 @@ Ce qui subsiste et reste utile :
   l'administration, elle, lit le solde **disponible** (`creditsGratuitsSql`) et marque
   d'un ↻ les comptes dont le renouvellement reste à écrire.
 - Vérification de disponibilité : **RDAP d'abord, WHOIS en repli**
+- `extraCredits` reçoit **à la fois** les packs achetés et les crédits offerts à la main
+  (ajustements admin, récompenses de retours) : son stock ne dit rien des ventes —
+  relevé le 31/10/2026, 7 comptes en avaient pour 2 paiements.
+- ⚠ Le **webhook Stripe crédite sans vérifier `payment_status`**, et `fulfillSession`
+  accepte une session `complete` non payée. Sans conséquence tant que seuls les moyens de
+  paiement immédiats sont activés ; à corriger dans un changement dédié avant d'en
+  activer un différé (virement, SEPA).
+
+### Registre des paiements
+
+`stripe_event` n'est qu'un verrou d'idempotence : écrit avant de savoir si la session
+est payée, pour tout type de session, sans montant ni compte. Le chiffre d'affaires se
+lit dans **`paiement`** (depuis le 31/10/2026) : une ligne par session de pack
+**payée** (`payment_status = 'paid'`) — compte, pack, crédits, montant en centimes,
+devise, date Stripe.
+
+- **Deux chemins, une ligne.** Le retour du navigateur (`fulfillSession`) et le webhook
+  appellent tous deux `enregistrerPaiement`, **après** l'ajout des crédits ;
+  `sessionId` est unique et l'insertion ignore un doublon.
+- **Le registre ne bloque jamais les crédits.** Un échec d'écriture se journalise en
+  erreur `payment_record_failed sessionId=…` (`python3 - errors`) et se rattrape.
+- **Aucune conversion de devise** : les montants restent dans la devise de la session.
+  Le coût IA étant en dollars, le tableau de bord affiche les deux côte à côte, sans
+  marge calculée — un taux figé finirait faux sans que rien ne le signale.
+- **Rattrapage** des sessions antérieures ou d'un échec, rejouable sans effet et sans
+  toucher aux crédits :
+  `docker compose exec api node dist/scripts/rattraper-paiements.js`
+  (une ligne JSON par session, avec `livemode`).
+
+> Migration : `2026-10-31-registre-des-paiements.sql`, avant de déployer l'image.
 
 ### Coût des appels au modèle
 
@@ -681,9 +711,44 @@ prérendu devait éviter.
 
 ### Tableau de bord d'administration
 
-Chaque indicateur de période s'affiche avec son **écart à la période précédente** —
-même durée, immédiatement avant — et six **historiques hebdomadaires** sur six mois.
-Un **entonnoir de conversion** rapporte le tout au trafic (voir plus bas).
+Refondu le 31/10/2026 autour des indicateurs standard d'un SaaS. L'ancienne page
+alignait une quarantaine d'éléments de même rang sans dire combien d'utilisateurs
+reviennent ni combien paient. Relevé ce jour-là : **52 MAU dont 1 seul inscrit depuis
+plus de 30 jours**, DAU/MAU ≈ 4 %, 2 paiements depuis l'origine.
+
+Cinq blocs, dans cet ordre :
+
+| bloc | indicateurs | source |
+|---|---|---|
+| **Bandeau** | MAU (nouveaux · récurrents), inscrits, activation, chiffre d'affaires, taux de succès | `GET /admin/stats` |
+| **Engagement** | DAU moyen, DAU/MAU, jours actifs par compte (1 / 2-3 / 4+), recherches par actif, comptes à plusieurs recherches | `period.engagement`, `period.succes` |
+| **Satisfaction** | taux de succès, retours écrits, comptes ayant noté | `period.succes` |
+| **Rétention** | décomposition mensuelle, triangle de cohortes, retours sous 7 / 30 j | `GET /admin/retention` |
+| **Monétisation** | CA par devise, payants (période, origine), tarifs → paiements lancés → aboutis | `period.revenu`, `period.funnel` |
+
+Puis le coût IA résumé (total, par actif, par recherche), l'entonnoir de visites, et
+l'historique **mensuel** (`GET /admin/series?months=12`). Le détail des coûts par
+opération et le simulateur vivent dans l'onglet **Coûts IA** (`/admin/costs`).
+
+Définitions :
+
+- **MAU** : comptes distincts ayant un jour d'activité dans la période. Le libellé
+  « MAU », le **DAU moyen** (jours d'activité ÷ jours écoulés) et le **DAU/MAU**
+  n'apparaissent qu'à partir de **28 jours** (`FENETRE_MAU_JOURS`) ; un mois en cours
+  se rapporte aux jours écoulés. **Toujours décomposé** en nouveaux (créés dans la
+  période) et récurrents : sans cela, le MAU mesure les inscriptions.
+- **Taux de succès** : projets de la période portant au moins un favori. Unité : la
+  recherche, datée de sa création. **Il remplace le ratio 👍 / 👎**, qui valait 3,8 %
+  sur les 30 jours au 31/10/2026 (27 👍 pour 681 👎, venant de 8 comptes) : le 👎 sert
+  à écarter un nom en triant, pas à se plaindre.
+- **Activation** : inscrits de la période ayant créé au moins un projet, depuis.
+- **Période** : 7 jours, 30 jours (défaut), mois civil (`?month=AAAA-MM`, comparé au
+  mois civil précédent) ou plage libre ; moins d'un jour est refusé (400). La fenêtre
+  de 24 h a disparu : à 2 actifs par jour, elle ne mesurait que du bruit.
+- **Retirés** : « Visiteurs déjà inscrits » (remplacé par nouveaux · récurrents),
+  suggestions générées, comptes cumulés, moyennes par projet, stocks de crédits
+  gratuits et pack (le second mêle achats et cadeaux), durée de vie médiane et
+  répartitions de la fidélité.
 
 Quatre règles, chacune posée contre une façon précise de faire mentir un chiffre :
 
@@ -698,18 +763,12 @@ Quatre règles, chacune posée contre une façon précise de faire mentir un chi
   d'événements par semaine, 1 → 4 s'afficherait « +300 % » et 0 → 1 n'aurait pas de
   pourcentage du tout. En dessous du socle, l'écart s'affiche en absolu. Sur un
   indicateur déjà en pourcentage (taux d'activation), l'écart se compte en **points**.
-- **La semaine en cours est incomplète.** Affichée pleine, elle simule une chute
-  hebdomadaire : elle est estompée, annoncée comme telle, et exclue des moyennes.
-- **« Visiteurs déjà inscrits » se rapporte aux visites IDENTIFIÉES, pas aux
-  visites.** Parmi les visites qu'un appel authentifié a rattachées à un compte
-  encore existant, la part de celles dont le compte est **antérieur au début de
-  la fenêtre**. Le reste — l'écrasante majorité des visites — est anonyme et n'a
-  pas d'âge de compte : le mettre au dénominateur ferait lire « peu de
-  revenants » là où il n'y a surtout aucune information. Une visite dont le
-  compte a été supprimé depuis est écartée du numérateur ET du dénominateur : on
-  ne sait plus quand il a été créé. Sous 5 visites identifiées, pas de taux du
-  tout (`null`, affiché « — ») : à 2 sur 3, une visite de plus déplace le
-  chiffre de 17 points, que le badge d'écart annoncerait comme une tendance.
+- **Le mois en cours est incomplet.** Affiché plein, il simule une chute : il est
+  estompé, annoncé comme tel, et exclu des moyennes — dans les courbes comme dans le
+  triangle de cohortes.
+- **Pas de taux sous 5 au dénominateur** (`SOCLE_TAUX`) : taux de succès, activation,
+  retours. À 1 sur 3, un cas de plus déplace le chiffre de 17 points ; l'interface
+  montre alors les valeurs brutes.
 
 Les **crédits consommés** sont reconstitués, faute de journal de débits :
 suggestions × 1 + `costCredits` réel des rapports. Deux angles morts assumés et
@@ -734,12 +793,17 @@ d'inscrit assez ancien pour avoir un J+7.
   n'a pas échoué à revenir, il n'en a pas eu le temps ; le compter ferait baisser le
   taux à chaque inscription. Avant le premier J+N, l'interface dit « pas encore
   mesurable » avec la date, pas 0 %.
-- Retours et jours d'activité ne portent que sur les comptes nés **après le début du
+- Retours et cohortes ne portent que sur les comptes nés **après le début du
   journal** (23/08/2026) : un compte plus ancien a pu revenir avant, sans trace.
-- La **durée de vie** (création → dernière activité, via `lastLogin`) couvre tout
-  l'historique, mais ne connaît que la dernière activité. Médiane rendue en minutes :
-  relevée à ~3 min le 22/09/2026, « 0,0 jour » aurait effacé l'information.
-- Cohortes **au mois**, pas à la semaine : chaque case vaudrait sinon 0, 20 ou 50 %.
+- **Décomposition mensuelle** (`RetentionService.decomposer`) : chaque mois civil,
+  les actifs se répartissent en **nouveaux** (inscrits ce mois), **retenus** (actifs
+  aussi le mois précédent), **réactivés** (inactifs le mois précédent) ; les
+  **perdus** sont les actifs du mois précédent absents ce mois. Le premier mois du
+  journal n'a ni retenus, ni réactivés, ni perdus (`null`) : le mois d'avant n'a pas
+  été mesuré. Tous les comptes mesurés y entrent, anciens compris.
+- **Triangle de cohortes** : pour chaque mois d'inscription, les inscrits actifs de
+  M+1 à M+5 (`HORIZON_COHORTES`). Au mois, pas à la semaine : chaque case vaudrait
+  sinon 0, 20 ou 50 %.
 
 > Relevé du 22/09/2026 : 70 comptes sur 75 sans aucune activité après leur premier
 > jour ; 3 retours sous 7 jours sur 23 inscrits éligibles.
@@ -773,11 +837,10 @@ l'inverse les viderait en silence.
 > `2026-09-24-tarifs-consultes.sql` (suivi de `scripts/rattraper-tarifs-consultes.py`
 > pour rattraper les ouvertures depuis les logs).
 
-La **satisfaction** est la part de 👍 parmi les noms notés (👍 ou 👎), rangés à la
-**date de génération du nom** — la note n'est pas horodatée, et la question est « les
-noms de cette période plaisent-ils ». Les noms laissés neutres sont hors du calcul, et
-sous 5 notes il n'y a pas de taux. La carte dit par combien de comptes : sur les 30
-jours au 24/09/2026, les 117 👎 venaient d'un seul.
+Les **notes 👍 / 👎** ne font plus de taux : le tableau de bord dit seulement combien
+de comptes ont noté. Déjà le 24/09/2026, les 117 👎 des 30 jours venaient d'un seul
+compte. La satisfaction se lit dans le **taux de succès** (voir plus haut) et dans les
+retours écrits.
 
 Les coûts IA s'affichent **au centime** (`usd()`) ; seuls les coûts unitaires — par
 crédit, par nom — gardent quatre décimales (`usdUnitaire()`), faute de quoi ils

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { comptesMesures } from './predicats';
+import { moisDe } from './indicateurs';
 
 /** Des inscrits qui ont eu le temps de revenir, et ceux qui l'ont fait. */
 export interface TauxDeRetour {
@@ -9,18 +10,52 @@ export interface TauxDeRetour {
   revenus: number;
 }
 
-/** Une cohorte mensuelle d'inscrits, et son retour à J+7 et J+30. */
+/**
+ * Un mois civil d'activité, décomposé.
+ *
+ * Les quatre flux répondent à la question que le MAU seul masque : relevé le
+ * 31/10/2026, 52 actifs sur 30 jours dont 51 inscrits dans la fenêtre. Le MAU
+ * montait en ne mesurant que les inscriptions.
+ */
+export interface MoisActif {
+  /** `AAAA-MM`. */
+  mois: string;
+  actifs: number;
+  /** Actifs inscrits ce mois-ci. */
+  nouveaux: number;
+  /**
+   * Actifs ce mois ET le précédent, inscrits avant. `null` le premier mois du
+   * journal : le mois précédent n'a pas été mesuré.
+   */
+  retenus: number | null;
+  /** Actifs ce mois, inactifs le précédent, inscrits avant. `null` : idem. */
+  reactives: number | null;
+  /** Actifs le mois précédent, inactifs ce mois. `null` : idem. */
+  perdus: number | null;
+  /** Le journal a commencé en cours de mois : ses volumes sont partiels. */
+  debutDuJournal: boolean;
+  /** Le mois n'est pas terminé. */
+  enCours: boolean;
+}
+
+/** Une case du triangle : la part d'une cohorte active N mois après son inscription. */
+export interface CaseCohorte {
+  /** Décalage en mois (1 = le mois qui suit l'inscription). */
+  decalage: number;
+  /** `AAAA-MM` du mois observé. */
+  mois: string;
+  actifs: number;
+  /** Mois observé pas encore terminé : la case est provisoire. */
+  enCours: boolean;
+}
+
+/** Les inscrits d'un mois, et ce qu'il en reste les mois suivants. */
 export interface CohorteMensuelle {
   /** `AAAA-MM`. */
   mois: string;
   inscrits: number;
-  sous7Jours: TauxDeRetour;
-  sous30Jours: TauxDeRetour;
-}
-
-export interface Tranche {
-  libelle: string;
-  comptes: number;
+  /** Mois suivants déjà commencés, au plus {@link HORIZON_COHORTES} ; les mois à venir sont absents. */
+  suivants: CaseCohorte[];
 }
 
 export interface AdminRetention {
@@ -30,24 +65,27 @@ export interface AdminRetention {
   sous7Jours: TauxDeRetour;
   /** Même chose sous 30 jours. */
   sous30Jours: TauxDeRetour;
-  /** Jours d'activité distincts par compte, inscrits depuis le début du journal. */
-  joursActifs: Tranche[];
-  /**
-   * Délai entre la création et la dernière activité, sur TOUT l'historique :
-   * `lastLogin` existe depuis l'ouverture, là où le journal ne commence qu'en
-   * août. Moins fin (seule la dernière activité compte), mais sans trou.
-   */
-  dureeDeVie: {
-    comptes: number;
-    /**
-     * Médiane en MINUTES. Pas en jours : relevé le 22/09/2026, elle tient en
-     * quelques minutes, et « 0,0 jour » effacerait précisément l'information.
-     * L'interface choisit l'unité. `null` sans compte.
-     */
-    medianeMinutes: number | null;
-    tranches: Tranche[];
-  };
+  /** Un élément par mois civil, du premier mois du journal au mois en cours. */
+  mensuel: MoisActif[];
   cohortes: CohorteMensuelle[];
+}
+
+/** Mois suivis après l'inscription, dans le triangle. */
+export const HORIZON_COHORTES = 5;
+
+/** Un compte actif un mois donné. */
+export interface PresenceMensuelle {
+  userId: number;
+  /** `AAAA-MM` d'activité. */
+  mois: string;
+  /** `AAAA-MM` de création du compte. */
+  cree: string;
+}
+
+/** `AAAA-MM` décalé de `n` mois. */
+function decaler(mois: string, n: number): string {
+  const [a, m] = mois.split('-').map(Number);
+  return moisDe(new Date(a, m - 1 + n, 1));
 }
 
 /**
@@ -63,9 +101,9 @@ export interface AdminRetention {
  * revenir sous 7 jours » — il n'en a pas encore eu le temps, et le compter
  * ferait baisser le taux à chaque inscription récente.
  *
- * Indépendant de la période choisie au tableau de bord : à quelques
- * inscriptions par semaine, une fenêtre de sept jours ne contiendrait presque
- * jamais de compte assez ancien pour avoir un J+7.
+ * Indépendant de la période choisie au tableau de bord. Au mois, pas à la
+ * semaine : à quelques inscriptions par semaine, chaque case vaudrait 0, 20
+ * ou 50 %.
  */
 @Injectable()
 export class RetentionService {
@@ -95,7 +133,7 @@ export class RetentionService {
     const cohorte = `${comptesMesures()} AND u.createdAt >= ?`;
     const depuis = journalDepuis ?? '9999-12-31';
 
-    const [taux, jours, vies, parMois] = await Promise.all([
+    const [taux, presences, inscrits] = await Promise.all([
       this.dataSource.query(
         `SELECT COALESCE(SUM(${RetentionService.eligible(7)}), 0) AS e7,
                 COALESCE(SUM(${RetentionService.eligible(7)} AND ${RetentionService.revenuSous(7)}), 0) AS r7,
@@ -104,26 +142,18 @@ export class RetentionService {
            FROM user u WHERE ${cohorte}`,
         [depuis],
       ),
+      // Tous les comptes mesurés, anciens compris : la décomposition mensuelle
+      // parle des ACTIFS d'un mois, quelle que soit leur date d'inscription.
       this.dataSource.query(
-        `SELECT n, COUNT(*) AS comptes FROM (
-           SELECT u.id, COUNT(a.day) AS n
-             FROM user u LEFT JOIN user_activity_day a ON a.userId = u.id
-            WHERE ${cohorte}
-            GROUP BY u.id) t
-          GROUP BY n`,
-        [depuis],
+        `SELECT DISTINCT a.userId AS userId,
+                DATE_FORMAT(a.day, '%Y-%m') AS mois,
+                DATE_FORMAT(u.createdAt, '%Y-%m') AS cree
+           FROM user_activity_day a
+           INNER JOIN user u ON u.id = a.userId
+          WHERE ${comptesMesures()}`,
       ),
       this.dataSource.query(
-        `SELECT TIMESTAMPDIFF(MINUTE, u.createdAt, GREATEST(u.lastLogin, u.createdAt)) AS minutes
-           FROM user u
-          WHERE ${comptesMesures()} AND u.lastLogin IS NOT NULL`,
-      ),
-      this.dataSource.query(
-        `SELECT DATE_FORMAT(u.createdAt, '%Y-%m') AS mois, COUNT(*) AS inscrits,
-                COALESCE(SUM(${RetentionService.eligible(7)}), 0) AS e7,
-                COALESCE(SUM(${RetentionService.eligible(7)} AND ${RetentionService.revenuSous(7)}), 0) AS r7,
-                COALESCE(SUM(${RetentionService.eligible(30)}), 0) AS e30,
-                COALESCE(SUM(${RetentionService.eligible(30)} AND ${RetentionService.revenuSous(30)}), 0) AS r30
+        `SELECT DATE_FORMAT(u.createdAt, '%Y-%m') AS mois, COUNT(*) AS n
            FROM user u WHERE ${cohorte}
           GROUP BY mois ORDER BY mois`,
         [depuis],
@@ -132,58 +162,90 @@ export class RetentionService {
 
     const t = taux[0] ?? {};
     const n = (v: unknown) => Number(v ?? 0);
+    const { mensuel, cohortes } = RetentionService.decomposer(
+      presences.map((r: any) => ({ userId: n(r.userId), mois: String(r.mois), cree: String(r.cree) })),
+      new Map(inscrits.map((r: any) => [String(r.mois), n(r.n)])),
+      journalDepuis,
+      moisDe(new Date()),
+    );
 
     return {
       journalDepuis,
       sous7Jours: { eligibles: n(t.e7), revenus: n(t.r7) },
       sous30Jours: { eligibles: n(t.e30), revenus: n(t.r30) },
-      joursActifs: RetentionService.tranchesJours(jours.map((r: any) => ({ jours: n(r.n), comptes: n(r.comptes) }))),
-      dureeDeVie: RetentionService.dureeDeVie(vies.map((r: any) => n(r.minutes))),
-      cohortes: parMois.map((r: any) => ({
-        mois: String(r.mois),
-        inscrits: n(r.inscrits),
-        sous7Jours: { eligibles: n(r.e7), revenus: n(r.r7) },
-        sous30Jours: { eligibles: n(r.e30), revenus: n(r.r30) },
-      })),
+      mensuel,
+      cohortes,
     };
   }
 
   /**
-   * Jours d'activité, en tranches plutôt qu'en moyenne : quand presque tout le
-   * monde est à 1, une moyenne à 1,3 ne dit ni combien reviennent, ni combien
-   * de fois.
+   * Décomposition mensuelle des actifs et triangle de cohortes.
+   *
+   * @param presences   un élément par (compte, mois d'activité), comptes mesurés
+   * @param inscrits    inscrits par mois, depuis le début du journal
+   * @param journalDepuis premier jour du journal (`AAAA-MM-JJ`)
+   * @param moisCourant `AAAA-MM` d'aujourd'hui
    */
-  static tranchesJours(parNombre: { jours: number; comptes: number }[]): Tranche[] {
-    const somme = (f: (j: number) => boolean) =>
-      parNombre.filter((r) => f(r.jours)).reduce((s, r) => s + r.comptes, 0);
-    return [
-      // Zéro jour : compte créé, mais le journal ne l'a jamais vu — possible
-      // si l'écriture best-effort a échoué. Rangé avec « un seul jour ».
-      { libelle: '1 jour', comptes: somme((j) => j <= 1) },
-      { libelle: '2 à 3 jours', comptes: somme((j) => j >= 2 && j <= 3) },
-      { libelle: '4 à 7 jours', comptes: somme((j) => j >= 4 && j <= 7) },
-      { libelle: '8 jours et +', comptes: somme((j) => j >= 8) },
-    ];
-  }
+  static decomposer(
+    presences: PresenceMensuelle[],
+    inscrits: Map<string, number>,
+    journalDepuis: string | null,
+    moisCourant: string,
+  ): { mensuel: MoisActif[]; cohortes: CohorteMensuelle[] } {
+    if (!journalDepuis) return { mensuel: [], cohortes: [] };
+    const premierMois = journalDepuis.slice(0, 7);
 
-  static dureeDeVie(minutes: number[]): AdminRetention['dureeDeVie'] {
-    const tries = [...minutes].sort((a, b) => a - b);
-    const jour = 24 * 60;
-    let mediane: number | null = null;
-    if (tries.length) {
-      const m = tries.length >> 1;
-      mediane = Math.round(tries.length % 2 ? tries[m] : (tries[m - 1] + tries[m]) / 2);
+    const actifsDe = new Map<string, Set<number>>();
+    const creeDe = new Map<number, string>();
+    for (const p of presences) {
+      if (!actifsDe.has(p.mois)) actifsDe.set(p.mois, new Set());
+      actifsDe.get(p.mois)!.add(p.userId);
+      creeDe.set(p.userId, p.cree);
     }
-    const compte = (f: (min: number) => boolean) => tries.filter(f).length;
-    return {
-      comptes: tries.length,
-      medianeMinutes: mediane,
-      tranches: [
-        { libelle: 'moins d\'un jour', comptes: compte((x) => x < jour) },
-        { libelle: '1 à 6 jours', comptes: compte((x) => x >= jour && x < 7 * jour) },
-        { libelle: '7 à 29 jours', comptes: compte((x) => x >= 7 * jour && x < 30 * jour) },
-        { libelle: '30 jours et +', comptes: compte((x) => x >= 30 * jour) },
-      ],
-    };
+    const actifs = (mois: string) => actifsDe.get(mois) ?? new Set<number>();
+
+    const mensuel: MoisActif[] = [];
+    for (let mois = premierMois; mois <= moisCourant; mois = decaler(mois, 1)) {
+      const ici = actifs(mois);
+      const premier = mois === premierMois;
+      const avant = actifs(decaler(mois, -1));
+      let nouveaux = 0, retenus = 0, reactives = 0;
+      for (const id of ici) {
+        if (creeDe.get(id) === mois) nouveaux++;
+        else if (avant.has(id)) retenus++;
+        else reactives++;
+      }
+      let perdus = 0;
+      for (const id of avant) if (!ici.has(id)) perdus++;
+
+      mensuel.push({
+        mois,
+        actifs: ici.size,
+        nouveaux,
+        retenus: premier ? null : retenus,
+        reactives: premier ? null : reactives,
+        perdus: premier ? null : perdus,
+        debutDuJournal: premier && !journalDepuis.endsWith('-01'),
+        enCours: mois === moisCourant,
+      });
+    }
+
+    const cohortes: CohorteMensuelle[] = [...inscrits.entries()]
+      .filter(([mois]) => mois >= premierMois && mois <= moisCourant)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([mois, n]) => {
+        const membres = new Set([...creeDe.entries()].filter(([, c]) => c === mois).map(([id]) => id));
+        const suivants: CaseCohorte[] = [];
+        for (let k = 1; k <= HORIZON_COHORTES; k++) {
+          const observe = decaler(mois, k);
+          if (observe > moisCourant) break;
+          let n2 = 0;
+          for (const id of actifs(observe)) if (membres.has(id)) n2++;
+          suivants.push({ decalage: k, mois: observe, actifs: n2, enCours: observe === moisCourant });
+        }
+        return { mois, inscrits: n, suivants };
+      });
+
+    return { mensuel, cohortes };
   }
 }

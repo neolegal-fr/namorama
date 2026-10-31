@@ -203,29 +203,39 @@ export class AdminController {
     await this.usersService.deleteAccountById(id);
   }
 
+  /**
+   * Indicateurs d'une période, comparés à la précédente.
+   *
+   * `month=AAAA-MM` désigne un mois civil, comparé au mois civil précédent ; à
+   * défaut, `from`/`to` (30 derniers jours par défaut), comparés à la même durée
+   * immédiatement avant.
+   */
   @Get('stats')
   async getStats(
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('month') month?: string,
   ) {
     return this.adminService.getStats(
       from ? new Date(from) : undefined,
       to ? new Date(to) : undefined,
+      month || undefined,
     );
   }
 
   /**
-   * Historique hebdomadaire, pour les courbes du tableau de bord.
+   * Historique mensuel, pour les courbes du tableau de bord : 12 mois par
+   * défaut, entre 1 et 24.
    *
-   * Séparé de `/stats` : la série balaie six mois et ne change qu'une fois par
-   * semaine, alors que les indicateurs se recalculent à chaque changement de
-   * période. Les fusionner ferait rejouer six mois d'agrégats à chaque clic.
+   * Séparé de `/stats` : la série balaie un an et ne change qu'une fois par
+   * jour, alors que les indicateurs se recalculent à chaque changement de
+   * période. Les fusionner ferait rejouer un an d'agrégats à chaque clic.
    */
   @Get('series')
   async getSeries(
-    @Query('weeks', new DefaultValuePipe(26), ParseIntPipe) weeks: number,
+    @Query('months', new DefaultValuePipe(12), ParseIntPipe) months: number,
   ) {
-    return this.adminService.getSeries(weeks);
+    return this.adminService.getSeries(Math.min(Math.max(months, 1), 24));
   }
 
   /**

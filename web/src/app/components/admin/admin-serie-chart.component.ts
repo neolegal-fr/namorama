@@ -3,7 +3,10 @@ import { CommonModule } from '@angular/common';
 
 /** Un point de la série, tel que le composant le consomme. */
 export interface ChartPoint {
-  /** Lundi de la semaine, `AAAA-MM-JJ`. */
+  /**
+   * Période du point : le lundi de la semaine (`AAAA-MM-JJ`) quand `pas` vaut
+   * `semaine`, le mois (`AAAA-MM`) quand il vaut `mois`.
+   */
   week: string;
   /** `null` = NON MESURÉ. Le graphique montre un trou, jamais une barre à zéro. */
   value: number | null;
@@ -27,7 +30,11 @@ interface Troncon {
 }
 
 /**
- * Historique hebdomadaire d'un indicateur.
+ * Historique d'un indicateur, à la semaine ou au mois (`pas`).
+ *
+ * Le tableau de bord est au mois depuis le 31/10/2026 — à ~10 inscriptions
+ * par semaine, chaque barre hebdomadaire était du bruit ; le détail des coûts
+ * et la fiche d'un utilisateur restent à la semaine.
  *
  * Deux formes, et le choix n'est pas cosmétique :
  *
@@ -56,7 +63,7 @@ interface Troncon {
  * corrélation que les données ne portent pas.
  */
 @Component({
-  selector: 'app-admin-weekly-chart',
+  selector: 'app-admin-serie-chart',
   standalone: true,
   imports: [CommonModule],
   template: `
@@ -66,7 +73,7 @@ interface Troncon {
           <div class="nm-chart-title">{{ title }}</div>
           <div class="nm-chart-sub">{{ sousTitre() }}</div>
         </div>
-        <div class="nm-chart-max" *ngIf="maximum() > 0">max {{ maximum() }}</div>
+        <div class="nm-chart-max" *ngIf="maximum() > 0">max {{ valeur(maximum()) }}</div>
       </div>
 
       <div class="nm-plot" (mouseleave)="survol.set(null)">
@@ -116,7 +123,7 @@ interface Troncon {
             {{ valeur(b.point.value) }} <span>{{ unite }}</span>
           </div>
           <div class="nm-tip-null" *ngIf="b.point.value === null">non mesuré</div>
-          <div class="nm-tip-encours" *ngIf="b.enCours">semaine en cours</div>
+          <div class="nm-tip-encours" *ngIf="b.enCours">{{ pas }} en cours</div>
         </div>
       </div>
 
@@ -130,7 +137,7 @@ interface Troncon {
         <summary>Voir les valeurs</summary>
         <table>
           <thead>
-            <tr><th>Semaine du</th><th>{{ title }}</th></tr>
+            <tr><th>{{ pas === 'mois' ? 'Mois' : 'Semaine du' }}</th><th>{{ title }}</th></tr>
           </thead>
           <tbody>
             <tr *ngFor="let b of barresRecentes()">
@@ -265,7 +272,7 @@ interface Troncon {
     .nm-td-null, .nm-td-note { color: var(--nm-text-light-3, #6a7470); font-style: italic; }
   `],
 })
-export class AdminWeeklyChartComponent {
+export class AdminSerieChartComponent {
   @Input({ required: true }) title = '';
   @Input({ required: true }) set points(v: ChartPoint[]) { this._points.set(v ?? []); }
 
@@ -286,6 +293,8 @@ export class AdminWeeklyChartComponent {
    */
   @Input() decimales: number | null = null;
   @Input() note = '';
+  /** Pas de la série : fixe le format des dates, de l'axe et des moyennes. */
+  @Input() pas: 'semaine' | 'mois' = 'semaine';
 
   private _points = signal<ChartPoint[]>([]);
   survol = signal<number | null>(null);
@@ -305,7 +314,7 @@ export class AdminWeeklyChartComponent {
 
     if (this.agregat === 'dernier') {
       const fin = revolues[revolues.length - 1];
-      return `${this.valeur(fin.value)} ${this.unite} au ${AdminWeeklyChartComponent.libelleSemaine(fin.week)}`;
+      return `${this.valeur(fin.value)} ${this.unite} ${this.pas === 'mois' ? 'en' : 'au'} ${this.libelle(fin.week)}`;
     }
     const total = revolues.reduce((s, p) => s + (p.value ?? 0), 0);
     const moyenne = total / revolues.length;
@@ -313,13 +322,14 @@ export class AdminWeeklyChartComponent {
     // cela, « 7,5 par semaine » calculé sur deux semaines mesurées se lirait
     // comme une moyenne sur six mois.
     const attendues = this._points().length - 1;
+    const s = revolues.length > 1 ? 's' : '';
     const base = revolues.length < attendues
-      ? ` (${revolues.length} semaine${revolues.length > 1 ? 's' : ''} mesurée${revolues.length > 1 ? 's' : ''})`
+      ? (this.pas === 'mois' ? ` (${revolues.length} mois mesuré${s})` : ` (${revolues.length} semaine${s} mesurée${s})`)
       : '';
     const texte = this.decimales === null
       ? (Math.round(moyenne * 10) / 10).toLocaleString('fr-FR')
       : this.valeur(moyenne);
-    return `${texte} / semaine en moyenne${base}`;
+    return `${texte} / ${this.pas} en moyenne${base}`;
   });
 
   valeur(v: number | null): string {
@@ -341,9 +351,9 @@ export class AdminWeeklyChartComponent {
     return pts.map((point, i) => ({
       point,
       hauteur: point.value === null ? null : max > 0 ? (point.value / max) * 100 : 0,
-      libelle: AdminWeeklyChartComponent.libelleSemaine(point.week),
+      libelle: this.libelle(point.week),
       enCours: i === dernier,
-      tick: (dernier - i) % pas === 0 ? AdminWeeklyChartComponent.tick(point.week) : '',
+      tick: (dernier - i) % pas === 0 ? this.tick(point.week) : '',
     }));
   });
 
@@ -413,21 +423,23 @@ export class AdminWeeklyChartComponent {
     return Math.min(85, Math.max(15, ((i + 0.5) / n) * 100));
   });
 
-  private static parse(week: string): Date {
+  private parse(cle: string): Date {
     // `T00:00:00` sans « Z » : la date est un jour civil du serveur, pas un
     // instant UTC. Sans cela, un navigateur à l'ouest recule d'un jour et la
     // « semaine du 17 » s'affiche « semaine du 16 ».
-    return new Date(`${week}T00:00:00`);
+    return new Date(`${this.pas === 'mois' ? `${cle}-01` : cle}T00:00:00`);
   }
 
-  private static libelleSemaine(week: string): string {
-    return AdminWeeklyChartComponent.parse(week)
-      .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
+  private libelle(cle: string): string {
+    return this.pas === 'mois'
+      ? this.parse(cle).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+      : this.parse(cle).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
   }
 
-  private static tick(week: string): string {
-    return AdminWeeklyChartComponent.parse(week)
-      .toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-      .replace('.', '');
+  private tick(cle: string): string {
+    return (this.pas === 'mois'
+      ? this.parse(cle).toLocaleDateString('fr-FR', { month: 'short' })
+      : this.parse(cle).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+    ).replace('.', '');
   }
 }

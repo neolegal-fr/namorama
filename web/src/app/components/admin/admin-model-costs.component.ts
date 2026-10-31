@@ -2,7 +2,7 @@ import { Component, Input, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AdminModelCosts, LigneConsommation } from '../../services/admin.service';
-import { AdminWeeklyChartComponent, ChartPoint } from './admin-weekly-chart.component';
+import { AdminSerieChartComponent, ChartPoint } from './admin-serie-chart.component';
 import { coutAuTarif, libelleOperation, tarifDe, tokens, usd, usdUnitaire } from './couts-modele';
 
 /** Une ligne du relevé, et ce qu'elle deviendrait sur le modèle choisi. */
@@ -26,7 +26,7 @@ interface LigneSimulee {
 @Component({
   selector: 'app-admin-model-costs',
   standalone: true,
-  imports: [CommonModule, RouterLink, AdminWeeklyChartComponent],
+  imports: [CommonModule, RouterLink, AdminSerieChartComponent],
   template: `
     <div>
       <div style="display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem">
@@ -177,13 +177,13 @@ interface LigneSimulee {
           </div>
 
           <div style="margin-top: 0.75rem; max-width: 36rem">
-            <app-admin-weekly-chart
+            <app-admin-serie-chart
               title="Coût du modèle"
               unite="$"
               [decimales]="2"
               [points]="pointsSemaines()"
               [note]="'Six derniers mois, indépendamment de la période choisie. Semaines antérieures au relevé hachurées : non mesurées, pas gratuites.'">
-            </app-admin-weekly-chart>
+            </app-admin-serie-chart>
           </div>
         </ng-container>
       </ng-container>

@@ -13,7 +13,7 @@ import { DialogModule } from 'primeng/dialog';
 import { Textarea } from 'primeng/textarea';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { AdminService, AdminMail, AdminUser, UserModelCosts } from '../../services/admin.service';
-import { AdminWeeklyChartComponent, ChartPoint } from './admin-weekly-chart.component';
+import { AdminSerieChartComponent, ChartPoint } from './admin-serie-chart.component';
 import { libelleOperation, parOperation, tokens, usd, usdUnitaire } from './couts-modele';
 import { UserService } from '../../services/user';
 import { KeycloakService } from 'keycloak-angular';
@@ -27,7 +27,7 @@ import { AdminReplayService } from '../../services/admin-replay.service';
     CommonModule, FormsModule, TranslatePipe,
     TableModule, ButtonModule, InputTextModule,
     InputNumberModule, ToastModule, TooltipModule,
-    ConfirmDialog, DialogModule, Textarea, AdminWeeklyChartComponent,
+    ConfirmDialog, DialogModule, Textarea, AdminSerieChartComponent,
   ],
   providers: [MessageService, ConfirmationService],
   template: `
@@ -269,13 +269,13 @@ import { AdminReplayService } from '../../services/admin-replay.service';
           ont payé sur les projets qu'il partage.
         </div>
 
-        <app-admin-weekly-chart
+        <app-admin-serie-chart
           title="Coût par semaine"
           unite="$"
           [decimales]="2"
           [points]="pointsCouts()"
           [note]="d.since ? 'Relevé depuis le ' + (d.since | date:'dd/MM/yyyy') + ' : les semaines antérieures sont hachurées.' : ''">
-        </app-admin-weekly-chart>
+        </app-admin-serie-chart>
       </ng-container>
     </p-dialog>
 

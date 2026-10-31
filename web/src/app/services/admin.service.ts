@@ -169,14 +169,36 @@ export interface Tranche {
   comptes: number;
 }
 
+/** Un mois civil d'activité, décomposé. Voir `MoisActif` côté API. */
+export interface MoisActif {
+  /** `AAAA-MM`. */
+  mois: string;
+  actifs: number;
+  nouveaux: number;
+  /** `null` le premier mois du journal : le mois précédent n'a pas été mesuré. */
+  retenus: number | null;
+  reactives: number | null;
+  perdus: number | null;
+  /** Le journal a commencé en cours de mois. */
+  debutDuJournal: boolean;
+  enCours: boolean;
+}
+
+/** Une case du triangle de cohortes. */
+export interface CaseCohorte {
+  decalage: number;
+  mois: string;
+  actifs: number;
+  enCours: boolean;
+}
+
 /** Qui revient, et combien de temps on reste. Voir `AdminRetention` côté API. */
 export interface AdminRetention {
   journalDepuis: string | null;
   sous7Jours: TauxDeRetour;
   sous30Jours: TauxDeRetour;
-  joursActifs: Tranche[];
-  dureeDeVie: { comptes: number; medianeMinutes: number | null; tranches: Tranche[] };
-  cohortes: { mois: string; inscrits: number; sous7Jours: TauxDeRetour; sous30Jours: TauxDeRetour }[];
+  mensuel: MoisActif[];
+  cohortes: { mois: string; inscrits: number; suivants: CaseCohorte[] }[];
 }
 
 export interface FeedbackItem {
@@ -235,20 +257,53 @@ export interface PeriodMetrics {
   ratingAccounts: number;
   /** `null` = calcul en échec (pas « zéro visiteur »). Voir `PeriodMetrics` côté API. */
   funnel: FunnelMetrics | null;
+  /** `null` quand le journal d'activité ne couvre pas toute la fenêtre. */
+  engagement: Engagement | null;
+  succes: SuccesMetrics;
+  /** `null` : registre des paiements indisponible — pas « 0 € ». */
+  revenu: RevenuMetrics | null;
+}
+
+/** Fréquence d'usage des comptes actifs. Voir `Engagement` côté API. */
+export interface Engagement {
+  joursActifs: number;
+  joursMesures: number;
+  /** `null` sous 28 jours. */
+  dauMoyen: number | null;
+  /** En % ; `null` sous 28 jours. */
+  dauSurMau: number | null;
+  tranches: { unJour: number; deuxATrois: number; quatreEtPlus: number };
+  nouveaux: number;
+  recurrents: number;
+}
+
+/** Projets de la fenêtre et ceux qui portent un favori. Voir `SuccesMetrics` côté API. */
+export interface SuccesMetrics {
+  projets: number;
+  projetsReussis: number;
+  comptesAvecProjet: number;
+  comptesMultiProjets: number;
+  /** `null` : requête en échec. */
+  retoursEcrits: number | null;
+}
+
+/** Chiffre d'affaires d'une fenêtre. Montants en centimes, par devise. */
+export interface RevenuMetrics {
+  parDevise: { devise: string; centimes: number }[];
+  paiements: number;
+  payants: number;
 }
 
 export interface AdminStats {
   period: PeriodMetrics;
-  /** Même durée, immédiatement avant la période choisie. */
+  /** Mois civil précédent pour un mois, même durée immédiatement avant sinon. */
   previous: PeriodMetrics;
+  /** `AAAA-MM` quand la période est un mois civil. */
+  month: string | null;
+  /** Comptes mesurés, tous temps. */
   totalUsers: number;
-  totalProjects: number;
-  totalSuggestions: number;
-  totalBrandReports: number;
-  avgSuggestionsPerProject: number;
-  avgFavoritesPerProject: number;
-  totalFreeCredits: number;
-  totalPackCredits: number;
+  /** Comptes mesurés ayant payé au moins une fois ; `null` : registre indisponible. */
+  payingUsersEver: number | null;
   /** `AAAA-MM-JJ` du premier jour mesuré par le journal d'activité, ou `null`. */
   activityTrackingSince: string | null;
   /**
@@ -261,29 +316,35 @@ export interface AdminStats {
   pricingTrackingSince: string;
 }
 
-/** Un point hebdomadaire. `week` est le lundi, au format `AAAA-MM-JJ`. */
-export interface WeeklyPoint {
-  week: string;
+/** Un point mensuel. `month` au format `AAAA-MM`. Voir `MonthlyPoint` côté API. */
+export interface MonthlyPoint {
+  month: string;
+  /** Mois en cours : estompé, exclu des moyennes. */
+  current: boolean;
   newUsers: number;
-  /** `null` avant le démarrage du journal — un trou dans la courbe, pas un zéro. */
-  activeUsers: number | null;
-  projects: number;
-  creditsConsumed: number;
-  /** Visites de la semaine. `null` avant le démarrage du journal des visites. */
-  visits: number | null;
-  /** Suggestions de la semaine notées 👍 / 👎. */
-  likes: number;
-  dislikes: number;
-  /** Visites ayant ouvert le dialogue des packs. `null` : semaine non mesurée. */
-  pricingViewed: number | null;
+  /** `null` avant le journal d'activité. */
+  active: MoisActif | null;
+  /** `null` : registre indisponible. */
+  revenue: { devise: string; centimes: number }[] | null;
+  /** `null` avant le relevé : non mesuré, pas gratuit. */
+  aiCostUsd: number | null;
+  aiCostPartial: boolean;
 }
 
 export interface AdminSeries {
-  weeks: WeeklyPoint[];
+  months: MonthlyPoint[];
   activityTrackingSince: string | null;
-  visitTrackingSince: string | null;
-  pricingTrackingSince: string;
+  aiCostTrackingSince: string | null;
 }
+
+/**
+ * Une période du tableau de bord : fenêtre glissante, mois civil ou plage libre.
+ * C'est elle que l'URL porte, et que partagent le tableau de bord et Coûts IA.
+ */
+export type PeriodeAdmin =
+  | { type: 'glissante'; jours: 7 | 30 }
+  | { type: 'mois'; mois: string }
+  | { type: 'plage'; du: string; au: string };
 
 @Injectable({ providedIn: 'root' })
 export class AdminService {
@@ -314,20 +375,24 @@ export class AdminService {
     return this.http.patch<AdminUser>(`${this.base}/users/${userId}/credits`, { delta, reason });
   }
 
-  getStats(from?: Date, to?: Date): Observable<AdminStats> {
+  /** Indicateurs d'une période : un mois civil passe par `month`, le reste par `from`/`to`. */
+  getStats(from?: Date, to?: Date, month?: string): Observable<AdminStats> {
     let params = new HttpParams();
-    if (from) params = params.set('from', from.toISOString());
-    if (to) params = params.set('to', to.toISOString());
+    if (month) params = params.set('month', month);
+    else {
+      if (from) params = params.set('from', from.toISOString());
+      if (to) params = params.set('to', to.toISOString());
+    }
     return this.http.get<AdminStats>(`${this.base}/stats`, { params });
   }
 
   /**
-   * Historique hebdomadaire. Appel distinct de `getStats` : la série ne dépend
+   * Historique mensuel. Appel distinct de `getStats` : la série ne dépend
    * pas de la période choisie et n'a donc pas à être rejouée à chaque clic.
    */
-  getSeries(weeks = 26): Observable<AdminSeries> {
+  getSeries(months = 12): Observable<AdminSeries> {
     return this.http.get<AdminSeries>(`${this.base}/series`, {
-      params: new HttpParams().set('weeks', weeks),
+      params: new HttpParams().set('months', months),
     });
   }
 

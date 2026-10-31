@@ -24,6 +24,7 @@ describe('AdminService — tri de la liste des utilisateurs', () => {
       {} as any,                               // dataSource
       { error: jest.fn() } as any,             // journalisation
       { coutsParCompte: jest.fn().mockResolvedValue(new Map()) } as any, // coûts du modèle
+      {} as any,                               // fidélité
     );
     // Les deux compteurs ne sont pas appelés quand la page est vide.
     return { service, qb };
