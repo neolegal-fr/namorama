@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { User } from '../users/entities/user.entity';
@@ -10,6 +10,7 @@ import { AppLoggerService } from '../common/logging/app-logger.service';
 import { comptesMesures, creditsGratuitsSql, jourISO, lundiDe, semaineSql } from './predicats';
 import { FREE_MONTHLY_QUOTA, renouvellementDu } from '../users/users.service';
 import { ModelCostsService } from './model-costs.service';
+import { ActiviteCompte, Engagement, bornesDuMois, engagement, estUnMois, moisPrecedent } from './indicateurs';
 
 export interface AdminUserRow {
   id: number;
@@ -159,19 +160,57 @@ export interface PeriodMetrics {
    * qu'une carte nouvelle emporte les quinze autres avec elle.
    */
   funnel: FunnelMetrics | null;
+  /**
+   * Fréquence et profondeur d'usage des comptes actifs, tirées du journal
+   * d'activité. `null` quand le journal ne couvre pas toute la fenêtre : les
+   * comptes actifs peuvent alors venir de `lastLogin`, qui ne dit rien des jours.
+   */
+  engagement: Engagement | null;
+  succes: SuccesMetrics;
+  /** `null` si le registre des paiements n'a pas répondu (table absente, jointure). */
+  revenu: RevenuMetrics | null;
+}
+
+/**
+ * Ce que le produit promet — trouver un nom — et ce que les gens en disent.
+ *
+ * L'unité est le PROJET (une recherche), daté de sa création ; il « réussit »
+ * s'il porte au moins un favori, quelle que soit la date de la note, faute
+ * d'horodatage. Relevé le 31/10/2026 : 8 projets sur 52.
+ */
+export interface SuccesMetrics {
+  projets: number;
+  /** Projets portant au moins un nom en favori (`rating = 'liked'`). */
+  projetsReussis: number;
+  /** Comptes ayant créé au moins un projet dans la fenêtre. */
+  comptesAvecProjet: number;
+  /** Parmi eux, ceux qui en ont créé plus d'un. */
+  comptesMultiProjets: number;
+  /** Retours écrits non rejetés. `null` si la requête a échoué. */
+  retoursEcrits: number | null;
+}
+
+/** Le chiffre d'affaires d'une fenêtre, lu dans le registre des paiements. */
+export interface RevenuMetrics {
+  /** Montants encaissés, par devise, en centimes. Vide sans paiement. */
+  parDevise: { devise: string; centimes: number }[];
+  paiements: number;
+  /** Comptes distincts ayant payé dans la fenêtre. */
+  payants: number;
 }
 
 export interface AdminStats {
   period: PeriodMetrics;
   previous: PeriodMetrics;
+  /**
+   * Mois civil affiché (`AAAA-MM`), ou `null` pour une fenêtre glissante. Un
+   * mois se compare au mois civil précédent, pas aux N jours qui précèdent.
+   */
+  month: string | null;
+  /** Comptes mesurés, tous temps : dénominateur de la conversion vers le payant. */
   totalUsers: number;
-  totalProjects: number;
-  totalSuggestions: number;
-  totalBrandReports: number;
-  avgSuggestionsPerProject: number;
-  avgFavoritesPerProject: number;
-  totalFreeCredits: number;
-  totalPackCredits: number;
+  /** Comptes mesurés ayant payé au moins une fois. `null` : registre indisponible. */
+  payingUsersEver: number | null;
   /**
    * Premier jour couvert par le journal d'activité (`AAAA-MM-JJ`), ou `null`
    * s'il est vide. Sert à l'interface pour dire « mesuré depuis le … » au lieu
@@ -662,29 +701,157 @@ export class AdminService {
    * 3. Ni l'un ni l'autre → `null`. Renvoyer zéro ferait passer une absence de
    *    mesure pour une absence d'usage.
    */
-  private async comptesActifs(debut: Date, fin: Date, debutJournal: string | null): Promise<number | null> {
+  private async activite(
+    debut: Date, fin: Date, debutJournal: string | null,
+  ): Promise<{ activeUsers: number | null; engagement: Engagement | null }> {
     const premierJour = AdminService.minuitProche(debut);
     const dernierJour = new Date(AdminService.minuitProche(fin).getTime() - 24 * 60 * 60 * 1000);
 
     if (debutJournal && dernierJour >= premierJour && AdminService.jourISO(premierJour) >= debutJournal) {
+      // Une ligne par compte actif : son nombre de jours et sa date de création.
+      // Le MAU, la fréquence et la part de récurrents en découlent ensemble —
+      // ils ne peuvent donc pas se contredire.
       const rows = await this.dataSource.query(
-        `SELECT COUNT(DISTINCT a.userId) AS n
+        `SELECT a.userId, COUNT(*) AS jours, u.createdAt
            FROM user_activity_day a
            INNER JOIN user u ON u.id = a.userId
-          WHERE ${AdminService.comptesMesures()} AND a.day >= ? AND a.day <= ?`,
+          WHERE ${AdminService.comptesMesures()} AND a.day >= ? AND a.day <= ?
+          GROUP BY a.userId, u.createdAt`,
         [AdminService.jourISO(premierJour), AdminService.jourISO(dernierJour)],
       );
-      return Number(rows[0]?.n ?? 0);
+      const comptes: ActiviteCompte[] = rows.map((r: any) => ({ jours: Number(r.jours), createdAt: new Date(r.createdAt) }));
+
+      // Un mois en cours n'a pas encore vécu ses derniers jours : la moyenne
+      // quotidienne se rapporte aux jours écoulés, sans quoi le 3 du mois
+      // afficherait un DAU divisé par dix.
+      const aujourdhui = AdminService.minuitProche(new Date());
+      const finMesure = dernierJour < aujourdhui ? dernierJour : aujourdhui;
+      const joursMesures = Math.max(1, Math.round((finMesure.getTime() - premierJour.getTime()) / 86_400_000) + 1);
+
+      return { activeUsers: comptes.length, engagement: engagement(comptes, debut, joursMesures) };
     }
 
     if (Math.abs(Date.now() - fin.getTime()) <= AdminService.MAINTENANT_MS) {
-      return this.userRepo.createQueryBuilder('u')
+      const n = await this.userRepo.createQueryBuilder('u')
         .where('u.lastLogin >= :from AND u.lastLogin <= :to', { from: debut, to: fin })
         .andWhere(AdminService.comptesMesures())
         .getCount();
+      return { activeUsers: n, engagement: null };
     }
 
-    return null;
+    return { activeUsers: null, engagement: null };
+  }
+
+  /**
+   * Projets de la fenêtre, et combien portent un favori.
+   *
+   * Le taux de succès remplace le ratio 👍 / 👎 : relevé le 31/10/2026, 27 👍
+   * pour 681 👎 venant de 8 comptes — le 👎 sert à écarter un nom en triant,
+   * pas à se plaindre, et le ratio affichait 3,8 % de « satisfaction ».
+   */
+  private async succes(debut: Date, fin: Date): Promise<SuccesMetrics> {
+    const [projets, retours] = await Promise.all([
+      this.dataSource.query(
+        `SELECT COUNT(*) AS projets,
+                COALESCE(SUM(EXISTS (SELECT 1 FROM domain_suggestion ds
+                                      WHERE ds.projectId = p.id AND ds.rating = 'liked')), 0) AS reussis,
+                COUNT(DISTINCT p.userId) AS comptes,
+                (SELECT COUNT(*) FROM (
+                   SELECT p2.userId
+                     FROM project p2
+                     INNER JOIN user u ON u.id = p2.userId
+                    WHERE ${AdminService.comptesMesures()} AND p2.createdAt >= ? AND p2.createdAt <= ?
+                    GROUP BY p2.userId HAVING COUNT(*) > 1) t) AS multi
+           FROM project p
+           INNER JOIN user u ON u.id = p.userId
+          WHERE ${AdminService.comptesMesures()} AND p.createdAt >= ? AND p.createdAt <= ?`,
+        [debut, fin, debut, fin],
+      ),
+      this.retoursEcrits(debut, fin),
+    ]);
+    const r = projets[0] ?? {};
+    return {
+      projets: Number(r.projets ?? 0),
+      projetsReussis: Number(r.reussis ?? 0),
+      comptesAvecProjet: Number(r.comptes ?? 0),
+      comptesMultiProjets: Number(r.multi ?? 0),
+      retoursEcrits: retours,
+    };
+  }
+
+  /**
+   * Retours écrits non rejetés de la fenêtre, comptes admin et internes écartés.
+   *
+   * `feedback.keycloakId` est joint à `user` : comme pour l'entonnoir, une
+   * collation divergente ferait échouer la requête. Elle échoue alors seule.
+   */
+  private async retoursEcrits(debut: Date, fin: Date): Promise<number | null> {
+    try {
+      const rows = await this.dataSource.query(
+        `SELECT COUNT(*) AS n
+           FROM feedback f
+           LEFT JOIN user u ON u.keycloakId = f.keycloakId
+          WHERE f.rejected = 0 AND (u.keycloakId IS NULL OR (${AdminService.comptesMesures()}))
+            AND f.createdAt >= ? AND f.createdAt <= ?`,
+        [debut, fin],
+      );
+      return Number(rows[0]?.n ?? 0);
+    } catch (e) {
+      this.logger.error(`Retours écrits non comptés : ${e}`, undefined, AdminService.name);
+      return null;
+    }
+  }
+
+  /**
+   * Chiffre d'affaires de la fenêtre, depuis le registre des paiements.
+   *
+   * `null` si la requête échoue — table pas encore créée, collation : la carte
+   * dit « indisponible », jamais « 0 € » à la place d'une absence de mesure.
+   */
+  private async revenu(debut: Date, fin: Date): Promise<RevenuMetrics | null> {
+    try {
+      const [parDevise, totaux] = await Promise.all([
+        this.dataSource.query(
+          `SELECT pa.devise AS devise, COALESCE(SUM(pa.montantCentimes), 0) AS centimes
+             FROM paiement pa
+             INNER JOIN user u ON u.keycloakId = pa.keycloakId
+            WHERE ${AdminService.comptesMesures()} AND pa.payeLe >= ? AND pa.payeLe <= ?
+            GROUP BY pa.devise ORDER BY pa.devise`,
+          [debut, fin],
+        ),
+        this.dataSource.query(
+          `SELECT COUNT(*) AS paiements, COUNT(DISTINCT pa.keycloakId) AS payants
+             FROM paiement pa
+             INNER JOIN user u ON u.keycloakId = pa.keycloakId
+            WHERE ${AdminService.comptesMesures()} AND pa.payeLe >= ? AND pa.payeLe <= ?`,
+          [debut, fin],
+        ),
+      ]);
+      return {
+        parDevise: parDevise.map((r: any) => ({ devise: String(r.devise), centimes: Number(r.centimes) })),
+        paiements: Number(totaux[0]?.paiements ?? 0),
+        payants: Number(totaux[0]?.payants ?? 0),
+      };
+    } catch (e) {
+      this.logger.error(`Chiffre d'affaires non calculé : ${e}`, undefined, AdminService.name);
+      return null;
+    }
+  }
+
+  /** Comptes mesurés ayant payé au moins une fois, ou `null` si le registre ne répond pas. */
+  private async payantsDepuisOrigine(): Promise<number | null> {
+    try {
+      const rows = await this.dataSource.query(
+        `SELECT COUNT(DISTINCT pa.keycloakId) AS n
+           FROM paiement pa
+           INNER JOIN user u ON u.keycloakId = pa.keycloakId
+          WHERE ${AdminService.comptesMesures()}`,
+      );
+      return Number(rows[0]?.n ?? 0);
+    } catch (e) {
+      this.logger.error(`Payants non comptés : ${e}`, undefined, AdminService.name);
+      return null;
+    }
   }
 
   // ─── Indicateurs d'une fenêtre ─────────────────────────────────────────────
@@ -695,8 +862,10 @@ export class AdminService {
    * écartés de bout en bout — comptes, projets, suggestions, rapports, crédits.
    */
   private async metriquesPeriode(debut: Date, fin: Date, debutJournal: string | null): Promise<PeriodMetrics> {
-    const [activeUsers, funnel, newProjects, brandReports, credits, activation] = await Promise.all([
-      this.comptesActifs(debut, fin, debutJournal),
+    const [activite, succes, revenu, funnel, newProjects, brandReports, credits, activation] = await Promise.all([
+      this.activite(debut, fin, debutJournal),
+      this.succes(debut, fin),
+      this.revenu(debut, fin),
 
       this.entonnoir(debut, fin),
 
@@ -783,7 +952,10 @@ export class AdminService {
     return {
       from: debut.toISOString(),
       to: fin.toISOString(),
-      activeUsers,
+      activeUsers: activite.activeUsers,
+      engagement: activite.engagement,
+      succes,
+      revenu,
       newUsers,
       newProjects,
       suggestions,
@@ -798,19 +970,48 @@ export class AdminService {
     };
   }
 
-  async getStats(from?: Date, to?: Date): Promise<AdminStats> {
-    const periodEnd = to ?? new Date();
-    const periodStart = from ?? new Date(periodEnd.getTime() - 7 * 24 * 60 * 60 * 1000);
+  /**
+   * Les deux fenêtres comparées : celle demandée, et celle qui la précède.
+   *
+   * - Un **mois civil** se compare au mois civil précédent : septembre (30
+   *   jours) face à août (31), pas aux 30 jours qui précèdent le 1er.
+   * - Une **fenêtre glissante** se compare à la même DURÉE, immédiatement
+   *   avant. Les bornes des agrégats étant INCLUSIVES des deux côtés, la
+   *   précédente s'arrête une milliseconde avant le début de la courante : les
+   *   deux se touchent sans se chevaucher.
+   *
+   * Une fenêtre de moins d'un jour est refusée : à ce volume (2 comptes actifs
+   * par jour en moyenne, relevé du 31/10/2026), elle ne mesure que du bruit.
+   */
+  static fenetres(from?: Date, to?: Date, mois?: string): {
+    debut: Date; fin: Date; debutPrecedent: Date; finPrecedente: Date;
+  } {
+    if (mois !== undefined) {
+      if (!estUnMois(mois)) throw new BadRequestException(`Mois invalide : ${mois} (attendu AAAA-MM)`);
+      const courant = bornesDuMois(mois);
+      const precedent = bornesDuMois(moisPrecedent(mois));
+      return { debut: courant.debut, fin: courant.fin, debutPrecedent: precedent.debut, finPrecedente: precedent.fin };
+    }
+    const fin = to ?? new Date();
+    const debut = from ?? new Date(fin.getTime() - 30 * 24 * 60 * 60 * 1000);
+    if (Number.isNaN(debut.getTime()) || Number.isNaN(fin.getTime())) {
+      throw new BadRequestException('Dates de période invalides');
+    }
+    const duree = fin.getTime() - debut.getTime();
+    if (duree < 24 * 60 * 60 * 1000) {
+      throw new BadRequestException('La période doit couvrir au moins un jour');
+    }
+    return {
+      debut,
+      fin,
+      debutPrecedent: new Date(debut.getTime() - duree),
+      finPrecedente: new Date(debut.getTime() - 1),
+    };
+  }
 
-    // Période de comparaison : même DURÉE, immédiatement avant. Comparer à
-    // « le mois dernier » quand on regarde sept jours ne dirait rien.
-    // Les bornes des agrégats sont INCLUSIVES des deux côtés (`>=` et `<=`) :
-    // faire finir la période précédente sur `periodStart` compterait deux fois
-    // ce qui tombe exactement à la charnière. Elle s'arrête une milliseconde
-    // avant, et les deux fenêtres se touchent sans se chevaucher.
-    const duree = periodEnd.getTime() - periodStart.getTime();
-    const previousEnd = new Date(periodStart.getTime() - 1);
-    const previousStart = new Date(periodStart.getTime() - duree);
+  async getStats(from?: Date, to?: Date, mois?: string): Promise<AdminStats> {
+    const { debut: periodStart, fin: periodEnd, debutPrecedent: previousStart, finPrecedente: previousEnd } =
+      AdminService.fenetres(from, to, mois);
 
     const [debutJournal, debutVisites] = await Promise.all([
       this.debutDuJournal(),
@@ -822,57 +1023,19 @@ export class AdminService {
       this.metriquesPeriode(previousStart, previousEnd, debutJournal),
     ]);
 
-    const [totalUsers, totalProjects, totalSuggestions, totalBrandReports] = await Promise.all([
+    // Plus de moyennes par projet ni de stocks de crédits : aucun ne menait à
+    // une décision, et le stock « pack » mélange achats et crédits offerts.
+    const [totalUsers, payingUsersEver] = await Promise.all([
       this.userRepo.count({ where: { isAdmin: false, isInternal: false } }),
-      this.projectRepo.createQueryBuilder('p')
-        .innerJoin('p.user', 'u')
-        .where(AdminService.comptesMesures())
-        .getCount(),
-      this.suggestionRepo.createQueryBuilder('ds')
-        .innerJoin('ds.project', 'p')
-        .innerJoin('p.user', 'u')
-        .where(AdminService.comptesMesures())
-        .getCount(),
-      this.brandReportRepo.createQueryBuilder('r')
-        .innerJoin(User, 'u', 'u.keycloakId = r.keycloakId')
-        .where(AdminService.comptesMesures())
-        .getCount(),
+      this.payantsDepuisOrigine(),
     ]);
-
-    const avgSuggestionsResult = await this.dataSource.query(
-      `SELECT AVG(cnt) as avg FROM (
-         SELECT COUNT(*) as cnt FROM domain_suggestion ds
-         INNER JOIN project p ON p.id = ds.projectId
-         INNER JOIN user u ON u.id = p.userId
-         WHERE ${AdminService.comptesMesures()}
-         GROUP BY ds.projectId) sub`
-    );
-    const avgFavoritesResult = await this.dataSource.query(
-      `SELECT AVG(cnt) as avg FROM (
-         SELECT COUNT(*) as cnt FROM domain_suggestion ds
-         INNER JOIN project p ON p.id = ds.projectId
-         INNER JOIN user u ON u.id = p.userId
-         WHERE ds.rating = 'liked' AND ${AdminService.comptesMesures()}
-         GROUP BY ds.projectId) sub`
-    );
-
-    const creditsResult = await this.dataSource.query(
-      // Solde disponible, pas solde en base : sans cela, les comptes absents
-      // depuis le mois dernier tireraient le total vers le bas.
-      `SELECT SUM(${creditsGratuitsSql()}) as free, SUM(u.extraCredits) as pack FROM user u WHERE ${AdminService.comptesMesures()}`
-    );
 
     return {
       period,
       previous,
+      month: mois ?? null,
       totalUsers,
-      totalProjects,
-      totalSuggestions,
-      totalBrandReports,
-      avgSuggestionsPerProject: Math.round((avgSuggestionsResult[0]?.avg ?? 0) * 10) / 10,
-      avgFavoritesPerProject: Math.round((avgFavoritesResult[0]?.avg ?? 0) * 10) / 10,
-      totalFreeCredits: Number(creditsResult[0]?.free ?? 0),
-      totalPackCredits: Number(creditsResult[0]?.pack ?? 0),
+      payingUsersEver,
       activityTrackingSince: debutJournal,
       visitTrackingSince: debutVisites,
       pricingTrackingSince: TARIFS_MESURES_DEPUIS,

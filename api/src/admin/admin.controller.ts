@@ -203,14 +203,23 @@ export class AdminController {
     await this.usersService.deleteAccountById(id);
   }
 
+  /**
+   * Indicateurs d'une période, comparés à la précédente.
+   *
+   * `month=AAAA-MM` désigne un mois civil, comparé au mois civil précédent ; à
+   * défaut, `from`/`to` (30 derniers jours par défaut), comparés à la même durée
+   * immédiatement avant.
+   */
   @Get('stats')
   async getStats(
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('month') month?: string,
   ) {
     return this.adminService.getStats(
       from ? new Date(from) : undefined,
       to ? new Date(to) : undefined,
+      month || undefined,
     );
   }
 
