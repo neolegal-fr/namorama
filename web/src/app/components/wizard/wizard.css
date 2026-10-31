@@ -1108,3 +1108,34 @@
     border-color: var(--nm-app-accent);
     border-style: solid;
 }
+
+/* ─── Étape 2 : cadrage (chantier refondre-l-ecran-de-cadrage) ───────────
+   Trois blocs au lieu de sept titres en capitales de même poids : le titre de
+   bloc porte la hiérarchie, les libellés internes restent discrets. */
+.cadrage-bloc__titre {
+    margin: 0;
+    font-family: var(--nm-font-display);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--nm-app-text);
+}
+
+.cadrage-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--nm-app-text-2);
+}
+
+.cadrage-affiner__entete:hover .cadrage-bloc__titre {
+    color: var(--nm-app-accent);
+}
+
+.cadrage-affiner__entete:focus-visible {
+    outline: 2px solid var(--nm-app-accent);
+    outline-offset: -2px;
+    border-radius: 0.75rem;
+}
+
+.cadrage-marche:hover {
+    text-decoration: underline;
+}

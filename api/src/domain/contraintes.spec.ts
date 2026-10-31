@@ -47,7 +47,7 @@ describe('contraintes tirées du brief', () => {
 
   it('sans consigne : aucune borne du brief, défauts effectifs', async () => {
     const c = await extraire(vide, 'Une boulangerie artisanale à Lyon');
-    expect(c).toMatchObject({ minLength: 7, maxLength: 12, briefMinLength: null, briefMaxLength: null, avoidEndings: [], requiredWords: [] });
+    expect(c).toMatchObject({ minLength: 6, maxLength: 10, briefMinLength: null, briefMaxLength: null, avoidEndings: [], requiredWords: [] });
   });
 
   it('réponse illisible : défauts complets', async () => {

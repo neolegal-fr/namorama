@@ -75,7 +75,11 @@ export class SearchDomainsDto {
   @IsOptional()
   dislikedNames?: string[];
 
-  /** Longueur minimale des noms générés (réglage explicite de l'écran de configuration). */
+  /**
+   * Longueur minimale. L'écran ne l'envoie plus : seul un onglet ouvert avant
+   * le chantier `refondre-l-ecran-de-cadrage` le fait encore. Acceptée dès 5
+   * pour ne pas lui renvoyer un 400, puis relevée au plancher de 6.
+   */
   @IsInt()
   @Min(5)
   @Max(12)
@@ -83,12 +87,12 @@ export class SearchDomainsDto {
   minLength?: number;
 
   /**
-   * Longueur maximale, envoyée seulement si l'utilisateur l'a réglée. Absente,
-   * la borne vient du brief, ou du défaut. Inférieure au minimum, elle est
-   * relevée au minimum.
+   * Longueur maximale (« au plus N caractères »), envoyée seulement si
+   * l'utilisateur l'a réglée ; « sans limite » envoie 30. Absente, la borne
+   * vient du brief, ou du défaut. Jamais sous le plancher de 6.
    */
   @IsInt()
-  @Min(5)
+  @Min(6)
   @Max(30)
   @IsOptional()
   maxLength?: number;

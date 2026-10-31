@@ -22,9 +22,20 @@ export class Project {
   @Column({ default: 'any' })
   matchMode: string;
 
-  /** Longueur minimale des noms générés (réglage de l'écran de configuration). */
+  /**
+   * Ancien réglage de longueur minimale. Ni écrit ni lu depuis le chantier
+   * `refondre-l-ecran-de-cadrage` ; gardé pour qu'un retour arrière trouve sa colonne.
+   */
   @Column({ type: 'int', default: 7 })
   minLength: number;
+
+  /**
+   * « Au plus N caractères », réglé à l'étape de cadrage. `null` = non réglé :
+   * la recherche applique la longueur du brief, ou le défaut.
+   * Migration : `2026-11-01-longueur-maximale-du-projet.sql`.
+   */
+  @Column({ type: 'int', nullable: true, default: null })
+  maxLength: number | null;
 
   /** Exemples de noms/domaines aimés, servant de références de style. */
   @Column('simple-array', { default: '' })

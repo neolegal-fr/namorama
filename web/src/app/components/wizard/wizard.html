@@ -165,281 +165,328 @@
         </p>
       </div>
 
-      <!-- Étape 2 : Mots-clés + configuration -->
-      <div *ngIf="activeIndex() === 1" style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 1.5rem">
-        <div>
-          <h2 class="font-bold text-900" style="font-size: 1.5rem; margin: 0 0 0.375rem 0">{{ 'WIZARD.STEP2.TITLE' | translate }}</h2>
-          <p class="text-500" style="margin: 0; font-size: 0.9rem">{{ 'WIZARD.STEP2.SUBTITLE' | translate }}</p>
+      <!-- Étape 2 : Cadrage (chantier refondre-l-ecran-de-cadrage).
+           Sept réglages de même poids, empilés, ne disaient pas qu'ils étaient
+           presque tous remplis d'après la description : on les lisait tous
+           avant d'oser lancer une recherche payante. Désormais : une phrase qui
+           dit ce qui sera cherché, deux blocs essentiels ouverts, le facultatif
+           replié et résumé, et le prix à côté du bouton qui le dépense. -->
+      <div *ngIf="activeIndex() === 1" class="cadrage" style="display: flex; flex-direction: column; align-items: center; gap: 1.25rem">
+
+        <!-- En-tête : le nom de l'étape, puis ce qui va être cherché -->
+        <div class="wizard-field" style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left">
+          <h2 class="font-bold text-900" style="font-size: 1.5rem; margin: 0">{{ 'WIZARD.STEP2.TITLE' | translate }}</h2>
+          <div class="cadrage-resume" style="display: flex; flex-direction: column; gap: 0.375rem; background: var(--nm-app-accent-surface); border: 1px solid var(--nm-app-accent-border); border-radius: 0.75rem; padding: 0.875rem 1rem">
+            <p style="margin: 0; font-size: 1.05rem; line-height: 1.5; color: var(--nm-app-text)" aria-live="polite">{{ resumeCadrage() }}</p>
+            <p style="margin: 0; font-size: 0.8125rem; color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.RESUME_HINT' | translate }}</p>
+          </div>
         </div>
 
-        <!-- 1. EXTENSIONS — le premier réglage du cadrage.
-             Elles vivaient au-dessus des RÉSULTATS : il fallait donc voir une
-             liste pour découvrir qu'on pouvait la changer, et chaque
-             changement relançait la vérification de tout ce qui était déjà à
-             l'écran. Un paramètre qui décide des résultats n'a pas sa place
-             dans les résultats. -->
-        <div class="extensions-bar wizard-field">
-          <!-- La classe porte l'empilement sur petit écran : en ligne, le
-               libellé, les puces et le champ d'ajout se répartissaient de part
-               et d'autre du pli, puces à droite et libellé dessous. -->
+        <!-- 1. LE NOM : style, longueur, contraintes du brief. Le cahier des
+             charges vient en premier : c'est ce que l'utilisateur a écrit. -->
+        <section class="wizard-field cadrage-bloc" aria-labelledby="cadrage-nom"
+                 style="display: flex; flex-direction: column; gap: 1.125rem; text-align: left; background: var(--nm-app-surface); border: 1px solid var(--nm-app-border); border-radius: 0.75rem; padding: 1.125rem 1.25rem">
+          <h3 id="cadrage-nom" class="cadrage-bloc__titre">{{ 'WIZARD.STEP2.BLOCK_NAME' | translate }}</h3>
+
+          <!-- Style : inventés par défaut ; le cumul est dans le libellé, pas
+               dans un « + » orphelin (les trois choix s'excluent). -->
+          <div style="display: flex; flex-direction: column; gap: 0.5rem">
+            <span class="cadrage-label">{{ 'WIZARD.STEP2.STYLE_LABEL' | translate }}</span>
+            <p-selectButton
+              [options]="TYPE_DE_NOM_OPTIONS"
+              [ngModel]="typeDeNom()"
+              (ngModelChange)="choisirTypeDeNom($event)"
+              optionValue="value"
+              [allowEmpty]="false"
+              [ariaLabel]="'WIZARD.STEP2.STYLE_LABEL' | translate"
+              styleClass="select-btn-full">
+              <ng-template #item let-option>{{ option.labelKey | translate }}</ng-template>
+            </p-selectButton>
+            <span style="font-size: 0.8rem; color: var(--nm-app-text-2)">{{ ('WIZARD.STEP2.NAME_TYPE_HINT_' + typeDeNom().toUpperCase()) | translate }}</span>
+          </div>
+
+          <!-- Longueur : UN maximum. L'utilisateur raisonne en « pas trop long » ;
+               le minimum est notre plancher, dit dans la phrase d'aide. Hors
+               réglage, le sélecteur montre ce que la recherche appliquera. -->
+          <div style="display: flex; flex-direction: column; gap: 0.5rem">
+            <div style="display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap">
+              <label class="cadrage-label" for="longueur-max">{{ 'WIZARD.STEP2.LENGTH_TITLE' | translate }}</label>
+              <span class="longueur-origine" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-accent); background: var(--nm-app-accent-surface); border-radius: 999px; padding: 0.05rem 0.5rem">{{ lengthOriginKey() | translate }}</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.625rem; flex-wrap: wrap">
+              <span style="font-size: 0.9rem; color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.LENGTH_AT_MOST' | translate }}</span>
+              <p-select
+                inputId="longueur-max"
+                [options]="maxLengthOptions()"
+                [ngModel]="bornes().max"
+                (ngModelChange)="onMaxLengthChange($event)"
+                optionLabel="label"
+                optionValue="value"
+                style="min-width: 10rem"
+                appendTo="body">
+              </p-select>
+            </div>
+            <span style="font-size: 0.8rem; line-height: 1.45; color: var(--nm-app-text-2)">{{ lengthHint().key | translate: lengthHint().params }}</span>
+            <div *ngIf="isRiskyLength()"
+                 style="display: flex; align-items: flex-start; gap: 0.5rem; background: var(--nm-app-verdict-unknown-bg); border: 1px solid var(--nm-app-verdict-unknown-bg); border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.78rem; color: var(--nm-app-verdict-unknown-fg); line-height: 1.45">
+              <i class="pi pi-exclamation-triangle" style="font-size: 0.85rem; margin-top: 0.1rem; flex-shrink: 0" aria-hidden="true"></i>
+              <span>{{ 'WIZARD.STEP2.LENGTH_NARROW_WARNING' | translate:{ n: bornes().min, pct: takenRate() } }}</span>
+            </div>
+            <span style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-3)">{{ 'WIZARD.STEP2.LENGTH_INVENTED_ONLY' | translate }}</span>
+          </div>
+
+          <!-- Contraintes comprises dans la description : retirables avant de
+               payer la recherche. Elles vivaient sous « Longueur », là où
+               personne ne les cherchait. -->
+          <div *ngIf="contraintesComprises().length > 0 || briefReferenceBrands().length > 0"
+               style="display: flex; flex-direction: column; gap: 0.5rem">
+            <span class="cadrage-label">{{ 'WIZARD.STEP2.BRIEF_ALSO' | translate }}</span>
+            <div *ngIf="contraintesComprises().length > 0" style="display: flex; flex-wrap: wrap; gap: 0.4rem">
+              <span *ngFor="let p of contraintesComprises()" class="contrainte-puce"
+                    style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.35rem 0.15rem 0.6rem; border-radius: 999px; border: 1px solid var(--nm-app-border); font-size: var(--nm-text-ui-sm)">
+                {{ p.libelle }}
+                <button type="button" (click)="retirerContrainte(p.cle)" [attr.aria-label]="('WIZARD.STEP2.BRIEF_REMOVE' | translate) + ' : ' + p.libelle"
+                        [title]="'WIZARD.STEP2.BRIEF_REMOVE' | translate"
+                        style="display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; cursor: pointer; padding: 0.15rem; color: inherit">
+                  <i class="pi pi-times" style="font-size: 0.65rem" aria-hidden="true"></i>
+                </button>
+              </span>
+            </div>
+            <span *ngIf="briefReferenceBrands().length > 0" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.DETECTED_BRANDS' | translate:{ brands: briefReferenceBrands().join(', ') } }}</span>
+          </div>
+        </section>
+
+        <!-- 2. LES DOMAINES : extensions et critère. Un paramètre qui décide
+             des résultats n'a pas sa place dans les résultats. -->
+        <section class="wizard-field cadrage-bloc" aria-labelledby="cadrage-domaines"
+                 style="display: flex; flex-direction: column; gap: 0.75rem; text-align: left; background: var(--nm-app-surface); border: 1px solid var(--nm-app-border); border-radius: 0.75rem; padding: 1.125rem 1.25rem">
+          <h3 id="cadrage-domaines" class="cadrage-bloc__titre">{{ 'WIZARD.STEP2.BLOCK_DOMAINS' | translate }}</h3>
           <div class="extensions-row">
-            <h4 class="section-label" style="margin: 0; white-space: nowrap">{{ 'WIZARD.STEP2.EXTENSIONS_TITLE' | translate }}</h4>
             <div style="display: flex; flex-wrap: wrap; gap: 0.375rem; flex: 1">
               <p-chip *ngFor="let ext of selectedExtensions()" [label]="ext" [removable]="true" (onRemove)="removeExtension(ext)"></p-chip>
             </div>
             <div style="display: flex; gap: 0.375rem; align-items: center; flex-shrink: 0">
-              <input pInputText [(ngModel)]="newExtension" [placeholder]="'WIZARD.STEP2.EXTENSIONS_PLACEHOLDER' | translate" style="width: 9rem; height: 2rem; font-size: 0.85rem" (keydown.enter)="addExtension()">
+              <input pInputText [(ngModel)]="newExtension" [placeholder]="'WIZARD.STEP2.EXTENSIONS_PLACEHOLDER' | translate" [attr.aria-label]="'WIZARD.STEP2.EXTENSIONS_ADD' | translate" style="width: 9rem; height: 2.25rem; font-size: 0.85rem" (keydown.enter)="addExtension()">
               <p-button icon="pi pi-plus" size="small" severity="secondary" [outlined]="true" (onClick)="addExtension()" [loading]="recheckLoading()" [attr.aria-label]="'WIZARD.STEP2.EXTENSIONS_ADD' | translate"></p-button>
             </div>
           </div>
-          <!-- Argument à énoncer ICI, près du sélecteur, et pas seulement dans
-               les mentions de crédits : c'est ce qui lève l'autocensure qui
-               pousse à ne vérifier que le .com. -->
-          <div style="margin-top: 0.5rem; font-size: 0.8125rem; color: var(--nm-app-text-2)">
-            {{ 'WIZARD.STEP2.EXTENSIONS_FREE_NOTE' | translate }}
-          </div>
-          <div *ngIf="selectedExtensions().length > 1" style="margin-top: 0.625rem">
+          <div *ngIf="selectedExtensions().length > 1">
             <p-selectButton [options]="matchOptions()" [(ngModel)]="matchMode" styleClass="select-btn-full"></p-selectButton>
             <div *ngIf="matchMode() === 'all'" style="margin-top: 0.375rem; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)">
               {{ 'WIZARD.STEP2.MATCH_ALL_HINT' | translate }}
             </div>
           </div>
-          <div *ngIf="recheckLoading()" style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--nm-app-text-2)">
-            <i class="pi pi-spin pi-spinner" style="margin-right: 0.375rem"></i>{{ 'WIZARD.RECHECKING' | translate }}
+          <!-- L'argument qui lève l'autocensure du « .com seul » -->
+          <span style="font-size: 0.8125rem; color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.EXTENSIONS_FREE_NOTE' | translate }}</span>
+          <div *ngIf="recheckLoading()" style="font-size: 0.8rem; color: var(--nm-app-text-2)">
+            <i class="pi pi-spin pi-spinner" style="margin-right: 0.375rem" aria-hidden="true"></i>{{ 'WIZARD.RECHECKING' | translate }}
           </div>
-        </div>
+        </section>
 
-        <div class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.75rem">
-          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem">
-            <h4 class="section-label">{{ 'WIZARD.STEP2.KEYWORDS_TITLE' | translate }}</h4>
-            <span [style.color]="keywordsFull() ? 'var(--nm-app-verdict-taken-fg)' : ''" class="text-500" style="font-size: var(--nm-text-ui-sm); flex-shrink: 0">
-              {{ 'WIZARD.STEP2.KEYWORDS_COUNT' | translate:{ n: keywords().length, max: MAX_KEYWORDS } }}
-            </span>
-          </div>
-          <div class="flex gap-2">
-            <input pInputText type="text" [(ngModel)]="newKeyword" class="flex-1" [attr.maxlength]="MAX_KEYWORD_LENGTH" [disabled]="keywordsFull()" [placeholder]="'WIZARD.STEP2.ADD_PLACEHOLDER' | translate" (keydown.enter)="addKeyword()">
-            <p-button icon="pi pi-plus" [disabled]="keywordsFull()" (onClick)="addKeyword()"></p-button>
-          </div>
-          <div class="chips-container">
-            <p-chip *ngFor="let keyword of keywords()" class="nm-prive" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
-          </div>
-          <span *ngIf="keywordsFull()" class="text-500" style="font-size: var(--nm-text-ui-sm)">{{ 'WIZARD.STEP2.KEYWORDS_FULL' | translate:{ max: MAX_KEYWORDS } }}</span>
-        </div>
-
-        <!-- Cible internationale ou locale -->
-        <div class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.625rem">
-          <h4 class="section-label">{{ 'WIZARD.STEP2.TARGET_TITLE' | translate }}</h4>
-          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap">
-            <p-selectButton
-              [options]="[{ label: ('WIZARD.STEP2.TARGET_INTL' | translate), value: false }, { label: ('WIZARD.STEP2.TARGET_LOCAL' | translate), value: true }]"
-              [(ngModel)]="isLocal"
-              styleClass="select-btn-full">
-            </p-selectButton>
-          </div>
-          <div *ngIf="isLocal()" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap">
-            <span class="text-500" style="font-size: 0.85rem">{{ 'WIZARD.STEP2.LANGUAGE' | translate }}</span>
-            <p-select
-              [options]="LOCALE_OPTIONS"
-              [(ngModel)]="localeOverride"
-              optionLabel="label"
-              optionValue="value"
-              [placeholder]="detectedLocale() ? (LOCALE_LABELS[detectedLocale()!] + ' (détecté)') : ('WIZARD.STEP2.LANGUAGE_PLACEHOLDER' | translate)"
-              style="min-width: 10rem"
-              appendTo="body">
-            </p-select>
-          </div>
-        </div>
-
-        <!-- Type de nom : inventés par défaut, choix de l'utilisateur (chantier respecter-le-cahier-des-charges) -->
-        <div class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.5rem">
-          <h4 class="section-label">{{ 'WIZARD.STEP2.NAME_TYPE_TITLE' | translate }}</h4>
-          <p-selectButton
-            [options]="TYPE_DE_NOM_OPTIONS"
-            [ngModel]="typeDeNom()"
-            (ngModelChange)="choisirTypeDeNom($event)"
-            optionValue="value"
-            [allowEmpty]="false"
-            styleClass="select-btn-full">
-            <ng-template #item let-option>{{ option.labelKey | translate }}</ng-template>
-          </p-selectButton>
-          <span class="text-500" style="font-size: 0.78rem">{{ ('WIZARD.STEP2.NAME_TYPE_HINT_' + typeDeNom().toUpperCase()) | translate }}</span>
-        </div>
-
-        <!-- #1 : Longueur minimale des noms générés -->
-        <div class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.5rem">
-          <h4 class="section-label">{{ 'WIZARD.STEP2.MIN_LENGTH_TITLE' | translate }}</h4>
-          <p-selectButton
-            [options]="MIN_LENGTH_OPTIONS"
-            [ngModel]="minNameLength()"
-            (ngModelChange)="onMinLengthChange($event)"
-            optionLabel="label"
-            optionValue="value"
-            [allowEmpty]="false"
-            styleClass="select-btn-full">
-          </p-selectButton>
-          <span class="text-500" style="font-size: 0.78rem">{{ 'WIZARD.STEP2.MIN_LENGTH_HINT' | translate:{ n: DEFAULT_MIN_LENGTH } }}</span>
-
-          <!-- Avertissement chiffré : part de .com déjà déposés à cette longueur -->
-          <div *ngIf="isRiskyLength()"
-               style="display: flex; align-items: flex-start; gap: 0.5rem; background: var(--nm-app-verdict-unknown-bg); border: 1px solid var(--nm-app-verdict-unknown-bg); border-radius: 0.5rem; padding: 0.625rem 0.75rem; font-size: 0.78rem; color: var(--nm-app-verdict-unknown-fg); line-height: 1.45">
-            <i class="pi pi-exclamation-triangle" style="font-size: 0.85rem; margin-top: 0.1rem; flex-shrink: 0"></i>
-            <span>{{ 'WIZARD.STEP2.MIN_LENGTH_WARNING' | translate:{ n: minNameLength(), pct: takenRate() } }}</span>
-          </div>
-
-          <!-- Contraintes comprises dans la description : retirables avant de payer la recherche -->
-          <div *ngIf="contraintesComprises().length > 0 || briefReferenceBrands().length > 0"
-               style="display: flex; flex-direction: column; gap: 0.4rem; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.5">
-            <span>
-              <i class="pi pi-sparkles" style="font-size: var(--nm-text-ui-sm); margin-right: 0.3rem"></i>{{ 'WIZARD.STEP2.DETECTED_FROM_BRIEF' | translate }}
-            </span>
-            <div style="display: flex; flex-wrap: wrap; gap: 0.4rem">
-              <span *ngFor="let p of contraintesComprises()" class="contrainte-puce"
-                    style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.35rem 0.15rem 0.6rem; border-radius: 999px; border: 1px solid var(--nm-app-border)">
-                {{ p.libelle }}
-                <button type="button" (click)="retirerContrainte(p.cle)" [attr.aria-label]="'WIZARD.STEP2.BRIEF_REMOVE' | translate"
-                        [title]="'WIZARD.STEP2.BRIEF_REMOVE' | translate"
-                        style="display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; cursor: pointer; padding: 0.15rem; color: inherit">
-                  <i class="pi pi-times" style="font-size: 0.65rem"></i>
-                </button>
+        <!-- 3. AFFINER, facultatif et replié : mots-clés, public, inspirations.
+             Replié, il résume ce qu'il contient ; son ouverture est mesurée
+             (wizard_refine_opened) pour savoir si le repli cache quelque chose
+             d'utile. -->
+        <section class="wizard-field cadrage-bloc" aria-labelledby="cadrage-affiner"
+                 style="display: flex; flex-direction: column; text-align: left; background: var(--nm-app-surface); border: 1px solid var(--nm-app-border); border-radius: 0.75rem">
+          <button type="button" class="cadrage-affiner__entete" (click)="toggleAffiner()" [attr.aria-expanded]="affinerOuvert()" aria-controls="cadrage-affiner-corps"
+                  style="display: flex; align-items: center; gap: 0.75rem; width: 100%; min-height: 2.75rem; padding: 1rem 1.25rem; border: none; background: transparent; cursor: pointer; text-align: left; color: inherit; font: inherit">
+            <span style="display: flex; flex-direction: column; gap: 0.15rem; flex: 1">
+              <span id="cadrage-affiner" class="cadrage-bloc__titre">{{ 'WIZARD.STEP2.BLOCK_REFINE' | translate }}
+                <span style="font-family: var(--nm-font-body); font-weight: 400; font-size: 0.875rem; color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.REFINE_OPTIONAL' | translate }}</span>
               </span>
-            </div>
-            <span *ngIf="briefReferenceBrands().length > 0">{{ 'WIZARD.STEP2.DETECTED_BRANDS' | translate:{ brands: briefReferenceBrands().join(', ') } }}</span>
-          </div>
-        </div>
-
-        <!-- #3 / #4 : inspirations — ce qui existe déjà sur le marché + noms aimés -->
-        <div class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.625rem">
-          <h4 class="section-label">{{ 'WIZARD.STEP2.INSPIRATION_TITLE' | translate }}</h4>
-
-          <!--
-            Le repérage du marché est une DEMANDE, pas un chargement d'écran.
-            C'est l'appel le plus cher du produit (~0,03 $, recherche web en
-            direct) et le plus lent (18 s en médiane) : le déclencher pour
-            quiconque atteint cet écran facturait tout le monde pour une
-            section que la plupart replient sans la lire.
-          -->
-          <button *ngIf="!competitorsLoading() && !competitorsLoaded()"
-                  type="button"
-                  (click)="loadCompetitors()"
-                  class="wizard-market-trigger"
-                  style="display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; cursor: pointer; background: var(--nm-app-surface-alt); border: 1px dashed var(--nm-app-border); border-radius: 0.625rem; padding: 0.75rem 0.875rem">
-            <i class="pi pi-compass" style="font-size: 0.85rem; color: var(--nm-app-accent); flex-shrink: 0"></i>
-            <span style="display: flex; flex-direction: column; gap: 0.15rem">
-              <span style="font-size: 0.85rem; font-weight: 600; color: var(--nm-app-text)">{{ 'WIZARD.STEP2.MARKET_SHOW' | translate }}</span>
-              <span style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.4">{{ 'WIZARD.STEP2.MARKET_SHOW_HINT' | translate }}</span>
+              <span style="font-size: 0.8125rem; color: var(--nm-app-text-2); line-height: 1.4">{{ 'WIZARD.STEP2.REFINE_SUBTITLE' | translate }}</span>
             </span>
-            <i class="pi pi-arrow-right" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); margin-left: auto"></i>
+            <i class="pi pi-chevron-down" aria-hidden="true" style="font-size: 0.85rem; color: var(--nm-app-text-2); transition: transform 0.2s ease"
+               [style.transform]="affinerOuvert() ? 'rotate(180deg)' : 'rotate(0deg)'"></i>
           </button>
 
-          <!--
-            Repérage demandé, rien trouvé. Le dire, plutôt que de faire
-            réapparaître le bouton : il a été payé, et le relancer sur la même
-            description rendrait la même liste vide.
-          -->
-          <p *ngIf="competitorsLoaded() && !competitorsLoading() && competitors().length === 0"
-             style="margin: 0; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.45">
-            {{ 'WIZARD.STEP2.MARKET_EMPTY' | translate }}
-          </p>
+          <!-- Replié : ce que le bloc contient, en trois lignes -->
+          <dl *ngIf="!affinerOuvert()" class="cadrage-affiner__resume"
+              style="margin: 0; padding: 0 1.25rem 1rem; display: grid; grid-template-columns: minmax(6rem, auto) minmax(0, 1fr); column-gap: 0.75rem; row-gap: 0.375rem; font-size: 0.85rem">
+            <dt style="color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.SUMMARY_KEYWORDS' | translate }}</dt>
+            <dd class="nm-prive" style="margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ resumeMotsCles() || ('WIZARD.STEP2.SUMMARY_NONE' | translate) }}</dd>
+            <dt style="color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.SUMMARY_TARGET' | translate }}</dt>
+            <dd style="margin: 0">{{ resumePublic() }}</dd>
+            <dt style="color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.SUMMARY_INSPIRATIONS' | translate }}</dt>
+            <dd class="nm-prive" style="margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ resumeInspirations() }}</dd>
+          </dl>
 
-          <!-- Liste du marché, notable ligne par ligne -->
-          <div *ngIf="competitorsLoading() || competitors().length > 0"
-               style="background: var(--nm-app-surface-alt); border: 1px solid var(--nm-app-border); border-radius: 0.625rem; padding: 0.75rem 0.875rem">
-            <button type="button"
-                    (click)="showCompetitors.set(!showCompetitors())"
-                    style="background: none; border: none; padding: 0; width: 100%; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; text-align: left">
-              <i class="pi pi-compass" style="font-size: 0.85rem; color: var(--nm-app-accent); flex-shrink: 0"></i>
-              <span style="font-size: 0.85rem; font-weight: 600; color: var(--nm-app-text)">{{ 'WIZARD.STEP2.MARKET_TITLE' | translate }}</span>
-              <i *ngIf="competitorsLoading()" class="pi pi-spin pi-spinner" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)"></i>
-              <span *ngIf="!competitorsLoading()" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)">({{ competitors().length }})</span>
-              <span *ngIf="!competitorsLoading() && competitorsSource() === 'web'"
-                    style="font-size: var(--nm-text-ui-sm); font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 999px; background: var(--nm-app-verdict-free-bg); color: var(--nm-app-verdict-free-fg); white-space: nowrap">
-                <i class="pi pi-globe" style="font-size: 0.6rem"></i> {{ 'WIZARD.STEP2.MARKET_LIVE_BADGE' | translate }}
-              </span>
-              <i class="pi pi-chevron-down" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); margin-left: auto; transition: transform 0.2s ease"
-                 [style.transform]="showCompetitors() ? 'rotate(180deg)' : 'rotate(0deg)'"></i>
-            </button>
+          <div *ngIf="affinerOuvert()" id="cadrage-affiner-corps"
+               style="display: flex; flex-direction: column; gap: 1.25rem; padding: 1rem 1.25rem 1.25rem; border-top: 1px solid var(--nm-app-divider)">
 
-            <p *ngIf="competitorsLoading()" style="margin: 0.5rem 0 0 0; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)">
-              {{ 'WIZARD.STEP2.MARKET_LOADING' | translate }}
-            </p>
-
-            <div *ngIf="showCompetitors() && competitors().length > 0" style="margin-top: 0.625rem; display: flex; flex-direction: column; gap: 0.25rem">
-              <p style="margin: 0 0 0.25rem 0; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.45">
-                {{ 'WIZARD.STEP2.MARKET_INSTRUCTION' | translate }}
-              </p>
-
-              <div *ngFor="let c of competitors()"
-                   style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; padding: 0.2rem 0"
-                   [style.opacity]="competitorRating(c.domain) === 'disliked' ? 0.5 : 1">
-                <button type="button"
-                        (click)="setCompetitorRating(c.domain, 'liked')"
-                        style="background: none; border: none; cursor: pointer; padding: 0; flex-shrink: 0; font-size: 0.95rem"
-                        [pTooltip]="'WIZARD.STEP2.MARKET_LIKE' | translate" tooltipPosition="top">
-                  <i class="pi" [class.pi-thumbs-up-fill]="competitorRating(c.domain) === 'liked'" [class.pi-thumbs-up]="competitorRating(c.domain) !== 'liked'"
-                     [style.color]="competitorRating(c.domain) === 'liked' ? 'var(--nm-app-verdict-free-fg)' : 'var(--nm-app-border-strong)'"></i>
-                </button>
-                <button type="button"
-                        (click)="setCompetitorRating(c.domain, 'disliked')"
-                        style="background: none; border: none; cursor: pointer; padding: 0; flex-shrink: 0; font-size: 0.95rem"
-                        [pTooltip]="'WIZARD.STEP2.MARKET_DISLIKE' | translate" tooltipPosition="top">
-                  <i class="pi" [class.pi-thumbs-down-fill]="competitorRating(c.domain) === 'disliked'" [class.pi-thumbs-down]="competitorRating(c.domain) !== 'disliked'"
-                     [style.color]="competitorRating(c.domain) === 'disliked' ? 'var(--nm-app-verdict-taken-fg)' : 'var(--nm-app-border-strong)'"></i>
-                </button>
-                <a [href]="'https://' + c.domain" target="_blank" rel="noopener noreferrer"
-                   style="font-family: var(--nm-font-display); font-weight: 700; color: var(--nm-app-accent); text-decoration: none; flex-shrink: 0"
-                   [style.text-decoration]="competitorRating(c.domain) === 'disliked' ? 'line-through' : 'none'">{{ c.domain }}</a>
-                <span style="color: var(--nm-app-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ c.note }}</span>
+            <!-- Mots-clés : ils orientent, ils ne figurent pas forcément -->
+            <div style="display: flex; flex-direction: column; gap: 0.5rem">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem">
+                <label class="cadrage-label" for="cadrage-mot-cle">{{ 'WIZARD.STEP2.KEYWORDS_TITLE' | translate }}</label>
+                <span *ngIf="keywords().length >= KEYWORDS_COUNTER_FROM" [style.color]="keywordsFull() ? 'var(--nm-app-verdict-taken-fg)' : 'var(--nm-app-text-2)'" style="font-size: var(--nm-text-ui-sm); flex-shrink: 0">
+                  {{ 'WIZARD.STEP2.KEYWORDS_COUNT' | translate:{ n: keywords().length, max: MAX_KEYWORDS } }}
+                </span>
               </div>
+              <span style="font-size: 0.8rem; color: var(--nm-app-text-2); margin-top: -0.25rem">{{ 'WIZARD.STEP2.KEYWORDS_HINT' | translate }}</span>
+              <div class="flex gap-2">
+                <input pInputText id="cadrage-mot-cle" type="text" [(ngModel)]="newKeyword" class="flex-1" [attr.maxlength]="MAX_KEYWORD_LENGTH" [disabled]="keywordsFull()" [placeholder]="'WIZARD.STEP2.ADD_PLACEHOLDER' | translate" (keydown.enter)="addKeyword()">
+                <p-button icon="pi pi-plus" [disabled]="keywordsFull()" (onClick)="addKeyword()" [attr.aria-label]="'WIZARD.STEP2.ADD_PLACEHOLDER' | translate"></p-button>
+              </div>
+              <div class="chips-container">
+                <p-chip *ngFor="let keyword of keywords()" class="nm-prive" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
+              </div>
+              <span *ngIf="keywordsFull()" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.KEYWORDS_FULL' | translate:{ max: MAX_KEYWORDS } }}</span>
+            </div>
 
-              <p style="margin: 0.5rem 0 0 0; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.45">
-                {{ (competitorsSource() === 'web' ? 'WIZARD.STEP2.MARKET_NOTE_WEB' : 'WIZARD.STEP2.MARKET_NOTE') | translate }}
+            <!-- Public : international ou local, et la langue -->
+            <div style="display: flex; flex-direction: column; gap: 0.5rem">
+              <span class="cadrage-label">{{ 'WIZARD.STEP2.TARGET_TITLE' | translate }}</span>
+              <p-selectButton
+                [options]="[{ label: ('WIZARD.STEP2.TARGET_INTL' | translate), value: false }, { label: ('WIZARD.STEP2.TARGET_LOCAL' | translate), value: true }]"
+                [(ngModel)]="isLocal"
+                [ariaLabel]="'WIZARD.STEP2.TARGET_TITLE' | translate"
+                styleClass="select-btn-full">
+              </p-selectButton>
+              <div *ngIf="isLocal()" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap">
+                <label for="cadrage-langue" style="font-size: 0.85rem; color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.LANGUAGE' | translate }}</label>
+                <p-select
+                  inputId="cadrage-langue"
+                  [options]="LOCALE_OPTIONS"
+                  [(ngModel)]="localeOverride"
+                  optionLabel="label"
+                  optionValue="value"
+                  [placeholder]="detectedLocale() ? ('WIZARD.STEP2.LANGUAGE_DETECTED' | translate:{ lang: LOCALE_LABELS[detectedLocale()!] }) : ('WIZARD.STEP2.LANGUAGE_PLACEHOLDER' | translate)"
+                  style="min-width: 10rem"
+                  appendTo="body">
+                </p-select>
+              </div>
+            </div>
+
+            <!-- Inspirations : noms aimés ou à éviter, en saisie libre.
+                 Libellés texte, et non des pouces : les pouces sont des BOUTONS
+                 de notation sur les cartes de résultats. -->
+            <div style="display: flex; flex-direction: column; gap: 0.625rem">
+              <span class="cadrage-label">{{ 'WIZARD.STEP2.SUMMARY_INSPIRATIONS' | translate }}</span>
+              <div class="inspiration-field">
+                <label class="inspiration-field__label" for="liked-examples">{{ 'WIZARD.STEP2.LIKED_EXAMPLES_LABEL' | translate }}</label>
+                <input pInputText id="liked-examples"
+                       [(ngModel)]="likedExamplesInput"
+                       [placeholder]="'WIZARD.STEP2.LIKED_EXAMPLES_PLACEHOLDER' | translate">
+              </div>
+              <div class="inspiration-field">
+                <label class="inspiration-field__label" for="disliked-examples">{{ 'WIZARD.STEP2.DISLIKED_EXAMPLES_LABEL' | translate }}</label>
+                <input pInputText id="disliked-examples"
+                       [(ngModel)]="dislikedExamplesInput"
+                       [placeholder]="'WIZARD.STEP2.DISLIKED_EXAMPLES_PLACEHOLDER' | translate">
+              </div>
+              <span style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)">{{ 'WIZARD.STEP2.EXAMPLES_HINT' | translate }}</span>
+
+              <!-- Le repérage du marché est une DEMANDE, jamais un chargement
+                   d'écran : c'est l'appel le plus cher du produit (~0,09 $,
+                   recherche web en direct) et le plus lent (~18 s). Action
+                   secondaire, durée annoncée. -->
+              <button *ngIf="!competitorsLoading() && !competitorsLoaded()"
+                      type="button"
+                      (click)="loadCompetitors()"
+                      class="nm-link cadrage-marche"
+                      style="align-self: flex-start; display: inline-flex; align-items: center; gap: 0.5rem; min-height: 2.5rem; padding: 0; border: none; background: transparent; cursor: pointer; font: inherit; font-size: 0.875rem; font-weight: 600">
+                <i class="pi pi-compass" aria-hidden="true" style="font-size: 0.85rem"></i>
+                {{ 'WIZARD.STEP2.MARKET_SHOW' | translate }}
+                <span style="font-weight: 400; color: var(--nm-app-text-2)">· {{ 'WIZARD.STEP2.MARKET_DURATION' | translate }}</span>
+              </button>
+
+              <!-- Repérage demandé, rien trouvé : le dire plutôt que de
+                   reproposer un appel payé qui rendrait la même liste vide. -->
+              <p *ngIf="competitorsLoaded() && !competitorsLoading() && competitors().length === 0"
+                 style="margin: 0; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.45">
+                {{ 'WIZARD.STEP2.MARKET_EMPTY' | translate }}
               </p>
+
+              <!-- Liste du marché, notable ligne par ligne -->
+              <div *ngIf="competitorsLoading() || competitors().length > 0"
+                   style="background: var(--nm-app-surface-alt); border: 1px solid var(--nm-app-border); border-radius: 0.625rem; padding: 0.75rem 0.875rem">
+                <button type="button"
+                        (click)="showCompetitors.set(!showCompetitors())"
+                        [attr.aria-expanded]="showCompetitors()"
+                        style="background: none; border: none; padding: 0; width: 100%; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; text-align: left">
+                  <i class="pi pi-compass" aria-hidden="true" style="font-size: 0.85rem; color: var(--nm-app-accent); flex-shrink: 0"></i>
+                  <span style="font-size: 0.85rem; font-weight: 600; color: var(--nm-app-text)">{{ 'WIZARD.STEP2.MARKET_TITLE' | translate }}</span>
+                  <i *ngIf="competitorsLoading()" class="pi pi-spin pi-spinner" aria-hidden="true" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)"></i>
+                  <span *ngIf="!competitorsLoading()" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)">({{ competitors().length }})</span>
+                  <span *ngIf="!competitorsLoading() && competitorsSource() === 'web'"
+                        style="font-size: var(--nm-text-ui-sm); font-weight: 600; padding: 0.1rem 0.45rem; border-radius: 999px; background: var(--nm-app-verdict-free-bg); color: var(--nm-app-verdict-free-fg); white-space: nowrap">
+                    <i class="pi pi-globe" aria-hidden="true" style="font-size: 0.6rem"></i> {{ 'WIZARD.STEP2.MARKET_LIVE_BADGE' | translate }}
+                  </span>
+                  <i class="pi pi-chevron-down" aria-hidden="true" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); margin-left: auto; transition: transform 0.2s ease"
+                     [style.transform]="showCompetitors() ? 'rotate(180deg)' : 'rotate(0deg)'"></i>
+                </button>
+
+                <p *ngIf="competitorsLoading()" style="margin: 0.5rem 0 0 0; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)">
+                  {{ 'WIZARD.STEP2.MARKET_LOADING' | translate }}
+                </p>
+
+                <div *ngIf="showCompetitors() && competitors().length > 0" style="margin-top: 0.625rem; display: flex; flex-direction: column; gap: 0.25rem">
+                  <p style="margin: 0 0 0.25rem 0; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.45">
+                    {{ 'WIZARD.STEP2.MARKET_INSTRUCTION' | translate }}
+                  </p>
+                  <div *ngFor="let c of competitors()"
+                       style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; padding: 0.2rem 0"
+                       [style.opacity]="competitorRating(c.domain) === 'disliked' ? 0.5 : 1">
+                    <button type="button"
+                            (click)="setCompetitorRating(c.domain, 'liked')"
+                            [attr.aria-label]="'WIZARD.STEP2.MARKET_LIKE' | translate"
+                            style="background: none; border: none; cursor: pointer; padding: 0; flex-shrink: 0; font-size: 0.95rem"
+                            [pTooltip]="'WIZARD.STEP2.MARKET_LIKE' | translate" tooltipPosition="top">
+                      <i class="pi" [class.pi-thumbs-up-fill]="competitorRating(c.domain) === 'liked'" [class.pi-thumbs-up]="competitorRating(c.domain) !== 'liked'"
+                         [style.color]="competitorRating(c.domain) === 'liked' ? 'var(--nm-app-verdict-free-fg)' : 'var(--nm-app-border-strong)'"></i>
+                    </button>
+                    <button type="button"
+                            (click)="setCompetitorRating(c.domain, 'disliked')"
+                            [attr.aria-label]="'WIZARD.STEP2.MARKET_DISLIKE' | translate"
+                            style="background: none; border: none; cursor: pointer; padding: 0; flex-shrink: 0; font-size: 0.95rem"
+                            [pTooltip]="'WIZARD.STEP2.MARKET_DISLIKE' | translate" tooltipPosition="top">
+                      <i class="pi" [class.pi-thumbs-down-fill]="competitorRating(c.domain) === 'disliked'" [class.pi-thumbs-down]="competitorRating(c.domain) !== 'disliked'"
+                         [style.color]="competitorRating(c.domain) === 'disliked' ? 'var(--nm-app-verdict-taken-fg)' : 'var(--nm-app-border-strong)'"></i>
+                    </button>
+                    <a [href]="'https://' + c.domain" target="_blank" rel="noopener noreferrer"
+                       style="font-family: var(--nm-font-display); font-weight: 700; color: var(--nm-app-accent); text-decoration: none; flex-shrink: 0"
+                       [style.text-decoration]="competitorRating(c.domain) === 'disliked' ? 'line-through' : 'none'">{{ c.domain }}</a>
+                    <span style="color: var(--nm-app-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ c.note }}</span>
+                  </div>
+                  <p style="margin: 0.5rem 0 0 0; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.45">
+                    {{ (competitorsSource() === 'web' ? 'WIZARD.STEP2.MARKET_NOTE_WEB' : 'WIZARD.STEP2.MARKET_NOTE') | translate }}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
+        </section>
 
-          <!-- Ajout libre de noms appréciés / rejetés -->
-          <!--
-            Libellés texte, et non des pouces : les pouces sont des BOUTONS de
-            notation sur les cartes de résultats. Employés ici comme étiquettes
-            de champ, ils donnent à croire qu'on peut cliquer dessus.
-          -->
-          <div class="inspiration-field">
-            <label class="inspiration-field__label" for="liked-examples">{{ 'WIZARD.STEP2.LIKED_EXAMPLES_LABEL' | translate }}</label>
-            <input pInputText id="liked-examples"
-                   [(ngModel)]="likedExamplesInput"
-                   [placeholder]="'WIZARD.STEP2.LIKED_EXAMPLES_PLACEHOLDER' | translate">
-          </div>
-          <div class="inspiration-field">
-            <label class="inspiration-field__label" for="disliked-examples">{{ 'WIZARD.STEP2.DISLIKED_EXAMPLES_LABEL' | translate }}</label>
-            <input pInputText id="disliked-examples"
-                   [(ngModel)]="dislikedExamplesInput"
-                   [placeholder]="'WIZARD.STEP2.DISLIKED_EXAMPLES_PLACEHOLDER' | translate">
-          </div>
-          <span class="text-500" style="font-size: var(--nm-text-ui-sm)">{{ 'WIZARD.STEP2.EXAMPLES_HINT' | translate }}</span>
-        </div>
-
-        <!-- Mots-clés -->
-        <div class="flex mt-3" class="wizard-field" style=" justify-content: space-between; flex-wrap: wrap; row-gap: 0.5rem">
-          <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
-          <!-- « Continuer vers les extensions » nommait un écran qui n'existe
-               plus. Le libellé nomme maintenant l'ACTION, et elle diffère selon
-               qu'il y a déjà des noms ou non : lancer une recherche coûte des
-               crédits, revoir une liste déjà payée n'en coûte aucun. -->
-          <p-button
-            [label]="(domains().length > 0 ? 'WIZARD.STEP2.SEE_RESULTS_BTN' : 'WIZARD.STEP2.SEARCH_BTN') | translate"
-            [icon]="domains().length > 0 ? 'pi pi-arrow-right' : 'pi pi-search'"
-            [disabled]="keywords().length === 0"
-            (onClick)="goToExtensions()">
-          </p-button>
-        </div>
-
-        <!-- Ligne discrète, pas un encadré : le bloc de signalement était un
-             pavé bordé au texte entièrement souligné en gras vert — plus
-             visible que l'action principale de l'écran. Un seul segment est un
-             lien, le reste est du texte courant. -->
+        <!-- Ligne discrète, pas un encadré : un seul segment est un lien. -->
         <p *ngIf="isLoggedIn()" class="feedback-line">
           <button type="button" class="nm-link" (click)="openFeedback()">{{ 'FEEDBACK.WIZARD_CTA_LINK' | translate }}</button>{{ 'FEEDBACK.WIZARD_CTA_SUFFIX' | translate }}
         </p>
+
+        <!-- Barre d'action COLLÉE en bas : le bouton qui dépense des crédits
+             était tout en bas d'un long écran, sans dire ni le prix ni le solde
+             — ils n'apparaissaient qu'à l'étape 3, la recherche partie. Le
+             libellé nomme l'action : lancer coûte, revoir une liste payée non. -->
+        <div class="wizard-field cadrage-actions"
+             style="position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: nowrap; background: var(--nm-app-bg); border-top: 1px solid var(--nm-app-border); padding: 0.75rem 0">
+          <p-button [label]="'WIZARD.STEP2.BACK_BTN' | translate" icon="pi pi-arrow-left" severity="secondary" (onClick)="prevStep()"></p-button>
+          <!-- Une seule rangée, même à 390 px : la ligne de prix passe à la ligne
+                 plutôt que de pousser le bouton sous « Retour ». -->
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.25rem; margin-left: auto; min-width: 0; flex: 0 1 auto">
+            <p-button
+              [label]="(domains().length > 0 ? 'WIZARD.STEP2.SEE_RESULTS_BTN' : 'WIZARD.STEP2.SEARCH_BTN') | translate"
+              [icon]="domains().length > 0 ? 'pi pi-arrow-right' : 'pi pi-search'"
+              [disabled]="keywords().length === 0"
+              (onClick)="goToExtensions()">
+            </p-button>
+            <span *ngIf="keywords().length === 0" class="cadrage-actions__note" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-verdict-taken-fg); text-align: right">
+              {{ 'WIZARD.STEP2.ACTION_NEEDS_KEYWORD' | translate }}
+            </span>
+            <span *ngIf="keywords().length > 0 && domains().length === 0" class="cadrage-actions__note" style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); text-align: right">
+              {{ 'WIZARD.STEP2.ACTION_COST' | translate }}<ng-container *ngIf="isLoggedIn() && (userService.credits$ | async) as solde"> · {{ 'WIZARD.STEP2.ACTION_BALANCE' | translate:{ n: solde } }}</ng-container>
+            </span>
+          </div>
+        </div>
       </div>
 
       <!-- Étape 3 : Extensions + Recherche + Résultats -->
@@ -586,11 +633,11 @@
             <span style="font-weight: 700; color: var(--nm-app-verdict-unknown-fg); font-size: 0.92rem">{{ 'WIZARD.STEP3.NO_RESULTS_TITLE' | translate }}</span>
           </div>
           <p style="margin: 0 0 0.875rem 0; font-size: 0.82rem; color: var(--nm-app-verdict-unknown-fg); line-height: 1.5">
-            {{ (ecartesParLeBrief() > 0 ? 'WIZARD.STEP3.NO_RESULTS_CONSTRAINTS' : isRiskyLength() ? 'WIZARD.STEP3.NO_RESULTS_SHORT' : 'WIZARD.STEP3.NO_RESULTS_EXPLAIN') | translate:{ n: minNameLength(), ecartes: ecartesParLeBrief() } }}
+            {{ (ecartesParLeBrief() > 0 ? 'WIZARD.STEP3.NO_RESULTS_CONSTRAINTS' : isRiskyLength() ? 'WIZARD.STEP3.NO_RESULTS_SHORT' : 'WIZARD.STEP3.NO_RESULTS_EXPLAIN') | translate:{ n: bornes().max, min: bornes().min, ecartes: ecartesParLeBrief() } }}
           </p>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
-            <p-button *ngIf="minNameLength() < MAX_LENGTH_SETTING"
-              [label]="'WIZARD.STEP3.NO_RESULTS_RELAX' | translate:{ n: relaxedLength() }"
+            <p-button *ngIf="bornes().max < UNLIMITED_LENGTH"
+              [label]="(relaxedLength() >= UNLIMITED_LENGTH ? 'WIZARD.STEP3.NO_RESULTS_RELAX_UNLIMITED' : 'WIZARD.STEP3.NO_RESULTS_RELAX') | translate:{ n: relaxedLength() }"
               icon="pi pi-arrow-up-right"
               size="small"
               (onClick)="relaxLengthAndRetry()">

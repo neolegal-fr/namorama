@@ -1,0 +1,15 @@
+[
+  { "cas": "« 4-5 lettres » : le maximum sous le plancher est ramené à 6", "brief": [4, 5], "reglage": {}, "attendu": { "min": 6, "max": 6, "origine": "brief" } },
+  { "cas": "« 6 lettres exactement »", "brief": [6, 6], "reglage": {}, "attendu": { "min": 6, "max": 6, "origine": "brief" } },
+  { "cas": "« pas plus de 8 lettres »", "brief": [null, 8], "reglage": {}, "attendu": { "min": 6, "max": 8, "origine": "brief" } },
+  { "cas": "« au moins 8 lettres » : maximum par défaut", "brief": [8, null], "reglage": {}, "attendu": { "min": 8, "max": 10, "origine": "brief" } },
+  { "cas": "« au moins 11 lettres » : le maximum suit, deux de plus", "brief": [11, null], "reglage": {}, "attendu": { "min": 11, "max": 13, "origine": "brief" } },
+  { "cas": "ni brief ni réglage : les défauts", "brief": [null, null], "reglage": {}, "attendu": { "min": 6, "max": 10, "origine": "defaut" } },
+  { "cas": "« au plus 9 » réglé sur un brief « 4-5 lettres »", "brief": [4, 5], "reglage": { "maxLength": 9 }, "attendu": { "min": 6, "max": 9, "origine": "utilisateur" } },
+  { "cas": "« sans limite »", "brief": [null, null], "reglage": { "maxLength": 30 }, "attendu": { "min": 6, "max": 30, "origine": "utilisateur" } },
+  { "cas": "« au plus 7 » sur un brief « au moins 8 » : le minimum retombe au plancher", "brief": [8, null], "reglage": { "maxLength": 7 }, "attendu": { "min": 6, "max": 7, "origine": "utilisateur" } },
+  { "cas": "« au plus 12 » sur un brief « au moins 8 » : le minimum du brief tient", "brief": [8, null], "reglage": { "maxLength": 12 }, "attendu": { "min": 8, "max": 12, "origine": "utilisateur" } },
+  { "cas": "minimum 5 envoyé par un ancien onglet : relevé à 6", "brief": [null, null], "reglage": { "minLength": 5 }, "attendu": { "min": 6, "max": 10, "origine": "utilisateur" } },
+  { "cas": "minimum 7 envoyé par un ancien onglet", "brief": [null, null], "reglage": { "minLength": 7 }, "attendu": { "min": 7, "max": 10, "origine": "utilisateur" } },
+  { "cas": "minimum hérité et maximum du brief compatible", "brief": [null, 9], "reglage": { "minLength": 6 }, "attendu": { "min": 6, "max": 9, "origine": "utilisateur" } }
+]

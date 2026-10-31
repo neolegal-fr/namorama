@@ -317,10 +317,22 @@ export function lireNomDeProjet(texte: string): string {
   return nom.length <= NOM_DE_PROJET_MAX ? nom : '';
 }
 
-export const DEFAULT_MIN_NAME_LENGTH = 7;
-/** Plancher absolu réglable depuis l'UI (avec avertissement « difficile »). */
-export const MIN_NAME_LENGTH_FLOOR = 5;
-/** Plafond du réglage de longueur mini côté UI. */
+/**
+ * Plancher de longueur des noms inventés, fixé par le produit et non réglable.
+ * Mesure du 01/08/2026 sur 340 noms prononçables : 83 % des .com sont pris à
+ * 5 caractères, 34 % à 6, 2,5 % à 7 (`TAKEN_RATE` côté web, qui en affiche la
+ * borne basse). Chercher en dessous de 6, c'est payer des tentatives pour une
+ * liste presque vide. Chantier `refondre-l-ecran-de-cadrage`.
+ */
+export const MIN_NAME_LENGTH_FLOOR = 6;
+/** Minimum appliqué faute d'autre indication : le plancher lui-même. */
+export const DEFAULT_MIN_NAME_LENGTH = MIN_NAME_LENGTH_FLOOR;
+/**
+ * Maximum par défaut : assez large pour trouver vite, assez court pour que
+ * « au plus 10 caractères » ne donne pas envie de le baisser.
+ */
+export const DEFAULT_MAX_NAME_LENGTH = 10;
+/** Plafond d'un minimum venu du brief ou d'un ancien onglet. */
 export const MAX_NAME_LENGTH_FLOOR = 12;
 
 export type OrigineDesBornes = 'utilisateur' | 'brief' | 'defaut';
@@ -333,33 +345,38 @@ export type OrigineDesBornes = 'utilisateur' | 'brief' | 'defaut';
  * auparavant il envoyait toujours la longueur minimale, que le serveur
  * prenait pour un choix explicite, et dont il déduisait un maximum élargi à
  * « minimum + 3 ». « Nom court : 4-5 lettres » rendait ainsi `duopawear`.
- * Une borne maximale venue du brief n'est jamais élargie ; seul le plancher
- * technique relève un minimum trop bas.
+ *
+ * L'écran ne règle plus qu'un MAXIMUM : l'utilisateur raisonne en « pas trop
+ * long ». Le minimum est le plancher du produit, relevé seulement par un
+ * minimum du brief qui reste sous le maximum. Tout est relevé au plancher, y
+ * compris un maximum du brief : « 4-5 lettres » donne [6, 6], et l'écran le
+ * dit avant la recherche. `minLength` n'arrive plus que d'un onglet ouvert
+ * avant ce changement. La table `bornes-de-longueur.cas.json` (côté web) fait
+ * foi pour cette fonction et pour son double d'affichage, `bornesAffichees`.
  */
 export function bornesDeLongueur(
   contraintes: Pick<NamingConstraints, 'briefMinLength' | 'briefMaxLength'>,
   reglage: { minLength?: number; maxLength?: number } = {},
 ): { min: number; max: number; origine: OrigineDesBornes } {
-  const plancher = (n: number) => Math.min(Math.max(Math.round(n), MIN_NAME_LENGTH_FLOOR), MAX_NAME_LENGTH_FLOOR);
-  const defautMax = DEFAULT_CONSTRAINTS.maxLength;
-  if (typeof reglage.minLength === 'number' || typeof reglage.maxLength === 'number') {
-    const min = typeof reglage.minLength === 'number'
-      ? plancher(reglage.minLength)
-      : plancher(contraintes.briefMinLength ?? DEFAULT_MIN_NAME_LENGTH);
-    const maxBrief = contraintes.briefMaxLength;
-    const max = typeof reglage.maxLength === 'number'
-      ? reglage.maxLength
-      : maxBrief !== null && maxBrief >= min ? maxBrief : Math.max(defautMax, min + 3);
-    return { min, max: Math.max(max, min), origine: 'utilisateur' };
-  }
+  const borne = (n: number) => Math.min(Math.max(Math.round(n), MIN_NAME_LENGTH_FLOOR), MAX_NAME_LENGTH_FLOOR);
+  const maxParDefaut = (min: number) => Math.max(DEFAULT_MAX_NAME_LENGTH, min + 2);
   const { briefMinLength, briefMaxLength } = contraintes;
-  if (briefMinLength === null && briefMaxLength === null) {
-    return { min: DEFAULT_MIN_NAME_LENGTH, max: defautMax, origine: 'defaut' };
+
+  if (typeof reglage.maxLength === 'number') {
+    const max = Math.max(Math.round(reglage.maxLength), MIN_NAME_LENGTH_FLOOR);
+    const voulu = borne(Math.max(briefMinLength ?? MIN_NAME_LENGTH_FLOOR, reglage.minLength ?? MIN_NAME_LENGTH_FLOOR));
+    return { min: voulu <= max ? voulu : MIN_NAME_LENGTH_FLOOR, max, origine: 'utilisateur' };
   }
-  const min = briefMinLength !== null
-    ? plancher(briefMinLength)
-    : Math.min(DEFAULT_MIN_NAME_LENGTH, Math.max(briefMaxLength!, MIN_NAME_LENGTH_FLOOR));
-  const max = briefMaxLength !== null ? briefMaxLength : Math.max(min + 5, defautMax);
+  if (typeof reglage.minLength === 'number') {
+    const min = borne(reglage.minLength);
+    const max = briefMaxLength !== null && briefMaxLength >= min ? briefMaxLength : maxParDefaut(min);
+    return { min, max, origine: 'utilisateur' };
+  }
+  if (briefMinLength === null && briefMaxLength === null) {
+    return { min: DEFAULT_MIN_NAME_LENGTH, max: DEFAULT_MAX_NAME_LENGTH, origine: 'defaut' };
+  }
+  const min = borne(briefMinLength ?? MIN_NAME_LENGTH_FLOOR);
+  const max = briefMaxLength !== null ? Math.max(briefMaxLength, MIN_NAME_LENGTH_FLOOR) : maxParDefaut(min);
   return { min, max: Math.max(max, min), origine: 'brief' };
 }
 
@@ -391,19 +408,20 @@ export const aucunEcart = (): Ecartes => ({ longueur: 0, terminaison: 0, mot_a_e
  * modèle, qui garantit le résultat : relevé du 31/10/2026, une consigne
  * « sans -ora ni -ia » rendait encore `velmira` et `premina`.
  *
- * Longueur : bornes exactes pour les noms inventés quand le brief fixe un
- * maximum, une lettre de tolérance sinon ; les noms descriptifs et
+ * Longueur : bornes exactes pour les noms inventés. L'écran annonce « au
+ * plus N caractères » : la lettre de tolérance qu'on accordait faute de
+ * maximum dans le brief rendait des noms de N + 1. Les noms descriptifs et
  * culturels, plus longs par nature, ne sont bornés que par le bas. Le reste
  * vaut pour tous les styles.
  */
 export function respecteLesContraintes(
   nom: string,
   style: string,
-  c: Pick<NamingConstraints, 'minLength' | 'maxLength' | 'avoidWords' | 'avoidEndings' | 'requiredWords' | 'briefMaxLength'>,
+  c: Pick<NamingConstraints, 'minLength' | 'maxLength' | 'avoidWords' | 'avoidEndings' | 'requiredWords'>,
 ): MotifDEcart | null {
   const inventé = style === 'standard';
   const min = inventé ? c.minLength : Math.min(c.minLength, DEFAULT_MIN_NAME_LENGTH);
-  const max = inventé ? Math.max(c.maxLength, c.minLength) + (c.briefMaxLength !== null ? 0 : 1) : 63;
+  const max = inventé ? Math.max(c.maxLength, c.minLength) : 63;
   if (nom.length < min || nom.length > max) return 'longueur';
   if (c.avoidEndings.some((t) => nom.endsWith(t))) return 'terminaison';
   if (c.avoidWords.some((w) => w.length > 2 && nom.includes(w))) return 'mot_a_eviter';
@@ -413,7 +431,7 @@ export function respecteLesContraintes(
 
 const DEFAULT_CONSTRAINTS: NamingConstraints = {
   minLength: DEFAULT_MIN_NAME_LENGTH,
-  maxLength: 12,
+  maxLength: DEFAULT_MAX_NAME_LENGTH,
   avoidWords: [],
   referenceBrands: [],
   avoidEndings: [],
@@ -892,7 +910,9 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
     // Le maximum n'est plus élargi ici : il vient de `bornesDeLongueur`, qui
     // ne touche jamais une borne demandée par le brief.
     const maxLen = Math.max(constraints.maxLength, minLen);
-    const wantsShort = minLen < 7;
+    // « Court » se décide par le maximum demandé, pas par le minimum : avec le
+    // plancher à 6, `minLen < 7` aurait mis toutes les recherches en mode court.
+    const wantsShort = maxLen <= 7;
     // Assainir les keywords avant injection dans le prompt : supprimer les séquences
     // qui pourraient tromper le modèle (sauts de ligne, guillemets triples, etc.)
     const sanitizedKeywords = keywords.map(k =>
@@ -963,11 +983,25 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
     const shortHi = Math.min(minLen + 2, maxLen);
     const compoundLo = Math.min(minLen + 1, maxLen);
     const metaHi = Math.min(minLen + 3, maxLen);
+    // Mesuré le 31/10/2026 sur claude-haiku-5-5 : à [6, 6], 11 noms sur 30
+    // sortaient des bornes, payés puis écartés par le filtre. Faire compter les
+    // lettres les y ramène en partie (55 à 80 % dans les bornes selon les passes) ;
+    // « EXACTLY 6 characters » faisait pire (43 %). Le filtre reste la garantie.
+    const bornesDites = `minimum ${minLen}, maximum ${maxLen} characters`;
+    const compter = `Count the letters of every name before writing it: any name outside ${minLen}-${maxLen} characters is discarded.`;
     const lengthRule = wantsShort
-      ? `- LENGTH: minimum ${minLen}, maximum ${maxLen} characters. The user EXPLICITLY wants SHORT, invented, premium names (in the spirit of Qonto, Stripe, Figma, Notion). Favor rare / uncommon letter combinations and unusual sounds to maximize the chance the domain is still available at this short length.`
-      : `- MINIMUM ${minLen} characters, MAXIMUM ${maxLen} characters. CRITICAL: names under ${minLen} characters are almost always already registered and must NOT be generated.`;
-    const shortExamples = wantsShort ? '"orva", "nyxo", "veli", "zuvo", "karos"' : '"treloxy", "voxifyn", "lumiqar", "namifex"';
-    const badShort = wantsShort ? '' : ', "trelox", "voxify", "namify" (too short — under ' + minLen + ' chars)';
+      ? `- LENGTH: ${bornesDites}. ${compter} The user EXPLICITLY wants SHORT, invented, premium names (in the spirit of Qonto, Stripe, Figma, Notion). Favor rare / uncommon letter combinations and unusual sounds to maximize the chance the domain is still available at this short length.`
+      : `- MINIMUM ${minLen} characters, MAXIMUM ${maxLen} characters. ${compter} CRITICAL: names under ${minLen} characters are almost always already registered and must NOT be generated.`;
+    // Les exemples de 4-5 caractères du mode court sont sous le plancher : le
+    // filtre les écarterait, et la consigne ressort ses exemples tels quels.
+    // Pas de remplaçant, pour ne pas ajouter de noms recopiés.
+    const shortExamples = wantsShort ? '' : ' Examples: "treloxy", "voxifyn", "lumiqar", "namifex"';
+    // Un contre-exemple « trop court » doit l'être vraiment : à minLen 6,
+    // « trelox » (6) est une longueur permise.
+    const tropCourts = ['trelox', 'voxify', 'namify'].filter((n) => n.length < minLen);
+    const badShort = tropCourts.length
+      ? `, ${tropCourts.map((n) => `"${n}"`).join(', ')} (too short — under ${minLen} chars)`
+      : '';
 
     styleInstructions.push(`
 === STYLE "standard" (generate exactly ${stdCount} names) ===
@@ -978,7 +1012,7 @@ ${lengthRule}
 - MUST draw inspiration from the semantic keywords below — at least half the names must incorporate a keyword root, sound, or concept.
 
 Distribute the ${stdCount} names across these 4 sub-groups:
-  [short] ${subShort} names — concise invented words, ${minLen}-${shortHi} characters, 2 syllables. Examples: ${shortExamples}
+  [short] ${subShort} names — concise invented words, ${minLen}-${shortHi} characters, 2 syllables.${shortExamples}
   [compound] ${subCompound} names — two keyword roots fused without separator, ${compoundLo}-${maxLen} characters. Examples: "snapflow", "taskbloom", "brandnest"
   [metaphor] ${subMetaphor} names — abstract concept or vivid image tied to the product's benefit, ${minLen}-${metaHi} characters. Examples: "veloria", "zephyra", "aurelix"
   [sound] ${subSound} names — names chosen primarily for their phonetic appeal and memorability, ${minLen}-${metaHi} characters. Examples: "navioq", "kalivo", "pivoxen"
@@ -1582,8 +1616,15 @@ ${langInstruction}`;
       onEvent?.({ type: 'generating' });
       const items = await this.generateDomainIdeas(description, keywords, locale, [...checkedNames], descriptiveNames, culturalNames, likedNames, dislikedNames, constraints, competitorDomains, dislikedStyleDomains, ecartes);
 
-      const newItems = items.filter(item => !checkedNames.has(item.name));
-      newItems.forEach(item => checkedNames.add(item.name));
+      // Filtrer ET marquer d'un même passage : un nom répété DANS le lot (le
+      // modèle le fait quand le cahier des charges ne laisse qu'une issue)
+      // passait autant de fois qu'il apparaissait — vérifié, affiché et
+      // facturé à chaque fois. Relevé le 31/10/2026 : « kwyzqx » ×10, 10 crédits.
+      const newItems = items.filter((item) => {
+        if (checkedNames.has(item.name)) return false;
+        checkedNames.add(item.name);
+        return true;
+      });
 
       if (newItems.length === 0) {
         attempts++;

@@ -15,9 +15,10 @@ describe('respecteLesContraintes', () => {
     expect(respecteLesContraintes('kalvi', 'standard', c)).toBe('longueur');
   });
 
-  it('sans maximum du brief, une lettre de tolérance comme avant', () => {
-    expect(respecteLesContraintes('abcdefghijklm', 'standard', base)).toBeNull(); // 13 = 12 + 1
-    expect(respecteLesContraintes('abcdefghijklmn', 'standard', base)).toBe('longueur');
+  it('« au plus 10 caractères » : pas de lettre de tolérance au-delà du maximum', () => {
+    const c = { ...base, minLength: 6, maxLength: 10 };
+    expect(respecteLesContraintes('abcdefghij', 'standard', c)).toBeNull(); // 10
+    expect(respecteLesContraintes('abcdefghijk', 'standard', c)).toBe('longueur'); // 11
   });
 
   it('un nom descriptif n’est borné que par le bas', () => {
