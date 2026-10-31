@@ -2,7 +2,7 @@ import { Controller, Post, Body, Req, Res, BadRequestException, ForbiddenExcepti
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
 import type { Request, Response } from 'express';
-import { DomainService } from './domain.service';
+import { DomainService, InterpretationRetours } from './domain.service';
 import { RefineDescriptionDto } from './dto/refine-description.dto';
 import { SearchDomainsDto } from './dto/search-domains.dto';
 import { RecheckDomainsDto } from './dto/recheck-domains.dto';
@@ -31,6 +31,24 @@ function resumeDuCahierDesCharges(
     motsImposes: c?.requiredWords?.length ?? 0,
     typeDuBrief: c?.nameType ?? null,
     styles: ['standard', ...(dto.descriptiveNames ? ['descriptive'] : []), ...(dto.culturalNames ? ['cultural'] : [])].join(','),
+  };
+}
+
+/**
+ * Retours sur les noms d'une recherche, sous une forme journalisable : leur
+ * nombre et ce qui en a été compris. Jamais le texte — il dit, comme une
+ * description, ce que le projet cherche.
+ */
+export function resumeDesRetours(retours: string[] | undefined, i: InterpretationRetours | undefined) {
+  return {
+    retours: retours?.length ?? 0,
+    retoursCompris: {
+      bornes: !!i && (i.minLength !== null || i.maxLength !== null),
+      contraintes: (i?.avoidWords.length ?? 0) + (i?.avoidEndings.length ?? 0) + (i?.requiredWords.length ?? 0),
+      formesRetirees: i?.formesRetirees.length ?? 0,
+      langue: !!i?.langue,
+      preference: !!i?.preference,
+    },
   };
 }
 
@@ -263,7 +281,7 @@ export class DomainController {
     try {
       const {
         totalChecked, verifiedNames, attempts, stopReason, minLengthUsed, maxLengthUsed, origineDesBornes,
-        constraints, ecartes, unresolved, sources,
+        constraints, ecartes, unresolved, sources, interpretation,
       } = await this.domainService.findAvailableDomains(
         dto.description,
         dto.keywords,
@@ -284,6 +302,7 @@ export class DomainController {
           minLength: dto.minLength,
           maxLength: dto.maxLength,
           contraintesRetirees: dto.contraintesRetirees ?? [],
+          retours: dto.retours ?? [],
           likedExamples: dto.likedExamples ?? [],
           competitorDomains: dto.competitorDomains ?? [],
           dislikedStyleDomains: dto.dislikedStyleDomains ?? [],
@@ -323,6 +342,8 @@ export class DomainController {
               maxLength: dto.maxLength,
               likedExamples: dto.likedExamples,
               dislikedExamples: dto.dislikedStyleDomains,
+              // Recherche aboutie : ses retours rejoignent le projet (D4).
+              retours: dto.retours,
             },
             manager,
           );
@@ -363,6 +384,9 @@ export class DomainController {
           // mesure du chantier « respecter le cahier des charges ».
           ...resumeDuCahierDesCharges(minLengthUsed, maxLengthUsed, origineDesBornes, constraints, dto),
           ecartes,
+          // Retours sur les noms : combien, et ce qui en a été compris — jamais
+          // leur texte. C'est la mesure du chantier « affiner par retour libre ».
+          ...resumeDesRetours(dto.retours, interpretation),
         });
 
         emit({
@@ -428,6 +452,7 @@ export class DomainController {
         minLength: dto.minLength,
         maxLength: dto.maxLength,
         contraintesRetirees: dto.contraintesRetirees ?? [],
+        retours: dto.retours ?? [],
         likedExamples: dto.likedExamples ?? [],
         competitorDomains: dto.competitorDomains ?? [],
         dislikedStyleDomains: dto.dislikedStyleDomains ?? [],
@@ -453,6 +478,7 @@ export class DomainController {
             maxLength: dto.maxLength,
             likedExamples: dto.likedExamples,
             dislikedExamples: dto.dislikedStyleDomains,
+            retours: dto.retours,
           },
           manager,
         );

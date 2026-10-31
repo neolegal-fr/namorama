@@ -642,6 +642,60 @@
           </p>
         </div>
 
+        <!-- Retours sur les noms (chantier affiner-par-retour-libre). Après avoir
+             vu des noms, dire ce qu'on attend des suivants. Envoyer = « 10 de
+             plus » avec ce retour ; les retours s'additionnent en puces, ne
+             touchent ni la description ni les cartes affichées. Masqué en
+             lecture seule : le serveur refuserait la recherche. Le texte des
+             puces reprend une saisie : nm-prive, et pas de p-chip, qui recopie
+             son libellé dans un attribut que le masquage ne couvre pas. -->
+        <div *ngIf="zoneRetourVisible()" class="wizard-row retours-zone">
+          <div>
+            <p class="retours-zone__titre">{{ 'WIZARD.STEP3.FEEDBACK_TITLE' | translate }}</p>
+            <p class="retours-zone__aide">{{ 'WIZARD.STEP3.FEEDBACK_HINT' | translate }}</p>
+          </div>
+
+          <div *ngIf="retours().length" class="nm-prive retours-zone__liste">
+            <span *ngFor="let texteDuRetour of retours(); let i = index" class="retour-puce">
+              <span>{{ texteDuRetour }}</span>
+              <button type="button" class="retour-puce__retirer" (click)="retirerRetour(i)" [disabled]="loading()"
+                      [attr.aria-label]="'WIZARD.STEP3.FEEDBACK_REMOVE' | translate">
+                <i class="pi pi-times" aria-hidden="true"></i>
+              </button>
+            </span>
+          </div>
+
+          <div class="retours-zone__liste">
+            <button *ngFor="let cle of SUGGESTIONS_DE_RETOUR" type="button" class="retour-suggestion"
+                    [disabled]="loading() || retoursPleins()" (click)="envoyerSuggestion(cle)">
+              {{ ('WIZARD.STEP3.FEEDBACK_SUGGESTION_' + cle) | translate }}
+            </button>
+          </div>
+
+          <div class="retours-zone__saisie">
+            <input pInputText
+                   class="retours-zone__champ"
+                   [ngModel]="retourSaisi()"
+                   (ngModelChange)="retourSaisi.set($event)"
+                   (keydown.enter)="envoyerRetour('saisie')"
+                   [attr.maxlength]="RETOUR_MAX_CARACTERES"
+                   [disabled]="retoursPleins()"
+                   [placeholder]="'WIZARD.STEP3.FEEDBACK_PLACEHOLDER' | translate"
+                   [attr.aria-label]="'WIZARD.STEP3.FEEDBACK_TITLE' | translate">
+            <p-button
+              [label]="'WIZARD.STEP3.FEEDBACK_SEND' | translate"
+              icon="pi pi-send"
+              size="small"
+              [loading]="loading()"
+              [disabled]="!retourSaisi().trim() || retoursPleins()"
+              (onClick)="envoyerRetour('saisie')">
+            </p-button>
+          </div>
+          <small *ngIf="retoursPleins()" class="retours-zone__plein">
+            {{ 'WIZARD.STEP3.FEEDBACK_FULL' | translate:{ max: RETOURS_MAX } }}
+          </small>
+        </div>
+
         <!-- Saisie manuelle d'un nom -->
         <div *ngIf="domains().length > 0 && projectId()" class="wizard-row" style="display: flex; gap: 0.5rem; align-items: center">
           <input pInputText

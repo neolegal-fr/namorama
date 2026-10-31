@@ -120,6 +120,53 @@ describe('DomainController.searchStream — débit et noms vérifiés', () => {
   });
 });
 
+describe('retours sur les noms (chantier affiner-par-retour-libre)', () => {
+  const base = { description: 'une description assez longue pour passer', keywords: ['mot'] };
+  const erreurSur = async (corps: any) =>
+    (await validate(plainToInstance(SearchDomainsDto, { ...base, ...corps }))).find((e) => e.property === 'retours');
+
+  it('accepte 10 retours de 200 caractères, et une requête sans retours', async () => {
+    expect(await erreurSur({ retours: Array.from({ length: 10 }, () => 'x'.repeat(200)) })).toBeUndefined();
+    expect(await erreurSur({})).toBeUndefined();
+  });
+
+  it('refuse un onzième retour, et un retour de 201 caractères', async () => {
+    expect(await erreurSur({ retours: Array.from({ length: 11 }, (_, i) => `r${i}`) })).toBeDefined();
+    expect(await erreurSur({ retours: ['x'.repeat(201)] })).toBeDefined();
+  });
+
+  it('transmet les retours au service et au projet enregistré, et les mesure sans leur texte', async () => {
+    const interpretation = {
+      minLength: null, maxLength: 8, avoidWords: [], avoidEndings: ['ia'], requiredWords: [],
+      formesRetirees: ['compound'], langue: 'French', preference: 'plus chaleureux',
+    };
+    const findAvailableDomains = jest.fn().mockImplementation(async (d: string, k: string[], opts: any) => {
+      const r = await service(3, 'target')(d, k, opts);
+      return { ...r, interpretation };
+    });
+    const { ctrl, event, createOrUpdate } = make(findAvailableDomains);
+    const retours = ['des noms plus francophones', 'pas de noms composés, plus chaleureux'];
+
+    await ctrl.searchStream({ ...dto, retours }, user, fausseReponse(), { headers: {} } as any);
+
+    expect(findAvailableDomains.mock.calls[0][2].retours).toEqual(retours);
+    expect(createOrUpdate.mock.calls[0][1].retours).toEqual(retours);
+    const fin = event.mock.calls.find((c: any[]) => c[0] === 'search_completed')[1];
+    expect(fin).toMatchObject({
+      retours: 2,
+      retoursCompris: { bornes: true, contraintes: 1, formesRetirees: 1, langue: true, preference: true },
+    });
+    expect(JSON.stringify(fin)).not.toMatch(/francophone|composés|chaleureux|French/);
+  });
+
+  it('sans retours : zéro, et rien de compris', async () => {
+    const { ctrl, event } = make(service(1, 'target'));
+    await ctrl.searchStream(dto, user, fausseReponse(), { headers: {} } as any);
+    const fin = event.mock.calls.find((c: any[]) => c[0] === 'search_completed')[1];
+    expect(fin).toMatchObject({ retours: 0, retoursCompris: { bornes: false, contraintes: 0, formesRetirees: 0, langue: false, preference: false } });
+  });
+});
+
 describe('SearchDomainsDto — liste d’exclusion', () => {
   const base = { description: 'une description assez longue pour passer', keywords: ['mot'] };
 

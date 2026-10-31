@@ -6,6 +6,7 @@ export const LIBELLES_OPERATION: Record<string, string> = {
   suggest_name: 'Nom de projet',
   keywords: 'Mots-clés',
   constraints: 'Contraintes',
+  feedback: 'Retours sur les noms',
   competitors: 'Repérage du marché',
   generate_names: 'Génération de noms',
   analyze: 'Analyse des noms',

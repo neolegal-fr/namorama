@@ -257,6 +257,64 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.derniereRechercheIncomplete.set(null);
   }
 
+  // ─── Retours sur les noms (« Affiner ») ────────────────────
+  /**
+   * Après avoir vu des noms, l'utilisateur dit ce qu'il attend des suivants
+   * (chantier `affiner-par-retour-libre`). 👍/👎 ne disaient pas pourquoi, et
+   * le seul autre endroit pour l'écrire était la description — qu'un retour
+   * ne touche JAMAIS. Les retours s'additionnent, du plus ancien au plus
+   * récent, et ne valent que pour les recherches suivantes : les cartes
+   * affichées ne bougent pas.
+   */
+  readonly RETOURS_MAX = 10;
+  readonly RETOUR_MAX_CARACTERES = 200;
+  readonly SUGGESTIONS_DE_RETOUR = ['SHORTER', 'FRENCH', 'NO_COMPOUND', 'SERIOUS', 'PLAYFUL'] as const;
+  retours = signal<string[]>([]);
+  retourSaisi = signal('');
+  /**
+   * Le retour qui accompagne la recherche en cours. Il ne rejoint les puces
+   * qu'à la fin d'une recherche aboutie — le serveur ne l'enregistre qu'alors :
+   * refusée faute de crédits ou arrêtée, il reste dans le champ.
+   */
+  private retourEnAttente: { texte: string; origine: 'suggestion' | 'saisie' } | null = null;
+
+  /** La zone : des noms affichés, un projet qu'on peut modifier, une description. */
+  zoneRetourVisible = computed(() => this.domains().length > 0 && !this.lectureSeule() && !!this.description());
+  retoursPleins = computed(() => this.retours().length >= this.RETOURS_MAX);
+
+  envoyerRetour(origine: 'suggestion' | 'saisie', texteSuggestion?: string) {
+    const texte = (texteSuggestion ?? this.retourSaisi()).trim().slice(0, this.RETOUR_MAX_CARACTERES);
+    if (!texte || this.loading() || this.retoursPleins()) return;
+    this.retourEnAttente = { texte, origine };
+    if (texteSuggestion) this.retourSaisi.set('');
+    this.findDomains(true, [...this.retours(), texte]);
+  }
+
+  envoyerSuggestion(cle: string) {
+    this.envoyerRetour('suggestion', this.translate.instant(`WIZARD.STEP3.FEEDBACK_SUGGESTION_${cle}`));
+  }
+
+  /** La recherche portant le retour a abouti : il rejoint les puces. */
+  private confirmerRetourEnvoye() {
+    const enAttente = this.retourEnAttente;
+    this.retourEnAttente = null;
+    if (!enAttente) return;
+    this.retours.update((r) => [...r, enAttente.texte].slice(-this.RETOURS_MAX));
+    if (enAttente.origine === 'saisie') this.retourSaisi.set('');
+    this.analytics.track('name_feedback_added', { origine: enAttente.origine, actifs: this.retours().length });
+  }
+
+  /** Retirer une puce : la recherche suivante ne la portera plus. */
+  retirerRetour(index: number) {
+    this.retours.update((r) => r.filter((_, i) => i !== index));
+    const id = this.projectId();
+    if (id) {
+      this.projectService.updateProject(id, { retours: this.retours() }).subscribe({
+        error: () => { /* non bloquant : la puce reste retirée pour la session, la recherche suivante enverra la liste */ },
+      });
+    }
+  }
+
   choisirTypeDeNom(v: 'inventes' | 'descriptifs' | 'culturels', parUtilisateur = true) {
     this.descriptiveNames.set(v === 'descriptifs');
     this.culturalNames.set(v === 'culturels');
@@ -1965,6 +2023,9 @@ export class WizardComponent implements OnInit, OnDestroy {
         // La description d'un projet existant n'est pas reformulée à sa
         // réouverture : elle a déjà servi à ses recherches.
         this.descriptionValidee = (project.description ?? '').trim();
+        // Les retours sur les noms vivent sur le projet : ils reviennent avec lui.
+        this.retours.set(Array.isArray(project.retours) ? project.retours : []);
+        this.retourSaisi.set('');
         this.setKeywords(project.keywords);
         this.selectedExtensions.set(project.extensions);
         this.matchMode.set(project.matchMode);
@@ -2070,6 +2131,8 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.briefMinLength.set(null);
     this.briefMaxLength.set(null);
     this.contraintesRetirees.set([]);
+    this.retours.set([]);
+    this.retourSaisi.set('');
     this.choisirTypeDeNom('inventes', false);
     this.typeDeNomTouched.set(false);
     this.likedExamplesInput.set('');
@@ -2680,6 +2743,8 @@ export class WizardComponent implements OnInit, OnDestroy {
   /** Issue #2 — interrompt la recherche en cours (abort du flux) et restaure l'UI. */
   cancelSearch() {
     this.analytics.track('search_cancelled_by_user', { found: this.domains().length });
+    // Arrêtée, la recherche n'enregistre rien : son retour non plus.
+    this.retourEnAttente = null;
     if (this.searchSub) {
       this.searchSub.unsubscribe(); // déclenche controller.abort() côté service
       this.searchSub = null;
@@ -3007,7 +3072,11 @@ export class WizardComponent implements OnInit, OnDestroy {
     });
   }
 
-  async findDomains(append = false) {
+  /**
+   * @param retoursEnvoyes la liste à envoyer quand un retour vient d'être
+   *   saisi : elle inclut ce retour, qui n'a pas encore rejoint les puces.
+   */
+  async findDomains(append = false, retoursEnvoyes?: string[]) {
     if (!this.isLoggedIn()) {
       const state = {
         description: this.description(),
@@ -3083,6 +3152,9 @@ export class WizardComponent implements OnInit, OnDestroy {
       competitorDomains: this.neutralCompetitorDomains(),
       // #4 — styles explicitement rejetés : saisie libre + marché rejeté
       dislikedStyleDomains: this.rejectedStyleReferences(),
+      // Retours sur les noms. Absents quand il n'y en a pas : le serveur garde
+      // alors ceux du projet, au lieu de les effacer avec une liste vide.
+      ...((retoursEnvoyes ?? this.retours()).length ? { retours: retoursEnvoyes ?? this.retours() } : {}),
     }, token).subscribe({
       next: (event: any) => {
         this.clearSearchTimeout();
@@ -3102,6 +3174,8 @@ export class WizardComponent implements OnInit, OnDestroy {
           this.streamProgress.update(p => p ? { ...p, found: this.domains().length } : null);
 
         } else if (event.type === 'done') {
+          // Recherche aboutie : le retour qui l'accompagnait est enregistré.
+          this.confirmerRetourEnvoye();
           // Cumulé sur les ajouts, comme les cartes auxquelles la note le compare.
           this.totalChecked.update(t => (append ? t : 0) + (event.totalChecked || 0));
           if (event.checkedNames?.length) {
@@ -3178,12 +3252,16 @@ export class WizardComponent implements OnInit, OnDestroy {
         this.cdr.detectChanges();
       },
       complete: () => {
+        // Sans `done` (recherche interrompue côté serveur), le retour n'a pas
+        // été enregistré : il reste dans le champ, hors des puces.
+        this.retourEnAttente = null;
         this.streamProgress.set(null);
         this.loading.set(false);
         this.clearSearchTimeout();
         this.cdr.detectChanges();
       },
       error: (err: any) => {
+        this.retourEnAttente = null;
         this.streamProgress.set(null);
         this.loading.set(false);
         this.clearSearchTimeout();

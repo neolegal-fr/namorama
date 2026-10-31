@@ -3,7 +3,7 @@ import { NameVariantsService } from '../../brand-report/trademark/name-variants.
 import { lireBrouillon } from '../../admin/admin-mail.service';
 import { modeleAnthropicFactice, reponseAnthropic } from './modele-ia.testing';
 import {
-  SCHEMA_ANALYSES, SCHEMA_BROUILLON, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_DECOUPAGES, SCHEMA_MOTS_CLES, SCHEMA_NOMS,
+  SCHEMA_ANALYSES, SCHEMA_BROUILLON, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_DECOUPAGES, SCHEMA_MOTS_CLES, SCHEMA_NOMS, SCHEMA_RETOURS,
 } from './schemas';
 
 /**
@@ -74,6 +74,17 @@ describe('Schémas de sortie structurée', () => {
       minLength: 5, avoidWords: ['tech'], referenceBrands: ['Qonto'],
       avoidEndings: ['ora'], requiredWords: ['bloom'], nameType: 'invented', briefMinLength: 5, briefMaxLength: null,
     });
+  });
+
+  it('feedback (retours sur les noms)', async () => {
+    const ex = {
+      minLength: null, maxLength: 8, avoidWords: ['tech'], avoidEndings: ['ia'], requiredWords: [],
+      formesRetirees: ['compound'], langue: 'French', preference: 'warmer, less corporate',
+    };
+    expect(conforme(ex, SCHEMA_RETOURS)).toEqual([]);
+    expect(conforme({ ...ex, formesRetirees: ['autre'] }, SCHEMA_RETOURS)).not.toEqual([]);
+    const i = await service(ex).svc.interpreterRetours(['pas de noms composés, plus de -ia, plus francophone'], { min: 6, max: 10 });
+    expect(i).toMatchObject({ maxLength: 8, avoidWords: ['tech'], avoidEndings: ['ia'], formesRetirees: ['compound'], langue: 'French' });
   });
 
   it('competitors (repli sans outil)', async () => {

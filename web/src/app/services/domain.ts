@@ -88,7 +88,7 @@ export class DomainService {
   }
 
   searchDomainsStream(
-    params: { description: string; keywords: string[]; extensions: string[]; matchMode: string; projectId?: string; projectName?: string; locale?: string | null; excludeNames?: string[]; descriptiveNames?: boolean; culturalNames?: boolean; likedNames?: string[]; dislikedNames?: string[]; minLength?: number; maxLength?: number; contraintesRetirees?: string[]; likedExamples?: string[]; competitorDomains?: string[]; dislikedStyleDomains?: string[] },
+    params: { description: string; keywords: string[]; extensions: string[]; matchMode: string; projectId?: string; projectName?: string; locale?: string | null; excludeNames?: string[]; descriptiveNames?: boolean; culturalNames?: boolean; likedNames?: string[]; dislikedNames?: string[]; minLength?: number; maxLength?: number; contraintesRetirees?: string[]; retours?: string[]; likedExamples?: string[]; competitorDomains?: string[]; dislikedStyleDomains?: string[] },
     token: string,
   ): Observable<any> {
     return new Observable(observer => {
