@@ -451,3 +451,93 @@
 }
 
 .rv-refresh .pi { font-size: 0.72rem; }
+
+/* Retours sur les noms, sous la liste des résultats (chantier
+ * affiner-par-retour-libre). Des classes plutôt que des styles en ligne : le
+ * cliquet du système de design refuse tout `style=` ajouté. */
+.retours-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  background: var(--nm-app-surface);
+  border: 1px solid var(--nm-app-border);
+  border-radius: var(--nm-radius-lg);
+  padding: 14px 16px;
+}
+.retours-zone__titre {
+  margin: 0;
+  font-size: var(--nm-text-ui);
+  font-weight: 600;
+  color: var(--nm-app-text);
+}
+.retours-zone__aide {
+  margin: 2px 0 0;
+  font-size: var(--nm-text-ui-sm);
+  color: var(--nm-app-text-2);
+}
+.retours-zone__liste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.retours-zone__saisie {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.retours-zone__champ {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--nm-text-ui);
+}
+.retours-zone__plein {
+  font-size: var(--nm-text-ui-sm);
+  color: var(--nm-app-verdict-unknown-fg);
+}
+.retour-puce {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 3px 4px 3px 10px;
+  border-radius: var(--nm-radius-pill);
+  background: var(--nm-app-accent-surface);
+  color: var(--nm-app-accent);
+  font-size: var(--nm-text-ui-sm);
+  overflow-wrap: anywhere;
+}
+.retour-puce__retirer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--nm-radius-pill);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.retour-puce__retirer .pi { font-size: 0.65rem; }
+.retour-puce__retirer:hover:not(:disabled) {
+  background: var(--nm-app-accent-border);
+}
+.retour-suggestion {
+  padding: 4px 12px;
+  border-radius: var(--nm-radius-pill);
+  border: 1px solid var(--nm-app-border-strong);
+  background: transparent;
+  color: var(--nm-app-text);
+  font-size: var(--nm-text-ui-sm);
+  cursor: pointer;
+}
+.retour-suggestion:hover:not(:disabled) {
+  border-color: var(--nm-app-accent);
+  color: var(--nm-app-accent);
+}
+.retour-suggestion:disabled,
+.retour-puce__retirer:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

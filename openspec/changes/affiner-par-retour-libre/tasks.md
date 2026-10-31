@@ -65,7 +65,9 @@
   - Navigateur (worktree N=2, comptes de test) : la zone apparaît sous un projet de 10 noms. Ouvert par un invité en lecture seule (30 cartes visibles), elle est absente.
   - Condition : `domains().length > 0 && !lectureSeule() && description()`. Sans résultat, la zone n'est pas rendue (condition dans le code, pas de relevé au navigateur).
   - Titre à l'écran « Ces noms vous parlent ? » : « Affiner » désigne déjà un bloc de l'étape 2 depuis la #171.
-  - Styles dans `styles.css` (`.retours-zone`, `.retour-puce`, `.retour-suggestion`) : `wizard.css` dépasse déjà son budget, et les survols demandent une classe.
+  - Styles dans `web/src/styles/components.css` (`.retours-zone*`, `.retour-puce`, `.retour-suggestion`), avec les jetons `--nm-*`, sans aucun `style=` ajouté au gabarit.
+  - Le cliquet du système de design (#175, arrivé pendant la réalisation) refusait la première version, qui ajoutait 8 styles en ligne (197 → 205). `node web/scripts/verifier-design.mjs` passe désormais.
+  - Revérifié au navigateur après le rebase : même parcours, même rendu.
   - Puces en simples éléments sous `nm-prive`, pas en `p-chip`, qui recopie son libellé dans un attribut. `masquage.spec.ts` surveille `texteDuRetour`.
 - [x] 4.2 Envoyer un retour : l'ajouter au signal `retours`, lancer la recherche en ajout avec `retours` et `excludeNames` (la recherche aboutie les enregistre sur le projet, D4), puis vider le champ. Sur refus faute de crédits, le texte reste dans le champ et n'est pas ajouté. Retirer une puce enregistre la liste par `PATCH /projects/:id`. Vérification : au navigateur, onglet réseau, la requête `search/stream` porte `retours` et les exclusions, les 10 premières cartes restent, et `GET /projects/:id` relu après la recherche porte `retours`.
   - Retour saisi : la requête `search/stream` porte `retours: ["je n'aime pas les noms composés"]` et 23 exclusions. Les 10 cartes du lot 1 restent en tête, la puce apparaît et le champ se vide.
