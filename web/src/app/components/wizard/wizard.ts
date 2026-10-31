@@ -475,7 +475,24 @@ export class WizardComponent implements OnInit, OnDestroy {
 
   // Étape 1
   description = signal('');
-  refinedDescription = signal('');
+  /**
+   * Reformulation proposée, le temps de la confirmation seulement (chantier
+   * `reformulation-systematique`). Elle ne sert à RIEN d'autre : auparavant,
+   * une version proposée et jamais adoptée partait quand même dans les
+   * mots-clés, les contraintes et la recherche (`refinedDescription() ||
+   * description()`), alors que le projet enregistrait l'original — la
+   * recherche portait sur un texte que personne n'avait choisi.
+   */
+  propositionReformulee = signal('');
+  /** Le texte tel que le modèle l'a rendu, pour savoir s'il a été retouché. */
+  private propositionInitiale = '';
+  confirmationReformulation = signal(false);
+  /**
+   * Dernière description validée — choisie à la confirmation, ou reprise d'un
+   * projet ou d'un état restauré. Un texte inchangé depuis n'est pas
+   * reformulé une seconde fois.
+   */
+  private descriptionValidee: string | null = null;
   /**
    * Doit rester aligné sur `DESCRIPTION_MIN_LENGTH` de l'API (`@MinLength` des
    * DTO de description) : en dessous, chaque appel de l'étape 1 repart en 400.
@@ -1538,9 +1555,11 @@ export class WizardComponent implements OnInit, OnDestroy {
     }
     if (savedState) {
       const state = JSON.parse(savedState);
+      // Un ancien état peut porter `refinedDescription` : ignoré. Seule la
+      // description a jamais été la description du projet.
       this.description.set(state.description);
+      this.descriptionValidee = (state.description ?? '').trim();
       this.projectName.set(state.projectName || '');
-      this.refinedDescription.set(state.refinedDescription);
       this.setKeywords(state.keywords);
       this.selectedExtensions.set(state.selectedExtensions || ['.com']);
       this.matchMode.set(state.matchMode || 'any');
@@ -1662,7 +1681,7 @@ export class WizardComponent implements OnInit, OnDestroy {
    */
   loadCompetitors(force = false): Promise<void> {
     if (this.competitorsLoading() || (this.competitorsLoaded() && !force)) return Promise.resolve();
-    const desc = this.refinedDescription() || this.description();
+    const desc = this.description();
     if (!desc || desc.trim().length < this.DESCRIPTION_MIN_LENGTH) return Promise.resolve();
 
     this.competitorsLoading.set(true);
@@ -1823,6 +1842,9 @@ export class WizardComponent implements OnInit, OnDestroy {
         );
         this.projectName.set(project.name);
         this.description.set(project.description);
+        // La description d'un projet existant n'est pas reformulée à sa
+        // réouverture : elle a déjà servi à ses recherches.
+        this.descriptionValidee = (project.description ?? '').trim();
         this.setKeywords(project.keywords);
         this.selectedExtensions.set(project.extensions);
         this.matchMode.set(project.matchMode);
@@ -1905,7 +1927,8 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.projectRole.set('owner');
     this.projectName.set('');
     this.description.set('');
-    this.refinedDescription.set('');
+    this.annulerConfirmation();
+    this.descriptionValidee = null;
     this.keywords.set([]);
     this.domains.set([]);
     this.testedNames.set([]);
@@ -2562,45 +2585,17 @@ export class WizardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // Actions IA
-  async refine() {
-    this.loading.set(true);
-    this.cdr.detectChanges();
-    this.domainService.refineDescription(this.description()).subscribe({
-      next: (res: { refined: string }) => {
-        this.refinedDescription.set(res.refined);
-        this.loading.set(false);
-        // Suggérer un nom dès que la description est raffinée
-        this.autoSuggestName(res.refined);
-        this.cdr.detectChanges();
-      },
-      error: (e) => {
-        this.loading.set(false);
-        this.signalDescriptionFailure(e, 'WIZARD.STEP1.REFINE_ERROR');
-        this.cdr.detectChanges();
-      }
-    });
-  }
+  // Reformulation confirmée (chantier `reformulation-systematique`)
 
-  autoSuggestName(description: string) {
-    // Ne suggérer que si le nom est vide ou générique
-    if (!this.projectName() || this.projectName().includes('...')) {
-      // La branche d'erreur est obligatoire, même vide de conséquence : sans
-      // elle, un 400 remonte en rejet non capturé (« Uncaught [object Object] »
-      // dans les logs client). Un nom de projet non deviné n'est pas un échec —
-      // l'utilisateur le saisit lui-même — donc rien à signaler à l'écran.
-      this.domainService.suggestProjectName(description).subscribe({
-        next: res => {
-          if (res.suggestedName) {
-            this.projectName.set(res.suggestedName);
-            this.cdr.detectChanges();
-          }
-        },
-        error: () => { /* non bloquant : le nom reste celui de l'utilisateur */ },
-      });
-    }
-  }
+  /** Délai au-delà duquel on passe à l'étape 2 sans reformulation. */
+  private readonly REFORMULATION_DELAI_MS = 10_000;
 
+  /**
+   * « Continuer » : la description est d'abord reformulée, et l'étape 2
+   * n'ouvre qu'après le choix de l'utilisateur. Le bouton séparé
+   * « Reformuler avec l'IA » laissait la fonction de côté, et sa version
+   * partait quand même, sans avoir été choisie.
+   */
   async goToKeywords() {
     // Le bouton est déjà inactif en dessous du seuil ; ce garde-fou couvre les
     // autres chemins (restauration d'un état, raccourci clavier) plutôt que de
@@ -2610,11 +2605,92 @@ export class WizardComponent implements OnInit, OnDestroy {
       return;
     }
 
+    const texte = this.description().trim();
+    if (texte !== this.descriptionValidee) {
+      const proposee = await this.demanderReformulation(texte);
+      if (proposee) {
+        this.propositionInitiale = proposee;
+        this.propositionReformulee.set(proposee);
+        this.confirmationReformulation.set(true);
+        this.analytics.track('description_refine_shown', { longueur: texte.length });
+        this.cdr.detectChanges();
+        return;
+      }
+      // Échec, délai dépassé ou texte rendu à l'identique : on avance avec
+      // la description saisie, sans confirmation ni message.
+      this.descriptionValidee = texte;
+    }
+    await this.passerAuCadrage();
+  }
+
+  /**
+   * Rend la version proposée, ou `null` quand il n'y a rien à confirmer :
+   * erreur, délai dépassé, réponse vide ou identique au texte (le repli du
+   * serveur). Montrer une « proposition » égale à ce qu'on vient d'écrire
+   * n'apprend rien.
+   */
+  private async demanderReformulation(texte: string): Promise<string | null> {
+    this.loadingKey.set('WIZARD.STEP1.REFINING');
     this.loading.set(true);
     this.cdr.detectChanges();
-    const descToUse = this.refinedDescription() || this.description();
+    try {
+      const res = await firstValueFrom(
+        this.domainService.refineDescription(texte).pipe(timeout(this.REFORMULATION_DELAI_MS)),
+      );
+      const proposee = (res?.refined ?? '').trim().slice(0, this.DESCRIPTION_MAX_LENGTH);
+      return proposee && proposee !== texte ? proposee : null;
+    } catch {
+      return null;
+    } finally {
+      this.loading.set(false);
+      this.loadingKey.set('WIZARD.LOADING');
+      this.cdr.detectChanges();
+    }
+  }
 
-    // Suggérer un nom avant de passer aux mots-clés si ce n'est pas déjà fait
+  /** La version proposée, éventuellement retouchée, assez longue pour servir. */
+  readonly propositionUtilisable = computed(
+    () => this.propositionReformulee().trim().length >= this.DESCRIPTION_MIN_LENGTH,
+  );
+
+  /** Le choix de la confirmation : le texte retenu devient LA description. */
+  async choisirDescription(choix: 'reformulation' | 'originale') {
+    const proposee = this.propositionReformulee().trim();
+    if (choix === 'reformulation') {
+      if (!this.propositionUtilisable()) return;
+      this.description.set(proposee);
+    }
+    this.analytics.track('description_refine_chosen', {
+      choix,
+      retouchee: choix === 'reformulation' && proposee !== this.propositionInitiale,
+    });
+    this.descriptionValidee = this.description().trim();
+    this.annulerConfirmation();
+    await this.passerAuCadrage();
+  }
+
+  /** Revenir à la saisie : la proposition est abandonnée, sans choix mesuré. */
+  modifierDescription() {
+    this.annulerConfirmation();
+    this.cdr.detectChanges();
+  }
+
+  private annulerConfirmation() {
+    this.confirmationReformulation.set(false);
+    this.propositionReformulee.set('');
+    this.propositionInitiale = '';
+  }
+
+  /** Le cadrage, avec la description retenue : nom, contraintes, mots-clés. */
+  private async passerAuCadrage() {
+    this.loading.set(true);
+    this.cdr.detectChanges();
+    const descToUse = this.description();
+
+    // Suggérer un nom avant de passer aux mots-clés si ce n'est pas déjà fait.
+    // La branche d'erreur est obligatoire, même vide de conséquence : sans
+    // elle, un 400 remonte en rejet non capturé (« Uncaught [object Object] »
+    // dans les logs client).
     if (!this.projectName() || this.projectName().includes('...')) {
       this.domainService.suggestProjectName(descToUse).subscribe({
         next: res => {
@@ -2815,7 +2891,6 @@ export class WizardComponent implements OnInit, OnDestroy {
       const state = {
         description: this.description(),
         projectName: this.projectName(),
-        refinedDescription: this.refinedDescription(),
         keywords: this.keywords(),
         selectedExtensions: this.selectedExtensions(),
         matchMode: this.matchMode(),
@@ -2858,7 +2933,7 @@ export class WizardComponent implements OnInit, OnDestroy {
     const token = await this.keycloak.getToken();
 
     this.searchSub = this.domainService.searchDomainsStream({
-      description: this.refinedDescription() || this.description(),
+      description: this.description(),
       keywords: this.keywords(),
       extensions: this.selectedExtensions(),
       matchMode: this.matchMode(),
