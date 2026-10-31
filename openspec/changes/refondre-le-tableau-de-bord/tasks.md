@@ -57,10 +57,12 @@
   - Vérifié le 31/10/2026, octobre, mesures prises au même instant (la base locale est partagée avec d'autres sessions et bougeait) : API = contrôle sur actifs 11 / 18 jours / 9 nouveaux, projets 12 dont 4 réussis par 8 comptes, 2 multi, 2 retours, 1 paiement 990 c, 9 inscrits, 12 comptes. Le bandeau rend ces champs sans recalcul (vérifié au navigateur en 5.2).
 - [x] 6.2 Appliquer en production la migration de 1.1, après sauvegarde datée dans `backups/`. Vérifier `SHOW CREATE TABLE paiement`.
   - Fait le 31/10/2026 à 11:23 : sauvegarde `backups/namorama-2026-10-31-avant-registre-paiements.sql` (5,8 Mo), migration appliquée, `paiement.keycloakId` en `utf8mb4_unicode_ci` comme `user` (et `feedback`), index unique sur `sessionId`, 0 ligne.
-- [ ] 6.3 Déployer l'image (après le build GitHub Actions), puis lancer le rattrapage de 1.4 deux fois dans le conteneur. Vérifier : 2 lignes dans `paiement` (ou 0 si les sessions de mars sont en mode test, noté ici), soldes de crédits inchangés.
+- [x] 6.3 Déployer l'image (après le build GitHub Actions), puis lancer le rattrapage de 1.4 deux fois dans le conteneur. Vérifier : 2 lignes dans `paiement` (ou 0 si les sessions de mars sont en mode test, noté ici), soldes de crédits inchangés.
+  - Déployé le 31/10/2026 à 11:38 (PR #167, `d393332`), démarrage sans erreur ni avertissement. Rattrapage lancé deux fois : les 2 sessions de mars sont `cs_test_…` — **paiements en mode test**, introuvables avec la clé de production (« No such checkout.session »). **0 ligne**, ce qui est juste : aucun paiement réel depuis l'origine. Le script n'appelle jamais l'ajout de crédits ; rien n'a été écrit.
 
 ## Workflow follow-up
 
 - Après déploiement, ouvrir le tableau de bord en prod sur « 30 jours » et vérifier contre des requêtes en lecture seule : MAU ≈ 52 dont 1 récurrent, taux de succès ≈ 8 sur 52 (valeurs du 31/10/2026, à réactualiser).
+  - Fait le 31/10/2026 à 11:40 (`getStats` exécuté dans le conteneur de prod, contre `q.sql`/`q2.sql` en lecture seule) : projets 53 par 45 comptes, 9 avec favori, 6 multi-projets, 3 retours, 29 👍 / 681 👎 par 9 comptes, DAU moyen 2,1 — identiques. Mois d'octobre : 53 actifs, 52 nouveaux, 1 retenu, 39 perdus — identique au contrôle (53 dont 1 ancien). Le MAU glissant vaut 50 contre 53 au contrôle : la fenêtre « 30 jours » arrondit ses bornes au minuit le plus proche (règle existante de `minuitProche`) et exclut donc le jour en cours et un 1er octobre commencé après midi. Paiements : 0.
 - Au premier achat de pack réel, vérifier qu'une ligne `paiement` apparaît avec le bon montant et qu'aucun `payment_record_failed` n'est journalisé (`python3 - errors`).
 - Archiver le changement une fois ces relevés notés ici, puis vérifier `openspec/specs/` et `openspec validate --all`.
