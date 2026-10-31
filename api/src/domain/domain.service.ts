@@ -363,6 +363,24 @@ export function bornesDeLongueur(
   return { min, max: Math.max(max, min), origine: 'brief' };
 }
 
+/**
+ * Retire du brief les contraintes que l'utilisateur a écartées à l'étape 2.
+ * Clés : `longueur`, `fin:<terminaison>`, `eviter:<mot>`, `avec:<mot>`. Une
+ * contrainte mal comprise par le modèle ne doit pas coûter une recherche.
+ */
+export function retirerContraintes(c: NamingConstraints, retirees: string[] = []): NamingConstraints {
+  if (!retirees.length) return c;
+  const r = new Set(retirees.map((k) => k.toLowerCase()));
+  const longueur = r.has('longueur');
+  return {
+    ...c,
+    ...(longueur ? { briefMinLength: null, briefMaxLength: null } : {}),
+    avoidEndings: c.avoidEndings.filter((t) => !r.has(`fin:${t}`)),
+    avoidWords: c.avoidWords.filter((w) => !r.has(`eviter:${w}`)),
+    requiredWords: c.requiredWords.filter((m) => !r.has(`avec:${m}`)),
+  };
+}
+
 export type MotifDEcart = 'longueur' | 'terminaison' | 'mot_a_eviter' | 'mot_impose';
 export type Ecartes = Record<MotifDEcart, number>;
 export const aucunEcart = (): Ecartes => ({ longueur: 0, terminaison: 0, mot_a_eviter: 0, mot_impose: 0 });
@@ -434,6 +452,8 @@ export interface FindDomainsOptions {
   minLength?: number;
   /** Longueur maxi choisie explicitement dans l'UI — prime sur celle extraite du brief. */
   maxLength?: number;
+  /** Contraintes du brief écartées par l'utilisateur (voir `retirerContraintes`). */
+  contraintesRetirees?: string[];
   /** Noms/domaines cités par l'utilisateur comme références de style. */
   likedExamples?: string[];
   /** Domaines de produits existants du même secteur (à ne pas imiter de trop près). */
@@ -1512,6 +1532,7 @@ ${langInstruction}`;
       dislikedNames = [],
       minLength,
       maxLength,
+      contraintesRetirees = [],
       likedExamples = [],
       competitorDomains = [],
       dislikedStyleDomains = [],
@@ -1534,7 +1555,7 @@ ${langInstruction}`;
     let attempts = 0;
 
     // #1/#2 — extraire une seule fois les contraintes de naming du brief libre
-    const constraints = await this.extractNamingConstraints(description);
+    const constraints = retirerContraintes(await this.extractNamingConstraints(description), contraintesRetirees);
 
     // #1 — réglage de l'écran, sinon brief, sinon défauts (voir `bornesDeLongueur`).
     const bornes = bornesDeLongueur(constraints, { minLength, maxLength });

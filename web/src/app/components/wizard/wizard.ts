@@ -27,6 +27,7 @@ import { SplitButton } from 'primeng/splitbutton';
 import { Menu } from 'primeng/menu';
 import { Toast } from 'primeng/toast';
 import { MenuItem, ConfirmationService, MessageService } from 'primeng/api';
+import { lireNomsSaisis } from './noms-saisis';
 import { UserService } from '../../services/user';
 import { ProjectService, ProjectShare, SharePermission } from '../../services/project';
 import { FeedbackService } from '../../services/feedback';
@@ -117,6 +118,103 @@ export class WizardComponent implements OnInit, OnDestroy {
   /** Autres contraintes devinées du brief, affichées pour transparence. */
   briefAvoidWords = signal<string[]>([]);
   briefReferenceBrands = signal<string[]>([]);
+  briefAvoidEndings = signal<string[]>([]);
+  briefRequiredWords = signal<string[]>([]);
+  /** Bornes écrites dans la description (`null` : elle n'en dit rien). */
+  briefMinLength = signal<number | null>(null);
+  briefMaxLength = signal<number | null>(null);
+  /**
+   * Contraintes du brief que l'utilisateur a retirées, par clé (`longueur`,
+   * `fin:ora`, `eviter:sport`, `avec:bloom`). Envoyées à la recherche : le
+   * serveur réextrait le brief, il doit savoir quoi en ignorer.
+   */
+  contraintesRetirees = signal<string[]>([]);
+
+  /**
+   * Ce que le système a compris du cahier des charges, en puces retirables.
+   * Relevé du 31/10/2026 : 18 projets sur 133 fixaient une longueur, 18 des
+   * mots ou terminaisons à éviter — et les noms rendus les contredisaient.
+   * Les montrer avant la recherche permet de corriger une contrainte mal lue
+   * avant de la payer.
+   */
+  contraintesComprises = computed(() => {
+    const retirees = new Set(this.contraintesRetirees());
+    const t = (k: string, p?: Record<string, unknown>) => this.translate.instant(k, p) as string;
+    const puces: { cle: string; libelle: string }[] = [];
+    const min = this.briefMinLength(), max = this.briefMaxLength();
+    if (min !== null || max !== null) {
+      const libelle = min !== null && max !== null
+        ? (min === max ? t('WIZARD.STEP2.BRIEF_LENGTH_EXACT', { n: min }) : t('WIZARD.STEP2.BRIEF_LENGTH_RANGE', { min, max }))
+        : min !== null ? t('WIZARD.STEP2.BRIEF_LENGTH_MIN', { n: min }) : t('WIZARD.STEP2.BRIEF_LENGTH_MAX', { n: max });
+      puces.push({ cle: 'longueur', libelle });
+    }
+    for (const f of this.briefAvoidEndings()) puces.push({ cle: `fin:${f}`, libelle: t('WIZARD.STEP2.BRIEF_ENDING', { fin: f }) });
+    for (const w of this.briefAvoidWords()) puces.push({ cle: `eviter:${w}`, libelle: t('WIZARD.STEP2.BRIEF_AVOID', { mot: w }) });
+    for (const m of this.briefRequiredWords()) puces.push({ cle: `avec:${m}`, libelle: t('WIZARD.STEP2.BRIEF_REQUIRED', { mot: m }) });
+    return puces.filter((p) => !retirees.has(p.cle));
+  });
+
+  retirerContrainte(cle: string) {
+    this.contraintesRetirees.update((r) => (r.includes(cle) ? r : [...r, cle]));
+    if (cle === 'longueur' && !this.minLengthTouched()) this.minNameLength.set(this.DEFAULT_MIN_LENGTH);
+  }
+
+  // ─── Type de nom ──────────────────────────────────────────
+  /**
+   * Inventés par défaut, pour tout le monde. Les styles descriptif et culturel
+   * étaient activés d'office dès que la région du navigateur était reconnue —
+   * la majorité des visiteurs — et un tiers des noms devenait des collages
+   * longs (`microcrecheprivee`), que personne n'aimait. C'est désormais un
+   * choix, pré-sélectionné d'après le brief, et suggéré quand les noms
+   * inventés déçoivent (décision du 31/10/2026).
+   */
+  readonly TYPES_DE_NOM = ['inventes', 'descriptifs', 'culturels'] as const;
+  typeDeNom = computed<'inventes' | 'descriptifs' | 'culturels'>(() =>
+    this.descriptiveNames() ? 'descriptifs' : this.culturalNames() ? 'culturels' : 'inventes');
+  private typeDeNomTouched = signal(false);
+  readonly TYPE_DE_NOM_OPTIONS = this.TYPES_DE_NOM.map((v) => ({ value: v, labelKey: `WIZARD.STEP2.NAME_TYPE_${v.toUpperCase()}` }));
+
+  /** La dernière recherche a rendu moins que demandé (null : rien à signaler). */
+  derniereRechercheIncomplete = signal<{ found: number; requested: number } | null>(null);
+  /** Bandeau « aucun nom ne vous plaît » fermé : il ne revient pas de la session. */
+  bandeauElargirFerme = signal(false);
+  readonly REJETS_AVANT_SUGGESTION = 5;
+
+  /**
+   * Faut-il proposer d'inclure les noms descriptifs, et pourquoi. Deux
+   * moments : une recherche en noms inventés qui rend moins que demandé, ou
+   * des rejets qui s'accumulent sans un seul favori. Jamais quand les
+   * descriptifs sont déjà inclus.
+   */
+  suggestionElargir = computed<'note' | 'bandeau' | null>(() => {
+    if (this.typeDeNom() !== 'inventes' || this.loading()) return null;
+    if (this.derniereRechercheIncomplete()) return 'note';
+    const d = this.domains();
+    const rejets = d.filter((x) => x.rating === 'disliked').length;
+    const aimes = d.filter((x) => x.rating === 'liked' && !x.isManual).length;
+    if (!this.bandeauElargirFerme() && rejets >= this.REJETS_AVANT_SUGGESTION && aimes === 0) return 'bandeau';
+    return null;
+  });
+
+  elargirAuxDescriptifs() {
+    const origine = this.suggestionElargir();
+    if (!origine) return;
+    this.analytics.track('naming_style_widened', { origine });
+    this.choisirTypeDeNom('descriptifs');
+    this.derniereRechercheIncomplete.set(null);
+    this.findDomains(true);
+  }
+
+  fermerBandeauElargir() {
+    this.bandeauElargirFerme.set(true);
+    this.derniereRechercheIncomplete.set(null);
+  }
+
+  choisirTypeDeNom(v: 'inventes' | 'descriptifs' | 'culturels', parUtilisateur = true) {
+    this.descriptiveNames.set(v === 'descriptifs');
+    this.culturalNames.set(v === 'culturels');
+    if (parUtilisateur) this.typeDeNomTouched.set(true);
+  }
 
   /** Vrai dès que la longueur demandée passe sous le seuil « raisonnable ». */
   isRiskyLength = computed(() => this.minNameLength() < this.DEFAULT_MIN_LENGTH);
@@ -319,17 +417,16 @@ export class WizardComponent implements OnInit, OnDestroy {
    */
   private applyRegionalDefaults(): void {
     const ext = this.detectRegionalExtension();
+    // Les styles ne dépendent plus de la région : noms inventés par défaut.
+    this.descriptiveNames.set(false);
+    this.culturalNames.set(false);
     if (!ext || ext === '.com') {
       this.selectedExtensions.set(['.com']);
       this.isLocal.set(false);
-      this.descriptiveNames.set(false);
-      this.culturalNames.set(false);
       return;
     }
     this.selectedExtensions.set([ext, '.com']);
     this.isLocal.set(true);
-    this.descriptiveNames.set(true);
-    this.culturalNames.set(true);
   }
   // ────────────────────────────────────────────────────────────
 
@@ -1448,8 +1545,10 @@ export class WizardComponent implements OnInit, OnDestroy {
       this.projectId.set(state.projectId || null);
       if (state.minNameLength) {
         this.minNameLength.set(Math.min(Math.max(state.minNameLength, this.MIN_LENGTH_FLOOR), this.MAX_LENGTH_SETTING));
-        this.minLengthTouched.set(true);
+        this.minLengthTouched.set(state.minLengthTouched ?? true);
       }
+      if (state.typeDeNom) this.choisirTypeDeNom(state.typeDeNom, state.typeDeNomTouched ?? false);
+      if (Array.isArray(state.contraintesRetirees)) this.contraintesRetirees.set(state.contraintesRetirees);
       this.likedExamplesInput.set(state.likedExamplesInput || '');
       this.dislikedExamplesInput.set(state.dislikedExamplesInput || '');
       localStorage.removeItem('wizard_state');
@@ -1525,13 +1624,21 @@ export class WizardComponent implements OnInit, OnDestroy {
   private loadNamingConstraints(description: string) {
     this.domainService.extractConstraints(description).subscribe({
       next: (c) => {
-        this.minLengthFromBrief.set(c.minLength ?? null);
+        this.minLengthFromBrief.set(c.briefMinLength ?? null);
+        this.briefMinLength.set(c.briefMinLength ?? null);
+        this.briefMaxLength.set(c.briefMaxLength ?? null);
         this.briefAvoidWords.set(c.avoidWords ?? []);
         this.briefReferenceBrands.set(c.referenceBrands ?? []);
-        if (!this.minLengthTouched() && typeof c.minLength === 'number') {
-          const clamped = Math.min(Math.max(c.minLength, this.MIN_LENGTH_FLOOR), this.MAX_LENGTH_SETTING);
+        this.briefAvoidEndings.set(c.avoidEndings ?? []);
+        this.briefRequiredWords.set(c.requiredWords ?? []);
+        this.contraintesRetirees.set([]);
+        // Affichage seulement : le réglage n'est envoyé que si l'utilisateur
+        // le touche, et le serveur applique sinon les bornes du brief.
+        if (!this.minLengthTouched() && typeof c.briefMinLength === 'number') {
+          const clamped = Math.min(Math.max(c.briefMinLength, this.MIN_LENGTH_FLOOR), this.MAX_LENGTH_SETTING);
           this.minNameLength.set(clamped);
         }
+        if (!this.typeDeNomTouched()) this.choisirTypeDeNom(c.nameType === 'descriptive' ? 'descriptifs' : 'inventes', false);
         this.cdr.detectChanges();
       },
       error: () => { /* non bloquant : on garde le défaut */ },
@@ -1722,7 +1829,9 @@ export class WizardComponent implements OnInit, OnDestroy {
           // Un projet ancien peut porter une longueur qui n'est plus proposée (8, 9…) :
           // on la ramène dans la plage du sélecteur pour qu'il reste cohérent.
           this.minNameLength.set(Math.min(Math.max(project.minLength, this.MIN_LENGTH_FLOOR), this.MAX_LENGTH_SETTING));
-          this.minLengthTouched.set(true);
+          // La colonne vaut 7 par défaut : seule une autre valeur dit un choix
+          // explicite. Sinon, le brief garde la main sur la longueur.
+          this.minLengthTouched.set(project.minLength !== this.DEFAULT_MIN_LENGTH);
         }
         this.likedExamplesInput.set((project.likedExamples ?? []).join(', '));
         this.dislikedExamplesInput.set((project.dislikedExamples ?? []).join(', '));
@@ -1810,6 +1919,13 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.minLengthFromBrief.set(null);
     this.briefAvoidWords.set([]);
     this.briefReferenceBrands.set([]);
+    this.briefAvoidEndings.set([]);
+    this.briefRequiredWords.set([]);
+    this.briefMinLength.set(null);
+    this.briefMaxLength.set(null);
+    this.contraintesRetirees.set([]);
+    this.choisirTypeDeNom('inventes', false);
+    this.typeDeNomTouched.set(false);
     this.likedExamplesInput.set('');
     this.dislikedExamplesInput.set('');
     this.competitors.set([]);
@@ -2588,17 +2704,20 @@ export class WizardComponent implements OnInit, OnDestroy {
   }
 
   addManualDomain() {
-    // Sépare par espace, virgule ou point-virgule ; normalise chaque token
-    const newNames = [
-      ...new Set(
-        this.newDomainName().trim().toLowerCase()
-          .split(/[\s,;]+/)
-          .filter(t => t.length > 0)
-          .map(t => t.replace(/^\./, '').replace(/\.[a-z]{2,10}$/, ''))
-          .filter(n => n.length > 0)
-          .filter(n => !this.domains().some(d => d.name === n)) // exclure doublons
-      )
-    ];
+    // Virgules, points-virgules, retours à la ligne : jamais l'espace. Une
+    // phrase n'est pas une liste de noms (voir `lireNomsSaisis`).
+    const { noms, refus } = lireNomsSaisis(this.newDomainName());
+    if (refus.length) {
+      const entree = refus[0].length > 40 ? refus[0].slice(0, 40) + '…' : refus[0];
+      this.messageService.add({
+        severity: 'warn',
+        summary: this.translate.instant('WIZARD.STEP3.MANUAL_SENTENCE_SUMMARY'),
+        detail: this.translate.instant('WIZARD.STEP3.MANUAL_SENTENCE', { entree }),
+        life: 8000,
+      });
+      return; // la saisie reste dans le champ, pour être corrigée
+    }
+    const newNames = noms.filter(n => !this.domains().some(d => d.name === n)); // exclure doublons
 
     if (newNames.length === 0) {
       this.newDomainName.set('');
@@ -2700,6 +2819,10 @@ export class WizardComponent implements OnInit, OnDestroy {
         matchMode: this.matchMode(),
         projectId: this.projectId(),
         minNameLength: this.minNameLength(),
+        minLengthTouched: this.minLengthTouched(),
+        typeDeNom: this.typeDeNom(),
+        typeDeNomTouched: this.typeDeNomTouched(),
+        contraintesRetirees: this.contraintesRetirees(),
         likedExamplesInput: this.likedExamplesInput(),
         dislikedExamplesInput: this.dislikedExamplesInput(),
         pendingSearch: true,
@@ -2718,6 +2841,7 @@ export class WizardComponent implements OnInit, OnDestroy {
       this.oublierCeQuiEstVu();
     }
     this.showNoResultHelp.set(false);
+    this.derniereRechercheIncomplete.set(null);
     this.loading.set(true);
     this.streamProgress.set({ phase: 'generating', checked: 0, found: 0 });
     this.startSearchTimeout();
@@ -2745,14 +2869,16 @@ export class WizardComponent implements OnInit, OnDestroy {
       excludeNames: append
         ? [...new Set([...this.testedNames(), ...this.domains().map(d => d.name)])].slice(-2000)
         : [],
-      // US-032 — naming styles (local mode only)
-      descriptiveNames: this.isLocal() ? this.descriptiveNames() : false,
-      culturalNames: this.isLocal() ? this.culturalNames() : false,
+      // US-032 — type de nom, choisi par l'utilisateur (inventés par défaut)
+      descriptiveNames: this.descriptiveNames(),
+      culturalNames: this.culturalNames(),
       // US-046 — feedback utilisateur pour affiner la génération suivante
       likedNames: this.domains().filter(d => d.rating === 'liked').map(d => d.name),
       dislikedNames: this.domains().filter(d => d.rating === 'disliked').map(d => d.name),
-      // #1 — longueur mini explicite (prime sur celle déduite du brief)
-      minLength: this.minNameLength(),
+      // #1 — longueur envoyée seulement si l'utilisateur l'a réglée : sinon le
+      // serveur applique les bornes du brief, sans les élargir.
+      ...(this.minLengthTouched() ? { minLength: this.minNameLength() } : {}),
+      contraintesRetirees: this.contraintesRetirees(),
       // #3 — références de style : saisie libre + domaines du marché aimés
       likedExamples: this.styleReferences(),
       // #4 — reste du marché : contexte dont il faut se démarquer
@@ -2816,6 +2942,11 @@ export class WizardComponent implements OnInit, OnDestroy {
 
           // Issue #3 — moins de suggestions trouvées que demandé dans le temps imparti
           // (le panneau dédié prend le relais quand on n'a strictement rien trouvé)
+          this.derniereRechercheIncomplete.set(
+            event.requested > 0 && (event.found ?? 0) < event.requested
+              ? { found: event.found ?? 0, requested: event.requested }
+              : null,
+          );
           if (event.requested > 0 && (event.found ?? 0) > 0 && (event.found ?? 0) < event.requested) {
             this.translate.get(['WIZARD.STEP3.PARTIAL_RESULTS', 'WIZARD.STEP3.PARTIAL_SUMMARY'],
               { count: event.found ?? 0 }).subscribe(t => {

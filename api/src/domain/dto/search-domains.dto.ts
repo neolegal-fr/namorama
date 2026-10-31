@@ -93,6 +93,18 @@ export class SearchDomainsDto {
   @IsOptional()
   maxLength?: number;
 
+  /**
+   * Contraintes du brief que l'utilisateur a retirées à l'étape 2 :
+   * `longueur`, `fin:<terminaison>`, `eviter:<mot>`, `avec:<mot>`.
+   */
+  @IsArray()
+  @ArrayMaxSize(40)
+  @IsString({ each: true })
+  @MaxLength(40, { each: true })
+  @Matches(/^(longueur|(fin|eviter|avec):[a-z0-9 '-]{1,30})$/i, { each: true, message: 'Contrainte retirée invalide' })
+  @IsOptional()
+  contraintesRetirees?: string[];
+
   /** Exemples de noms/domaines que l'utilisateur aime — servent de références de style. */
   @IsArray()
   @ArrayMaxSize(10)

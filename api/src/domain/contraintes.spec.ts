@@ -1,4 +1,7 @@
-import { DomainService, nettoyerContraintesDuBrief } from './domain.service';
+import { validateSync } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
+import { DomainService, nettoyerContraintesDuBrief, retirerContraintes } from './domain.service';
+import { SearchDomainsDto } from './dto/search-domains.dto';
 import { modeleAnthropicFactice, reponseAnthropic } from '../common/modele-ia/modele-ia.testing';
 
 /**
@@ -63,5 +66,37 @@ describe('nettoyage des contraintes', () => {
   it('au plus trois mots imposés', () => {
     const c = nettoyerContraintesDuBrief({ requiredWords: ['alpha', 'bravo', 'charlie', 'delta'] }, 'alpha bravo charlie delta');
     expect(c.requiredWords).toEqual(['alpha', 'bravo', 'charlie']);
+  });
+});
+
+describe('contraintes retirées par l’utilisateur', () => {
+  const c: any = {
+    minLength: 6, maxLength: 6, avoidWords: ['sport'], referenceBrands: [], avoidEndings: ['ora', 'ia'],
+    requiredWords: ['bloom'], nameType: 'invented', briefMinLength: 6, briefMaxLength: 6,
+  };
+
+  it('retire une contrainte mal comprise, garde les autres', () => {
+    const r = retirerContraintes(c, ['eviter:sport', 'fin:ia']);
+    expect(r.avoidWords).toEqual([]);
+    expect(r.avoidEndings).toEqual(['ora']);
+    expect(r.requiredWords).toEqual(['bloom']);
+  });
+
+  it('retirer la longueur efface les bornes du brief', () => {
+    expect(retirerContraintes(c, ['longueur'])).toMatchObject({ briefMinLength: null, briefMaxLength: null });
+  });
+});
+
+describe('DTO : contraintes retirées', () => {
+  const valide = (contraintesRetirees: string[]) => validateSync(plainToInstance(SearchDomainsDto, {
+    description: 'une description assez longue pour passer', keywords: ['mot'], contraintesRetirees,
+  })).filter((e: any) => e.property === 'contraintesRetirees');
+
+  it('accepte les clés connues', () => {
+    expect(valide(['longueur', 'eviter:sport', 'fin:ora', 'avec:bloom'])).toEqual([]);
+  });
+
+  it('refuse le reste', () => {
+    expect(valide(['n’importe quoi'])).not.toEqual([]);
   });
 });

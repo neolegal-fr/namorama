@@ -250,19 +250,19 @@
           </div>
         </div>
 
-        <!-- US-032 : Styles de noms (local seulement) -->
-        <div *ngIf="isLocal()" class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.625rem">
-          <h4 class="section-label">{{ 'WIZARD.STEP2.NAMING_STYLES_TITLE' | translate }}</h4>
-          <label style="display: flex; align-items: center; gap: 0.625rem; cursor: pointer; font-size: 0.9rem">
-            <input type="checkbox" [checked]="descriptiveNames()" (change)="descriptiveNames.set($any($event.target).checked)"
-                   style="width: 1rem; height: 1rem; cursor: pointer; accent-color: var(--nm-app-accent); flex-shrink: 0">
-            {{ 'WIZARD.STEP2.DESCRIPTIVE_TOGGLE' | translate }}
-          </label>
-          <label style="display: flex; align-items: center; gap: 0.625rem; cursor: pointer; font-size: 0.9rem">
-            <input type="checkbox" [checked]="culturalNames()" (change)="culturalNames.set($any($event.target).checked)"
-                   style="width: 1rem; height: 1rem; cursor: pointer; accent-color: var(--nm-app-accent); flex-shrink: 0">
-            {{ 'WIZARD.STEP2.CULTURAL_TOGGLE' | translate }}
-          </label>
+        <!-- Type de nom : inventés par défaut, choix de l'utilisateur (chantier respecter-le-cahier-des-charges) -->
+        <div class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.5rem">
+          <h4 class="section-label">{{ 'WIZARD.STEP2.NAME_TYPE_TITLE' | translate }}</h4>
+          <p-selectButton
+            [options]="TYPE_DE_NOM_OPTIONS"
+            [ngModel]="typeDeNom()"
+            (ngModelChange)="choisirTypeDeNom($event)"
+            optionValue="value"
+            [allowEmpty]="false"
+            styleClass="select-btn-full">
+            <ng-template #item let-option>{{ option.labelKey | translate }}</ng-template>
+          </p-selectButton>
+          <span class="text-500" style="font-size: 0.78rem">{{ ('WIZARD.STEP2.NAME_TYPE_HINT_' + typeDeNom().toUpperCase()) | translate }}</span>
         </div>
 
         <!-- #1 : Longueur minimale des noms générés -->
@@ -286,14 +286,24 @@
             <span>{{ 'WIZARD.STEP2.MIN_LENGTH_WARNING' | translate:{ n: minNameLength(), pct: takenRate() } }}</span>
           </div>
 
-          <!-- Contraintes déduites de la description libre -->
-          <div *ngIf="minLengthFromBrief() || briefAvoidWords().length > 0 || briefReferenceBrands().length > 0"
-               style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.5">
-            <i class="pi pi-sparkles" style="font-size: var(--nm-text-ui-sm); margin-right: 0.3rem"></i>
-            <span>{{ 'WIZARD.STEP2.DETECTED_FROM_BRIEF' | translate }}</span>
-            <span *ngIf="minLengthFromBrief()"> {{ 'WIZARD.STEP2.DETECTED_LENGTH' | translate:{ n: minLengthFromBrief() } }}</span>
-            <span *ngIf="briefAvoidWords().length > 0"> · {{ 'WIZARD.STEP2.DETECTED_AVOID' | translate:{ words: briefAvoidWords().join(', ') } }}</span>
-            <span *ngIf="briefReferenceBrands().length > 0"> · {{ 'WIZARD.STEP2.DETECTED_BRANDS' | translate:{ brands: briefReferenceBrands().join(', ') } }}</span>
+          <!-- Contraintes comprises dans la description : retirables avant de payer la recherche -->
+          <div *ngIf="contraintesComprises().length > 0 || briefReferenceBrands().length > 0"
+               style="display: flex; flex-direction: column; gap: 0.4rem; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.5">
+            <span>
+              <i class="pi pi-sparkles" style="font-size: var(--nm-text-ui-sm); margin-right: 0.3rem"></i>{{ 'WIZARD.STEP2.DETECTED_FROM_BRIEF' | translate }}
+            </span>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.4rem">
+              <span *ngFor="let p of contraintesComprises()" class="contrainte-puce"
+                    style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.35rem 0.15rem 0.6rem; border-radius: 999px; border: 1px solid var(--nm-app-border)">
+                {{ p.libelle }}
+                <button type="button" (click)="retirerContrainte(p.cle)" [attr.aria-label]="'WIZARD.STEP2.BRIEF_REMOVE' | translate"
+                        [title]="'WIZARD.STEP2.BRIEF_REMOVE' | translate"
+                        style="display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; cursor: pointer; padding: 0.15rem; color: inherit">
+                  <i class="pi pi-times" style="font-size: 0.65rem"></i>
+                </button>
+              </span>
+            </div>
+            <span *ngIf="briefReferenceBrands().length > 0">{{ 'WIZARD.STEP2.DETECTED_BRANDS' | translate:{ brands: briefReferenceBrands().join(', ') } }}</span>
           </div>
         </div>
 
@@ -495,6 +505,21 @@
             </button>
           </div>
 
+          <!-- Incitation à élargir aux noms descriptifs : recherche incomplète, ou rejets sans favori -->
+          <div *ngIf="suggestionElargir() as origine" class="wizard-row wizard-row--wide elargir-bandeau"
+               style="display: flex; align-items: flex-start; gap: 0.75rem; justify-content: space-between; flex-wrap: wrap; background: var(--nm-app-verdict-unknown-bg); border-radius: 0.625rem; padding: 0.75rem 1rem; margin-bottom: 0.75rem">
+            <div style="display: flex; align-items: flex-start; gap: 0.5rem; flex: 1 1 18rem; font-size: 0.85rem; line-height: 1.5; color: var(--nm-app-verdict-unknown-fg)">
+              <i class="pi pi-lightbulb" style="margin-top: 0.15rem"></i>
+              <span>{{ (origine === 'note' ? 'WIZARD.STEP3.WIDEN_NOTE' : 'WIZARD.STEP3.WIDEN_BANNER') | translate:{ found: derniereRechercheIncomplete()?.found ?? 0, requested: derniereRechercheIncomplete()?.requested ?? 10 } }}</span>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center">
+              <p-button [label]="'WIZARD.STEP3.WIDEN_CTA' | translate" icon="pi pi-plus" size="small" (onClick)="elargirAuxDescriptifs()"></p-button>
+              <button type="button" class="nm-btn-tertiary" (click)="fermerBandeauElargir()" [attr.aria-label]="'WIZARD.STEP3.WIDEN_DISMISS' | translate">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+          </div>
+
           <!-- Grille de cartes (refonte, étape 3). Remplace la matrice
                noms × extensions. La logique reste dans le wizard : le
                composant ne reçoit que des données et remonte des événements. -->
@@ -569,6 +594,13 @@
               icon="pi pi-arrow-up-right"
               size="small"
               (onClick)="relaxLengthAndRetry()">
+            </p-button>
+            <p-button *ngIf="suggestionElargir() === 'note'"
+              [label]="'WIZARD.STEP3.WIDEN_CTA' | translate"
+              icon="pi pi-plus"
+              severity="secondary"
+              size="small"
+              (onClick)="elargirAuxDescriptifs()">
             </p-button>
             <p-button
               [label]="'WIZARD.STEP3.NO_RESULTS_CONTINUE' | translate"
