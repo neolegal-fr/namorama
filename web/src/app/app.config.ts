@@ -9,7 +9,18 @@ registerLocaleData(localeFr);
 import { provideRouter, withInMemoryScrolling, RouteReuseStrategy } from '@angular/router';
 import { WizardReuseStrategy } from './wizard-reuse-strategy';
 import { provideHttpClient, withInterceptorsFromDi, withFetch } from '@angular/common/http';
-import { of, firstValueFrom } from 'rxjs';
+import { of, firstValueFrom, from, map } from 'rxjs';
+
+/**
+ * Dictionnaires des langues servies, chargés à la demande par le bundler :
+ * chacun devient un fichier au nom haché, donc jamais servi périmé (voir
+ * `CustomTranslateLoader`). Les autres langues du dépôt, non proposées,
+ * gardent l'URL fixe.
+ */
+const DICTIONNAIRES_VERSIONNES: Record<string, () => Promise<unknown>> = {
+  fr: () => import('../../public/assets/i18n/fr.json'),
+  en: () => import('../../public/assets/i18n/en.json'),
+};
 import { providePrimeNG } from 'primeng/config';
 import Aura from '@primeuix/themes/aura';
 import { definePreset } from '@primeuix/themes';
@@ -71,6 +82,17 @@ export class CustomTranslateLoader implements TranslateLoader {
     // renvoie index.html avec un code 200. ngx-translate recevait donc du HTML
     // au lieu du JSON, échouait sans bruit, et changer de langue ne faisait
     // plus rien dès qu'on n'était pas à la racine.
+    //
+    // Les deux langues servies passent par le BUNDLER, pas par une URL fixe.
+    // `/assets/i18n/fr.json` garde son nom d'une version à l'autre : le
+    // 31/10/2026, des navigateurs qui l'avaient en cache (servi sans
+    // Cache-Control) faisaient tourner le nouveau code avec d'anciennes
+    // traductions — l'ancien titre « Vos préférences » à côté de chaque clé
+    // nouvelle, tombée sur le repli anglais. Importé, le dictionnaire devient
+    // un fichier au nom haché : un texte modifié change l'URL, et le cache ne
+    // peut plus mentir.
+    const versionne = DICTIONNAIRES_VERSIONNES[lang];
+    if (versionne) return from(versionne()).pipe(map((m: any) => m.default ?? m));
     return this.http.get(`/assets/i18n/${lang}.json`);
   }
 }
