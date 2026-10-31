@@ -1615,8 +1615,15 @@ ${langInstruction}`;
       onEvent?.({ type: 'generating' });
       const items = await this.generateDomainIdeas(description, keywords, locale, [...checkedNames], descriptiveNames, culturalNames, likedNames, dislikedNames, constraints, competitorDomains, dislikedStyleDomains, ecartes);
 
-      const newItems = items.filter(item => !checkedNames.has(item.name));
-      newItems.forEach(item => checkedNames.add(item.name));
+      // Filtrer ET marquer d'un même passage : un nom répété DANS le lot (le
+      // modèle le fait quand le cahier des charges ne laisse qu'une issue)
+      // passait autant de fois qu'il apparaissait — vérifié, affiché et
+      // facturé à chaque fois. Relevé le 31/10/2026 : « kwyzqx » ×10, 10 crédits.
+      const newItems = items.filter((item) => {
+        if (checkedNames.has(item.name)) return false;
+        checkedNames.add(item.name);
+        return true;
+      });
 
       if (newItems.length === 0) {
         attempts++;

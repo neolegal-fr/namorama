@@ -59,6 +59,18 @@ describe('DomainService — boucle de recherche', () => {
     expect(r.stopReason).toBe('time');
   });
 
+  it('un nom répété dans un même lot n’est vérifié, rendu et facturé qu’une fois', async () => {
+    const s = fabrique({ unSurN: 1 });
+    // Relevé du 31/10/2026 : un cahier des charges sans autre issue faisait
+    // rendre « kwyzqx » dix fois dans le même lot.
+    s.generateDomainIdeas = jest.fn().mockResolvedValue(Array.from({ length: 10 }, () => ({ name: 'kwyzqx', style: 'standard' })));
+    s.checkExtensions = jest.fn().mockResolvedValue({ '.com': true });
+    const r = await s.findAvailableDomains('desc', ['mot'], { ...options, targetCount: 10, maxAttempts: 3 });
+    expect(r.results).toHaveLength(1);
+    expect(s.checkExtensions).toHaveBeenCalledTimes(1);
+    expect(r.verifiedNames).toEqual(['kwyzqx']);
+  });
+
   it('ne vérifie jamais un nom reçu en exclusion', async () => {
     const s = fabrique({ unSurN: 1 });
     const r = await s.findAvailableDomains('desc', ['mot'], { ...options, targetCount: 5, excludeNames: ['nom1', 'nom2'] });
