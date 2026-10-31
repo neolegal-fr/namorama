@@ -1,7 +1,14 @@
 node_modules/
 package-lock.json
 package.json
-.claude/
+.claude/*
+# OpenSpec : commandes /opsx et compétences versionnées, pour tous les postes
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/openspec-*/
+!.claude/commands/
+.claude/commands/*
+!.claude/commands/opsx/
 
 # Secrets — ne JAMAIS commiter
 .env
