@@ -30,10 +30,17 @@
 
 ## 4. Réglage de longueur à l'écran (web)
 
-- [ ] 4.1 Écrire `bornesAffichees(contraintes, reglage)`, fonction pure, dans `web/src/app/components/wizard/`. Son test Vitest importe la table de 2.1. Vérification : `cd web && npx ng test --watch=false` passe, avec les mêmes cas que 2.2.
-- [ ] 4.2 Remplacer le `p-selectButton` de longueur minimale par « Au plus N caractères » (6 à 12, « sans limite »), suivi de la phrase d'aide de `bornesAffichees`, de la marque d'origine (« par défaut », « repris de votre description », « modifié ») et de l'alerte « plage étroite » pour un maximum de 7 ou moins. N'envoyer `maxLength` que si l'utilisateur l'a touché, et `30` pour « sans limite ». Retirer la puce de longueur des contraintes. Vérification au navigateur, avec un brief « 4-5 lettres » : le réglage affiche « Au plus 6 caractères » et la phrase d'explication ; la requête n'a pas de `maxLength` ; les 10 noms rendus font 6 caractères.
-- [ ] 4.3 Remplacer `minLengthTouched` par `maxLengthTouched` dans l'état `localStorage` et dans la restauration d'un projet (D5), et faire monter le maximum dans `relaxLengthAndRetry` (D9). Vérification au navigateur : régler « Au plus 8 », enregistrer, recharger, rouvrir le projet, et lire « Au plus 8 », marqué « modifié » ; sur une recherche vide, « Assouplir » passe à « Au plus 10 » et relance.
-- [ ] 4.4 Libellés fr et en dans `web/public/assets/i18n/`. Vérification : aucune clé `WIZARD.*` brute à l'étape 2, en `fr-FR` comme en `en-US`.
+- [x] 4.1 Écrire `bornesAffichees(contraintes, reglage)`, fonction pure, dans `web/src/app/components/wizard/`. Son test Vitest importe la table de 2.1. Vérification : `cd web && npx ng test --watch=false` passe, avec les mêmes cas que 2.2.
+  - 13 cas de la table passent côté Vitest (7 fichiers, 53 tests). `resolveJsonModule` ajouté à `tsconfig.spec.json` pour importer la table.
+- [x] 4.2 Remplacer le `p-selectButton` de longueur minimale par « Au plus N caractères » (6 à 12, « sans limite »), suivi de la phrase d'aide de `bornesAffichees`, de la marque d'origine (« par défaut », « repris de votre description », « modifié ») et de l'alerte « plage étroite » pour un maximum de 7 ou moins. N'envoyer `maxLength` que si l'utilisateur l'a touché, et `30` pour « sans limite ». Retirer la puce de longueur des contraintes. Vérification au navigateur, avec un brief « 4-5 lettres » : le réglage affiche « Au plus 6 caractères » et la phrase d'explication ; la requête n'a pas de `maxLength` ; les 10 noms rendus font 6 caractères.
+  - Navigateur, 31/10/2026, base `namorama_w1` (`just agent-env`), compte de test local. Brief « 4-5 lettres maximum » : « Au plus 6 caractères », marqué « repris de votre description », avec « Votre description demande 5 caractères au plus… nous cherchons donc des noms de 6 caractères » et l'alerte de plage étroite.
+  - Requête sans `minLength` ni `maxLength` ; `done` : 10 noms, `minLengthUsed: 6`, tous de 6 caractères (Budino, Cagado, Finado, Envoli…).
+  - La même passe a révélé un défaut antérieur, hors chantier : un nom répété dans un lot était facturé autant de fois (« kwyzqx » ×10). Corrigé à part, commit `fix(recherche)`, test dans `recherche-boucle.spec.ts`.
+- [x] 4.3 Remplacer `minLengthTouched` par `maxLengthTouched` dans l'état `localStorage` et dans la restauration d'un projet (D5), et faire monter le maximum dans `relaxLengthAndRetry` (D9). Vérification au navigateur : régler « Au plus 8 », enregistrer, recharger, rouvrir le projet, et lire « Au plus 8 », marqué « modifié » ; sur une recherche vide, « Assouplir » passe à « Au plus 10 » et relance.
+  - « Au plus 8 » réglé : requête `maxLength: 8`, noms de 6 à 8 caractères ; après rechargement et réouverture du projet, « Au plus 8 caractères », marqué « modifié ».
+  - Recherche vide (mot imposé « google », 6 au plus : 0 nom, 25 écartés) : bouton « Passer à 8 caractères au plus et relancer », et la relance envoie `maxLength: 8`. Le scénario de la tâche (8 → 10) suit la même règle (+2).
+- [x] 4.4 Libellés fr et en dans `web/public/assets/i18n/`. Vérification : aucune clé `WIZARD.*` brute à l'étape 2, en `fr-FR` comme en `en-US`.
+  - Étape 2 parcourue en `en-US` (« At most 8 characters », « taken from your description ») et en `fr-FR` : aucune clé `WIZARD.*` dans le texte de la page.
 
 ## 5. Mise en page de l'étape 2 (web)
 

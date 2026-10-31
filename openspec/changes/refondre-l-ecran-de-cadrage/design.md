@@ -28,7 +28,7 @@ Voir proposal.md, section Why. État du code au 31/10/2026, `origin/main` à `12
 
 Le réglage propose « Au plus N caractères », N de 6 à 12, plus « sans limite ». La recherche porte sur [plancher, N].
 
-- **Plancher 6.** À 5 caractères, l'estimation du produit est de 75 % de .com déjà pris, contre 25 % à 6 (`TAKEN_RATE`). Les noms de 6 caractères restent la cible naturelle d'un « nom court ».
+- **Plancher 6.** À 5 caractères, 83 % des .com prononçables sont pris, contre 34 % à 6 (mesure du 01/08/2026 sur 340 noms, `TAKEN_RATE`). Les noms de 6 caractères restent la cible naturelle d'un « nom court ».
   - *Écarté : plancher 5.* C'est l'état actuel ; il produit les recherches sans issue décrites dans la proposition.
   - *Écarté : plancher 7*, l'ancien défaut. Il exclurait d'office les noms de 6 caractères, ceux que demandent les briefs « court ».
 - **Défaut 10.** Assez large pour trouver vite, et assez court pour ne pas inciter à le baisser.

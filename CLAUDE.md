@@ -384,7 +384,7 @@ Les utilisateurs écrivent un cahier des charges autant qu'une description : rel
   `refondre-l-ecran-de-cadrage`). L'utilisateur raisonne en « pas trop long » :
   l'écran propose « au plus N caractères » (6 à 12, ou « sans limite », envoyé
   `maxLength: 30`), et rien d'autre. Le minimum n'est pas réglable : à 5 caractères,
-  ~75 % des .com prononçables sont pris (`TAKEN_RATE`, estimation), contre ~25 % à
+  ~75 % des .com prononçables sont pris (mesure du 01/08/2026, borne basse, `TAKEN_RATE`), contre ~25 % à
   6. Sans brief ni réglage : **[6, 10]**. Le front n'envoie `maxLength` que si
   l'utilisateur l'a touché ; sinon le serveur applique les bornes du brief
   (`briefMinLength`, `briefMaxLength`), **relevées au plancher** — « 4-5 lettres »

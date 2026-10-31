@@ -319,9 +319,10 @@ export function lireNomDeProjet(texte: string): string {
 
 /**
  * Plancher de longueur des noms inventés, fixé par le produit et non réglable.
- * À 5 caractères, ~75 % des .com prononçables sont déjà pris, contre ~25 % à 6
- * (estimation de `TAKEN_RATE` côté web) : chercher en dessous, c'est payer des
- * tentatives pour une liste presque vide. Chantier `refondre-l-ecran-de-cadrage`.
+ * Mesure du 01/08/2026 sur 340 noms prononçables : 83 % des .com sont pris à
+ * 5 caractères, 34 % à 6, 2,5 % à 7 (`TAKEN_RATE` côté web, qui en affiche la
+ * borne basse). Chercher en dessous de 6, c'est payer des tentatives pour une
+ * liste presque vide. Chantier `refondre-l-ecran-de-cadrage`.
  */
 export const MIN_NAME_LENGTH_FLOOR = 6;
 /** Minimum appliqué faute d'autre indication : le plancher lui-même. */
