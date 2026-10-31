@@ -98,6 +98,9 @@ interface ExtVerdict {
               @if (d.isManual) {
                 <i class="pi pi-pencil rg-card__manual" [attr.aria-label]="'WIZARD.STEP3.MANUAL_TOOLTIP' | translate"></i>
               }
+              @if (d.style === 'descriptive' || d.style === 'cultural') {
+                <span class="rg-card__style">{{ ('WIZARD.STYLE.' + (d.style === 'descriptive' ? 'DESCRIPTIVE' : 'CULTURAL')) | translate }}</span>
+              }
             </div>
 
             <!--

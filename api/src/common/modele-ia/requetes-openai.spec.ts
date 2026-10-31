@@ -44,10 +44,13 @@ describe('Requêtes OpenAI, inchangées par le passage au port', () => {
     expect(chat).toEqual([{ model: S, messages: systemeEtUser('desc'), max_completion_tokens: 200, reasoning_effort: 'none' }]);
   });
 
-  it('keywords', async () => {
-    const { svc, chat } = service('a, b');
+  // Seul écart voulu depuis le port (chantier respecter-le-cahier-des-charges,
+  // 31/10/2026) : les mots-clés passent en JSON, pour séparer l'activité du
+  // cahier des charges du nom (`namingBusiness`).
+  it('keywords : JSON depuis le chantier « respecter le cahier des charges »', async () => {
+    const { svc, chat } = service('{"keywords": ["a", "b"], "namingBusiness": false}');
     await svc.generateKeywords('desc', 'fr');
-    expect(chat).toEqual([{ model: S, messages: systemeEtUser('desc'), max_completion_tokens: 600, reasoning_effort: 'none' }]);
+    expect(chat).toEqual([{ model: S, messages: systemeEtUser('desc'), max_completion_tokens: 600, reasoning_effort: 'none', ...JSON_OBJECT }]);
   });
 
   it('constraints', async () => {

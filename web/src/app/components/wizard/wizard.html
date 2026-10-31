@@ -53,7 +53,7 @@
          demandent pas la même vigilance. -->
     <div *ngIf="projetPartage()" class="partage-bandeau" [class.partage-bandeau--lecture]="lectureSeule()">
       <i class="pi" [class.pi-eye]="lectureSeule()" [class.pi-wallet]="!lectureSeule()" aria-hidden="true"></i>
-      <span>{{ (lectureSeule() ? 'PROJECTS.READ_ONLY_BANNER' : 'PROJECTS.WRITE_BANNER') | translate:{ email: proprietaireDuProjet() } }}</span>
+      <span class="nm-prive">{{ (lectureSeule() ? 'PROJECTS.READ_ONLY_BANNER' : 'PROJECTS.WRITE_BANNER') | translate:{ email: proprietaireDuProjet() } }}</span>
     </div>
 
     <div class="w-full mb-5" style="text-align: center">
@@ -150,7 +150,7 @@
 
         <div *ngIf="refinedDescription()" class="mt-4 p-3 border-left-4 border-solid border-round" style="max-width: 48rem; width: 100%; text-align: left; background: var(--nm-app-accent-surface); border-color: var(--nm-app-accent)">
           <h4 class="font-bold mb-2" style="color: var(--nm-app-accent)">{{ 'WIZARD.STEP1.SUGGESTION_TITLE' | translate }}</h4>
-          <p class="font-italic text-800" style="white-space: pre-line">{{ refinedDescription() }}</p>
+          <p class="font-italic text-800 nm-prive" style="white-space: pre-line">{{ refinedDescription() }}</p>
           <div class="mt-2 text-right">
              <p-button [label]="'WIZARD.STEP1.USE_VERSION' | translate" size="small" (onClick)="description.set(refinedDescription()); refinedDescription.set('')"></p-button>
           </div>
@@ -221,7 +221,7 @@
             <p-button icon="pi pi-plus" [disabled]="keywordsFull()" (onClick)="addKeyword()"></p-button>
           </div>
           <div class="chips-container">
-            <p-chip *ngFor="let keyword of keywords()" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
+            <p-chip *ngFor="let keyword of keywords()" class="nm-prive" [label]="keyword" [removable]="true" (onRemove)="removeKeyword(keyword)"></p-chip>
           </div>
           <span *ngIf="keywordsFull()" class="text-500" style="font-size: var(--nm-text-ui-sm)">{{ 'WIZARD.STEP2.KEYWORDS_FULL' | translate:{ max: MAX_KEYWORDS } }}</span>
         </div>
@@ -250,19 +250,19 @@
           </div>
         </div>
 
-        <!-- US-032 : Styles de noms (local seulement) -->
-        <div *ngIf="isLocal()" class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.625rem">
-          <h4 class="section-label">{{ 'WIZARD.STEP2.NAMING_STYLES_TITLE' | translate }}</h4>
-          <label style="display: flex; align-items: center; gap: 0.625rem; cursor: pointer; font-size: 0.9rem">
-            <input type="checkbox" [checked]="descriptiveNames()" (change)="descriptiveNames.set($any($event.target).checked)"
-                   style="width: 1rem; height: 1rem; cursor: pointer; accent-color: var(--nm-app-accent); flex-shrink: 0">
-            {{ 'WIZARD.STEP2.DESCRIPTIVE_TOGGLE' | translate }}
-          </label>
-          <label style="display: flex; align-items: center; gap: 0.625rem; cursor: pointer; font-size: 0.9rem">
-            <input type="checkbox" [checked]="culturalNames()" (change)="culturalNames.set($any($event.target).checked)"
-                   style="width: 1rem; height: 1rem; cursor: pointer; accent-color: var(--nm-app-accent); flex-shrink: 0">
-            {{ 'WIZARD.STEP2.CULTURAL_TOGGLE' | translate }}
-          </label>
+        <!-- Type de nom : inventés par défaut, choix de l'utilisateur (chantier respecter-le-cahier-des-charges) -->
+        <div class="wizard-field" style=" text-align: left; display: flex; flex-direction: column; gap: 0.5rem">
+          <h4 class="section-label">{{ 'WIZARD.STEP2.NAME_TYPE_TITLE' | translate }}</h4>
+          <p-selectButton
+            [options]="TYPE_DE_NOM_OPTIONS"
+            [ngModel]="typeDeNom()"
+            (ngModelChange)="choisirTypeDeNom($event)"
+            optionValue="value"
+            [allowEmpty]="false"
+            styleClass="select-btn-full">
+            <ng-template #item let-option>{{ option.labelKey | translate }}</ng-template>
+          </p-selectButton>
+          <span class="text-500" style="font-size: 0.78rem">{{ ('WIZARD.STEP2.NAME_TYPE_HINT_' + typeDeNom().toUpperCase()) | translate }}</span>
         </div>
 
         <!-- #1 : Longueur minimale des noms générés -->
@@ -286,14 +286,24 @@
             <span>{{ 'WIZARD.STEP2.MIN_LENGTH_WARNING' | translate:{ n: minNameLength(), pct: takenRate() } }}</span>
           </div>
 
-          <!-- Contraintes déduites de la description libre -->
-          <div *ngIf="minLengthFromBrief() || briefAvoidWords().length > 0 || briefReferenceBrands().length > 0"
-               style="font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.5">
-            <i class="pi pi-sparkles" style="font-size: var(--nm-text-ui-sm); margin-right: 0.3rem"></i>
-            <span>{{ 'WIZARD.STEP2.DETECTED_FROM_BRIEF' | translate }}</span>
-            <span *ngIf="minLengthFromBrief()"> {{ 'WIZARD.STEP2.DETECTED_LENGTH' | translate:{ n: minLengthFromBrief() } }}</span>
-            <span *ngIf="briefAvoidWords().length > 0"> · {{ 'WIZARD.STEP2.DETECTED_AVOID' | translate:{ words: briefAvoidWords().join(', ') } }}</span>
-            <span *ngIf="briefReferenceBrands().length > 0"> · {{ 'WIZARD.STEP2.DETECTED_BRANDS' | translate:{ brands: briefReferenceBrands().join(', ') } }}</span>
+          <!-- Contraintes comprises dans la description : retirables avant de payer la recherche -->
+          <div *ngIf="contraintesComprises().length > 0 || briefReferenceBrands().length > 0"
+               style="display: flex; flex-direction: column; gap: 0.4rem; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2); line-height: 1.5">
+            <span>
+              <i class="pi pi-sparkles" style="font-size: var(--nm-text-ui-sm); margin-right: 0.3rem"></i>{{ 'WIZARD.STEP2.DETECTED_FROM_BRIEF' | translate }}
+            </span>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.4rem">
+              <span *ngFor="let p of contraintesComprises()" class="contrainte-puce"
+                    style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.15rem 0.35rem 0.15rem 0.6rem; border-radius: 999px; border: 1px solid var(--nm-app-border)">
+                {{ p.libelle }}
+                <button type="button" (click)="retirerContrainte(p.cle)" [attr.aria-label]="'WIZARD.STEP2.BRIEF_REMOVE' | translate"
+                        [title]="'WIZARD.STEP2.BRIEF_REMOVE' | translate"
+                        style="display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; cursor: pointer; padding: 0.15rem; color: inherit">
+                  <i class="pi pi-times" style="font-size: 0.65rem"></i>
+                </button>
+              </span>
+            </div>
+            <span *ngIf="briefReferenceBrands().length > 0">{{ 'WIZARD.STEP2.DETECTED_BRANDS' | translate:{ brands: briefReferenceBrands().join(', ') } }}</span>
           </div>
         </div>
 
@@ -495,6 +505,21 @@
             </button>
           </div>
 
+          <!-- Incitation à élargir aux noms descriptifs : recherche incomplète, ou rejets sans favori -->
+          <div *ngIf="suggestionElargir() as origine" class="wizard-row wizard-row--wide elargir-bandeau"
+               style="display: flex; align-items: flex-start; gap: 0.75rem; justify-content: space-between; flex-wrap: wrap; background: var(--nm-app-verdict-unknown-bg); border-radius: 0.625rem; padding: 0.75rem 1rem; margin-bottom: 0.75rem">
+            <div style="display: flex; align-items: flex-start; gap: 0.5rem; flex: 1 1 18rem; font-size: 0.85rem; line-height: 1.5; color: var(--nm-app-verdict-unknown-fg)">
+              <i class="pi pi-lightbulb" style="margin-top: 0.15rem"></i>
+              <span>{{ (origine === 'note' ? 'WIZARD.STEP3.WIDEN_NOTE' : 'WIZARD.STEP3.WIDEN_BANNER') | translate:{ found: derniereRechercheIncomplete()?.found ?? 0, requested: derniereRechercheIncomplete()?.requested ?? 10 } }}</span>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center">
+              <p-button [label]="'WIZARD.STEP3.WIDEN_CTA' | translate" icon="pi pi-plus" size="small" (onClick)="elargirAuxDescriptifs()"></p-button>
+              <button type="button" class="nm-btn-tertiary" (click)="fermerBandeauElargir()" [attr.aria-label]="'WIZARD.STEP3.WIDEN_DISMISS' | translate">
+                <i class="pi pi-times"></i>
+              </button>
+            </div>
+          </div>
+
           <!-- Grille de cartes (refonte, étape 3). Remplace la matrice
                noms × extensions. La logique reste dans le wizard : le
                composant ne reçoit que des données et remonte des événements. -->
@@ -561,7 +586,7 @@
             <span style="font-weight: 700; color: var(--nm-app-verdict-unknown-fg); font-size: 0.92rem">{{ 'WIZARD.STEP3.NO_RESULTS_TITLE' | translate }}</span>
           </div>
           <p style="margin: 0 0 0.875rem 0; font-size: 0.82rem; color: var(--nm-app-verdict-unknown-fg); line-height: 1.5">
-            {{ (isRiskyLength() ? 'WIZARD.STEP3.NO_RESULTS_SHORT' : 'WIZARD.STEP3.NO_RESULTS_EXPLAIN') | translate:{ n: minNameLength() } }}
+            {{ (ecartesParLeBrief() > 0 ? 'WIZARD.STEP3.NO_RESULTS_CONSTRAINTS' : isRiskyLength() ? 'WIZARD.STEP3.NO_RESULTS_SHORT' : 'WIZARD.STEP3.NO_RESULTS_EXPLAIN') | translate:{ n: minNameLength(), ecartes: ecartesParLeBrief() } }}
           </p>
           <div style="display: flex; gap: 0.5rem; flex-wrap: wrap">
             <p-button *ngIf="minNameLength() < MAX_LENGTH_SETTING"
@@ -569,6 +594,13 @@
               icon="pi pi-arrow-up-right"
               size="small"
               (onClick)="relaxLengthAndRetry()">
+            </p-button>
+            <p-button *ngIf="suggestionElargir() === 'note'"
+              [label]="'WIZARD.STEP3.WIDEN_CTA' | translate"
+              icon="pi pi-plus"
+              severity="secondary"
+              size="small"
+              (onClick)="elargirAuxDescriptifs()">
             </p-button>
             <p-button
               [label]="'WIZARD.STEP3.NO_RESULTS_CONTINUE' | translate"
@@ -707,7 +739,7 @@
           -->
           <span class="project-item__meta">
             {{ project.updatedAt | date:'d MMM yyyy' }}
-            <span *ngIf="project.description">· {{ project.description | slice:0:60 }}</span>
+            <span *ngIf="project.description" class="nm-prive">· {{ project.description | slice:0:60 }}</span>
           </span>
         </button>
 
@@ -741,7 +773,7 @@
               {{ shared.name }}
               <span *ngIf="shared.permission === 'read'" class="project-item__tag">{{ 'PROJECTS.READ_ONLY' | translate }}</span>
             </span>
-            <span class="project-item__meta">
+            <span class="project-item__meta nm-prive">
               {{ 'PROJECTS.SHARED_BY' | translate:{ email: shared.ownerEmail || '—' } }}
             </span>
           </button>
@@ -808,14 +840,15 @@
       <p *ngIf="partages().length === 0" class="partage__hint">{{ 'PROJECTS.SHARE_NONE' | translate }}</p>
       <div *ngFor="let p of partages()" class="partage__ligne">
         <span class="partage__qui">
-          {{ p.email }}
+          <span class="nm-prive">{{ p.email }}</span>
           <span class="partage__etat">
             {{ (p.permission === 'write' ? 'PROJECTS.SHARE_PERM_WRITE' : 'PROJECTS.SHARE_PERM_READ') | translate }}
             · {{ (p.acceptedAt ? 'PROJECTS.SHARE_ACTIVE' : 'PROJECTS.SHARE_PENDING') | translate }}
             <span *ngIf="p.emailSent === false" class="partage__alerte">· {{ 'PROJECTS.SHARE_NO_MAIL_TAG' | translate }}</span>
           </span>
         </span>
-        <button type="button" class="partage__retirer" (click)="retirerPartage(p)"
+        <!-- nm-bloque : l'adresse est dans un ATTRIBUT, que le masquage de texte ne couvre pas. -->
+        <button type="button" class="partage__retirer nm-bloque" (click)="retirerPartage(p)"
                 [attr.aria-label]="('PROJECTS.SHARE_REVOKE' | translate) + ' — ' + p.email">
           <i class="pi pi-times" aria-hidden="true"></i>
         </button>

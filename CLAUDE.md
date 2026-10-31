@@ -13,13 +13,53 @@ SaaS pour trouver des noms de marque et domaines disponibles à partir d'une des
 ## Commandes
 
 - `just start` : lance Docker + API + Web en dev
-- `just stop` : arrête tout
+- `just stop` : arrête l'API (3001) et le front (4200) de la copie principale, **par
+  port** ; Docker n'est arrêté que si aucun worktree d'agent ne tourne encore
 - `just build` : compile API + Web
-- `just clean` : supprime node_modules, dist, volumes Docker
+- `just clean` : supprime node_modules, dist, volumes Docker — **toutes les bases**,
+  celles des worktrees comprises. Jamais depuis un agent.
 - `just dev-api-url` : sous WSL, pointe `config.json` sur l'IP de la distribution
   et **masque le fichier du diff** (`--skip-worktree`). Le navigateur Windows
   n'atteint pas le `localhost` de WSL ; cette IP change à chaque redémarrage et
   n'a rien à faire dans le dépôt. `just dev-api-url-reset` réarme le suivi.
+
+## Plusieurs agents en parallèle
+
+Chaque agent travaille dans son **worktree** (`.claude/worktrees/<nom>`), sur sa
+branche, vers sa PR ; la copie principale reste à l'utilisateur. Le code est ainsi
+isolé — pas ce qui tourne. Avant `just agent-env`, tous les worktrees partageaient
+la base `namorama` : avec `DB_SYNCHRONIZE=true`, deux branches aux entités
+différentes y réécrivaient le schéma l'une contre l'autre à chaque démarrage, et
+une colonne ajoutée par l'une disparaissait, données comprises, au démarrage de
+l'autre. Ils partageaient aussi les ports 3001/4200, et `just stop` (un
+`pkill -f nest`) tuait les serveurs de tout le monde.
+
+- **`just agent-env`**, une fois par worktree : lui attribue un numéro N libre (1 à 9),
+  une base `namorama_wN` **copiée** de `namorama` (schéma et données, pour tester sur
+  autre chose qu'un écran vide), l'API sur `3001+N`, le front sur `4200+N`. Recopie
+  `api/.env` de la copie principale en y remplaçant `PORT`, `DATABASE_URL`,
+  `FRONTEND_URL` et en posant `DB_SYNCHRONIZE=true` — sans danger sur une base à soi.
+  Réécrit `config.json` et le masque du diff. Installe les `node_modules` manquants.
+- `just agent-start` / `agent-stop` : les serveurs de **ce** worktree, en arrière-plan
+  (journaux dans `.agent-run/`). `just agent-status` liste tous les worktrees, leurs
+  ports et ce qui tourne.
+- **`just agent-clean` avant de supprimer un worktree** : arrête, supprime sa base,
+  rend `config.json` à Git, libère N.
+- Keycloak et MariaDB restent **communs** (un seul conteneur chacun). Le client
+  `namorama-web` autorise les ports 4201 à 4209, mais le realm n'est importé qu'à la
+  création : sur un Keycloak local déjà initialisé, `just agent-realm` les ajoute.
+- Les commandes `agent-*` refusent de s'exécuter dans la copie principale.
+
+Ce qui reste à faire **un par un** :
+
+- **La livraison.** Une migration s'applique avant l'image qui en dépend : deux
+  livraisons entrelacées peuvent déployer l'image de l'une avant le SQL de l'autre.
+  Un merge à la fois — rebase sur `main`, CI verte, SQL, déploiement, contrôle des
+  logs — puis le suivant.
+- **L'archivage OpenSpec**, qui écrit dans `openspec/specs/`, commun à tous.
+- Deux agents sur les mêmes fichiers (le wizard, `domain.service`) produiront des
+  conflits quoi qu'on isole : répartir les chantiers par zone du code.
+- `CLAUDE.md` est le fichier le plus disputé : rebaser juste avant le merge.
 
 ## Architecture
 
@@ -46,6 +86,12 @@ api/src/
 - **PrimeNG écrase les classes Tailwind** dans ses composants (Card, Table, Drawer, Dialog, etc.). Utiliser des **inline styles** pour les propriétés de layout critiques (`display`, `flex-direction`, `align-items`, `justify-content`, `gap`, `text-align`, `margin`, `max-width`).
 - Tailwind reste utilisable pour les éléments hors PrimeNG et pour les propriétés décoratives.
 - Les hover effects nécessitent des classes CSS dans `styles.css` (pas d'inline styles possibles).
+- **`nm-prive` sur tout texte affiché qui reprend une saisie ou une adresse e-mail**
+  (description, mots-clés, adresses). L'enregistrement de session masque d'office les
+  champs de saisie, pas ce qu'on en réaffiche. Une adresse portée par un **attribut**
+  (`aria-label`, `title`) demande `nm-bloque` : le masquage de texte ne couvre pas les
+  attributs. `masquage.spec.ts` vérifie les gabarits ; toute nouvelle expression
+  personnelle s'y ajoute. Les pages `/admin` ne sont jamais enregistrées.
 
 ### Angular
 - Composants standalone avec **signals** (`signal()`, `.set()`, `.update()`)
@@ -226,8 +272,10 @@ sur l'organisation Console liée à l'abonnement : c'est ce qui rend Claude int�
 - **Pas de carte sur l'organisation Console** : sinon, les crédits épuisés, la dépense
   continue sur la carte au lieu de passer au secours.
 - Avec `AI_PROVIDER=openai`, les requêtes sont celles d'avant, paramètre pour paramètre
-  (`requetes-openai.spec.ts`). Seul écart : le brouillon admin suit le rôle créatif, alors
-  qu'il retombait sur luna quand `OPENAI_MODEL_CREATIVE` manquait.
+  (`requetes-openai.spec.ts`). Deux écarts : le brouillon admin suit le rôle créatif, alors
+  qu'il retombait sur luna quand `OPENAI_MODEL_CREATIVE` manquait ; et `keywords` passe en
+  JSON (`{ keywords, namingBusiness }`, 31/10/2026) pour écarter du cadrage le vocabulaire
+  du nommage (`estVocabulaireDeNommage`), sauf pour une activité de nommage.
 
 Trois règles, chacune tirée d'une dépense qu'on a vraiment payée :
 
@@ -321,6 +369,39 @@ La disponibilité a **trois états** : libre, pris, et **non vérifiable** (`nul
 > optimisation de la durée d'une recherche commence par là.
 
 > Ne jamais faire retomber un doute sur `true` ou `false` : « pris » masque des noms libres, « libre » fait payer un crédit pour un domaine inachetable.
+
+### Cahier des charges du nom
+
+Les utilisateurs écrivent un cahier des charges autant qu'une description : relevé du
+31/10/2026, 18 projets sur 133 fixaient une longueur, 18 des mots ou terminaisons à
+éviter, 13 des marques de référence. Les noms rendus les contredisaient
+(« 4-5 lettres » → `duopawear`). Chantier OpenSpec `respecter-le-cahier-des-charges`.
+
+- **Le brief fixe la longueur, sauf réglage explicite.** Le front n'envoie `minLength`
+  ou `maxLength` que si l'utilisateur les a touchés ; sinon le serveur applique les
+  bornes du brief (`briefMinLength`, `briefMaxLength`), **sans jamais élargir un
+  maximum demandé** (`bornesDeLongueur`). Plancher technique : 5.
+- **Le filtre garantit, la consigne aide** : `respecteLesContraintes` écarte après
+  génération, pour tous les styles, les noms hors longueur (noms inventés), à
+  terminaison interdite, contenant un mot à éviter, ou sans le mot imposé. Un mot
+  imposé n'est retenu que s'il figure dans la description : le modèle ne doit pas
+  inventer d'obligation.
+- **Noms inventés par défaut**, quelle que soit la région. Les styles descriptif et
+  culturel, autrefois activés d'office en mode local, sont un choix de l'étape 2,
+  pré-sélectionné d'après le brief (`nameType`), et suggéré quand les noms inventés
+  déçoivent (`naming_style_widened`).
+- **Les contraintes comprises s'affichent en puces retirables** ; une puce retirée part
+  dans `contraintesRetirees`, car le serveur réextrait le brief à chaque recherche.
+- `search_completed` porte les bornes et leur origine, les décomptes de contraintes
+  (jamais les mots) et `ecartes` par motif. L'événement `done` porte aussi `ecartes` :
+  une recherche vide après 300 noms écartés ne doit pas dire « tout est pris ».
+- Les mots-clés ne décrivent que l'activité (`estVocabulaireDeNommage`), et le champ de
+  test manuel lit une liste séparée par des virgules, jamais une phrase
+  (`lireNomsSaisis`).
+
+> Limite connue : le filtre compare des chaînes. « Éviter calm » laisse passer
+> `inkalm`, et les exemples de la consigne de génération (`navioq`, `pivoxen`)
+> ressortent tels quels — c'est le chantier suivant, sur la diversité.
 
 ### Suggestions supplémentaires (« 10 de plus »)
 
@@ -486,6 +567,11 @@ poser : ce dernier ne part qu'au clic sur « Analyser », donc uniquement quand 
 n'a PAS été pré-calculée. Un seul exemplaire en sept jours pour 409 analyses produites —
 l'absence de signal mesurait l'efficacité du pré-calcul, pas la lecture.
 
+`naming_style_widened` (depuis le 31/10/2026) marque l'acceptation de la suggestion
+« inclure les noms descriptifs », avec `origine` : `note` (recherche incomplète) ou
+`bandeau` (5 rejets sans favori). Il dit si l'incitation sert, et donc si le défaut
+« noms inventés » doit être revu.
+
 ### Parcours utilisateur
 
 Deux canaux complémentaires :
@@ -494,6 +580,50 @@ Deux canaux complémentaires :
 - **Google Analytics** : uniquement si consentement (Consent Mode v2), pour les tableaux de bord d'audience.
 
 Côté front, passer par `AnalyticsService.track()`, qui alimente les deux et n'échoue jamais.
+
+### Rejeu des sessions
+
+Les logs disent **où** un visiteur s'arrête, jamais **ce qu'il a vu** : les 100 recherches
+refusées sans message du 22 au 29/10/2026 se lisaient dans le journal, pas à l'écran.
+`SessionReplayService` enregistre la visite avec rrweb (auto-hébergé, sans sous-traitant),
+et **Administration → Sessions** (`/admin/replays`) la rejoue.
+
+- **Consentement dédié** : la catégorie `replay` du bandeau, désactivée par défaut, est
+  distincte de `analytics`. Accepter « pages consultées » ne vaut pas accord pour
+  enregistrer ses gestes. Sans elle, rrweb n'est même pas téléchargé (chunk paresseux,
+  absent du prérendu). Le lien « Gérer les cookies » du pied de page est le seul moyen
+  de retirer un consentement, et le retrait arrête la capture sur-le-champ.
+- **`consent_recorded`** mesure chaque choix (`onFirstConsent`, `onChange` — pas
+  `onConsent`, qui revient à chaque page). `python3 - consentement` donne la part des
+  visites enregistrables : le rejeu ne voit qu'elles, comme GA.
+- **Masquage dans le navigateur**, avant tout envoi. Les saisies sont masquées d'office
+  (`maskAllInputs`), les textes réaffichés le sont par `nm-prive` (voir « CSS / Styles »).
+  rrweb ne masque **pas les attributs** : la puce PrimeNG d'un mot-clé recopie son libellé
+  en `aria-label`, et le mot-clé partait en clair. `masquage-attributs.ts` s'en charge
+  pour les nœuds sous `nm-prive`. Les pages `/admin` et les administrateurs ne sont jamais
+  enregistrés. Ni réseau, ni canvas.
+- **Envoi** : l'instantané complet part **sur-le-champ**, le reste toutes les 3 s, en
+  **`text/plain`**, une requête « simple » sans `OPTIONS` préalable. Envoyé plus tard,
+  l'instantané (700 à 920 ko) restait dans le tampon quand la page partait vers Keycloak.
+  Trop gros pour `keepalive` (64 ko), il était perdu avec tout le parcours avant la
+  connexion.
+- **Trois plafonds**, parce que `POST /replay` est `@Public()` et sans limite de débit :
+  le corps (4 Mo, parseur propre à la route : `parseurDuRejeu()`, à ne jamais remplacer
+  par un `json()` nu, qui désactiverait le parseur JSON de toute l'API), la visite
+  (`REPLAY_MAX_SESSION_MB`, 5 Mo compressés, 413) et le jour (`REPLAY_MAX_DAY_MB`,
+  200 Mo, 429). Chaque plafond atteint journalise `replay_capped` une fois. Un 4xx
+  arrête la capture pour la visite. Une visite inconnue de `visitor_session` est
+  refusée.
+- **Stockage en base**, table `session_replay_chunk` (lots gzippés, jointe à
+  `visitor_session`), purgée après `REPLAY_RETENTION_DAYS` (30 jours). Les sauvegardes
+  `mysqldump` grossissent d'autant.
+- **Les feuilles de style sont copiées dans l'instantané** (`inlineStylesheet`, défaut de
+  rrweb) : les noms de fichiers CSS changent à chaque build, et un rejeu qui les
+  référencerait perdrait ses styles au déploiement suivant.
+
+> Migration `2026-10-31-rejeu-des-sessions.sql`, à appliquer **avant** de déployer l'image.
+> Les trois variables ont des défauts : rien à reporter dans le `docker-compose.yml` de
+> prod tant qu'on les garde.
 
 ### Consulter les logs en prod
 
@@ -517,6 +647,9 @@ ssh namorama-prod "python3 - nom"      < scripts/analyze-logs.py
 
 # Recherches qui rendent moins que demandé : seuil d'arrêt et tentatives
 ssh namorama-prod "python3 - ajouts"   < scripts/analyze-logs.py
+
+# Réponses au bandeau de cookies : part des visites enregistrables (rejeu)
+ssh namorama-prod "python3 - consentement" < scripts/analyze-logs.py
 
 # Requêtes les plus lentes / codes de statut par route / lignes brutes
 ssh namorama-prod "python3 - slow"   < scripts/analyze-logs.py

@@ -751,6 +751,26 @@ body {
     margin: 16mm 14mm;
 }
 
+/* Administration → Sessions : drapeaux de parcours d'une visite enregistrée. */
+.nm-rejeu-badge {
+    display: inline-block;
+    padding: 0.05rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    line-height: 1.4;
+    background: var(--nm-app-badge-bg);
+    color: var(--nm-app-badge-fg);
+    white-space: nowrap;
+}
+.nm-rejeu-badge--erreur {
+    background: #fde8e8;
+    color: #9b1c1c;
+}
+.nm-rejeu-badge--ok {
+    background: #def7ec;
+    color: #03543f;
+}
+
 @media print {
     .p-menubar,
     .p-toast,
