@@ -13,6 +13,7 @@ Modes :
   funnel   — tunnel de conversion : volumétrie par événement et taux de chute
   rapports — rapports de marque : demandes, issues, et détail par utilisateur
   ajouts   — recherches qui rendent moins que demandé : seuil d’arrêt, tentatives
+  consentement — réponses au bandeau, et part des visites enregistrables (rejeu)
   slow     — requêtes les plus lentes
   http     — répartition des codes de statut par route
   raw      — dernières lignes, brutes
@@ -407,6 +408,51 @@ def ajouts(rows):
         print(f"\n{len(interrompues)} recherche(s) interrompue(s) côté serveur, sans débit.")
 
 
+def consentement(rows):
+    """Ce que les visiteurs répondent au bandeau — la portée réelle du rejeu.
+
+    Le rejeu ne voit que ceux qui acceptent « Enregistrement de session » :
+    sans ce décompte, on lirait ses sessions comme si elles représentaient
+    toutes les visites. Une visite compte pour son DERNIER choix.
+
+    « Sans choix pendant la visite » mêle deux cas que le navigateur ne
+    distingue pas pour nous : n'a pas répondu, ou avait répondu lors d'une
+    visite précédente (`onFirstConsent` ne revient pas).
+    """
+    visites = {r.get("sessionId") for r in rows if r.get("context") == "page_viewed" and r.get("sessionId")}
+    choix = {}
+    for r in rows:
+        if r.get("context") == "consent_recorded" and r.get("sessionId"):
+            choix[r["sessionId"]] = r  # les lignes sont chronologiques : le dernier l'emporte
+
+    def libelle(r):
+        a, e = r.get("analytics") is True, r.get("replay") is True
+        if a and e:
+            return "tout accepté"
+        if a:
+            return "audience seule"
+        if e:
+            return "enregistrement seul"
+        return "refusé"
+
+    repartition = Counter(libelle(r) for r in choix.values())
+    sans = len(visites - set(choix))
+    total = len(visites | set(choix))
+    print(f"Visites : {total}\n")
+    for cle in ("tout accepté", "audience seule", "enregistrement seul", "refusé"):
+        n = repartition.get(cle, 0)
+        print(f"  {cle:<34} {n:>6}  {100 * n / total:5.1f} %" if total else f"  {cle:<34} {n:>6}")
+    if total:
+        print(f"  {'sans choix pendant la visite':<34} {sans:>6}  {100 * sans / total:5.1f} %")
+
+    enregistrables = repartition.get("tout accepté", 0) + repartition.get("enregistrement seul", 0)
+    if total:
+        print(f"\nVisites enregistrables (rejeu) : {enregistrables}/{total} ({100 * enregistrables / total:.1f} %)")
+    modifs = sum(1 for r in rows if r.get("context") == "consent_recorded" and r.get("origine") == "modification")
+    if modifs:
+        print(f"{modifs} modification(s) via « Gérer les cookies ».")
+
+
 def raw(rows):
     for r in rows[-30:]:
         print(json.dumps(r, ensure_ascii=False)[:220])
@@ -419,6 +465,7 @@ MODES = {
     "quota": quota,
     "nom": nom,
     "ajouts": ajouts,
+    "consentement": consentement,
     "slow": slow,
     "http": http,
     "raw": raw,

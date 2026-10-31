@@ -70,7 +70,7 @@ import { BrandReport, ReportLike, Availability, NameQuality, TrademarkHit, Trade
                    soit hérité d'une reformulation d'avant le 05/08/2026, quand
                    l'IA en produisait encore. Réécrire ce que quelqu'un a saisi
                    serait pire que de l'afficher proprement. -->
-              <p class="rv-quote">{{ sansMarkdown(ctx.description) }}</p>
+              <p class="rv-quote nm-prive">{{ sansMarkdown(ctx.description) }}</p>
             </section>
           }
           @if (ctx.constraints?.length) {
