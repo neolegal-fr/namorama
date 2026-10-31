@@ -1,0 +1,105 @@
+{
+  "_lisezmoi": "Référence du cliquet de web/scripts/verifier-design.mjs. Ne se relève qu’à la main, avec la justification dans le chantier OpenSpec. Voir docs/systeme-de-design.md §1.",
+  "fichiers": {
+    "src/app/app.ts": {
+      "couleurs": 1,
+      "stylesEnLigne": 54
+    },
+    "src/app/components/admin/admin-costs.component.ts": {
+      "stylesEnLigne": 2
+    },
+    "src/app/components/admin/admin-dashboard.component.ts": {
+      "couleurs": 19,
+      "stylesEnLigne": 12
+    },
+    "src/app/components/admin/admin-feedback.component.ts": {
+      "couleurs": 1,
+      "stylesEnLigne": 14
+    },
+    "src/app/components/admin/admin-model-costs.component.ts": {
+      "couleurs": 21,
+      "stylesEnLigne": 18
+    },
+    "src/app/components/admin/admin-model-prices.component.ts": {
+      "couleurs": 22,
+      "stylesEnLigne": 14
+    },
+    "src/app/components/admin/admin-periode.component.ts": {
+      "couleurs": 1,
+      "stylesEnLigne": 5
+    },
+    "src/app/components/admin/admin-replays.component.ts": {
+      "couleurs": 1,
+      "stylesEnLigne": 22
+    },
+    "src/app/components/admin/admin-retention.component.ts": {
+      "couleurs": 21,
+      "stylesEnLigne": 14
+    },
+    "src/app/components/admin/admin-serie-chart.component.ts": {
+      "couleurs": 22
+    },
+    "src/app/components/admin/admin-users.component.ts": {
+      "couleurs": 18,
+      "stylesEnLigne": 54
+    },
+    "src/app/components/brand-report/brand-report-locked.css": {
+      "taillesPx": 2
+    },
+    "src/app/components/brand-report/brand-report-view.css": {
+      "couleurs": 3,
+      "taillesPx": 3,
+      "important": 2
+    },
+    "src/app/components/brand-report/brand-report-view.ts": {
+      "stylesEnLigne": 2
+    },
+    "src/app/components/content/article-cta.ts": {
+      "couleurs": 2,
+      "stylesEnLigne": 5
+    },
+    "src/app/components/content/guides-index.ts": {
+      "couleurs": 3
+    },
+    "src/app/components/content/rapport-public.css": {
+      "taillesPx": 1
+    },
+    "src/app/components/content/verifier-disponibilite-nom-de-marque.ts": {
+      "couleurs": 12,
+      "stylesEnLigne": 1
+    },
+    "src/app/components/landing/landing.css": {
+      "couleurs": 2,
+      "taillesPx": 11
+    },
+    "src/app/components/payment-result/payment-result.ts": {
+      "couleurs": 3,
+      "stylesEnLigne": 8
+    },
+    "src/app/components/results/results-grid.css": {
+      "taillesPx": 9
+    },
+    "src/app/components/wizard/wizard.css": {
+      "couleurs": 2,
+      "taillesPx": 2,
+      "important": 10
+    },
+    "src/app/components/wizard/wizard.html": {
+      "couleurs": 1,
+      "stylesEnLigne": 197
+    },
+    "src/app/components/wizard/wizard.ts": {
+      "couleurs": 16,
+      "stylesEnLigne": 15
+    },
+    "src/styles.css": {
+      "couleurs": 12,
+      "taillesPx": 1,
+      "important": 12
+    },
+    "src/styles/components.css": {
+      "couleurs": 1,
+      "taillesPx": 3
+    }
+  }
+}

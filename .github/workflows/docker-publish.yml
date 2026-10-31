@@ -14,8 +14,13 @@ name: Build and Push Docker Images
 # dans le Dockerfile ne signalerait la casse qu'au moment du build d'image —
 # et c'est précisément ce qui avait laissé passer une montée de TypeORM.
 #
-# Pas de job pour le web : il n'a aucun test, et `ng test` échoue s'il n'en
-# trouve aucun. À ajouter le jour où une première spec existe.
+# Pas de job de tests pour le web : il n'a aucun test, et `ng test` échoue
+# s'il n'en trouve aucun. À ajouter le jour où une première spec existe.
+#
+# Le web a en revanche le contrôle du système de design (`design-web`) : un
+# cliquet qui refuse toute couleur, style en ligne, taille en px ou
+# `!important` ajouté hors des fichiers de jetons. Sans dépendance, il tourne
+# sans `npm ci`, et l'image web en dépend. Voir docs/systeme-de-design.md §1.
 on:
   push:
     branches: [main]
@@ -91,9 +96,27 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-api:latest
             ${{ env.IMAGE_PREFIX }}-api:${{ github.sha }}
 
+  design-web:
+    name: Système de design (web)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+
+      - name: Aucune valeur en dur ajoutée
+        run: node web/scripts/verifier-design.mjs
+
   build-web:
     name: Build Web image
-    needs: test-api
+    needs: [test-api, design-web]
     runs-on: ubuntu-latest
     permissions:
       contents: read

@@ -26,6 +26,16 @@ build:
     @echo "Compilation du Web (Angular)..."
     cd web && npm run build
 
+# Contrôle du système de design : refuse toute valeur en dur ajoutée
+# (couleur, style en ligne, taille en px, !important) hors des jetons.
+# Le même tourne en CI sur chaque PR. Voir docs/systeme-de-design.md §1.
+design-check:
+    node web/scripts/verifier-design.mjs
+
+# Après un nettoyage : abaisse la référence du cliquet, jamais ne la relève.
+design-resserrer:
+    node web/scripts/verifier-design.mjs --resserrer
+
 # Installer les dépendances Node (legacy-peer-deps requis pour nest-keycloak-connect)
 install:
     cd api && npm install --legacy-peer-deps
