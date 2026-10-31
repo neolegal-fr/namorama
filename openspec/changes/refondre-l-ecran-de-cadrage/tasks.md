@@ -67,8 +67,11 @@
 
 - [x] 6.1 Ouvrir la PR depuis `feat/refonte-ecran-de-cadrage`, avec la CI verte. Vérification : `gh pr checks` au vert.
   - PR #171 (brouillon), run 41201586709 : Test API, Build Web image et Build API image en succès.
-- [ ] 6.2 Appliquer `2026-11-01-longueur-maximale-du-projet.sql` en production, sauvegarde datée faite d'abord, **avant** de déployer l'image. Vérification : `SHOW COLUMNS FROM project LIKE 'maxLength'` en production rend une ligne.
+- [x] 6.2 Appliquer `2026-11-01-longueur-maximale-du-projet.sql` en production, sauvegarde datée faite d'abord, **avant** de déployer l'image. Vérification : `SHOW COLUMNS FROM project LIKE 'maxLength'` en production rend une ligne.
+  - 31/10/2026 : sauvegarde `backups/namorama-2026-10-31-avant-longueur-maximale.sql` (5,8 Mo), migration appliquée, `maxLength int(11) NULL`.
 - [ ] 6.3 Fusionner, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web` sur `namorama-prod`. Vérification : `docker compose ps` affiche les deux conteneurs à jour, et une recherche réelle aboutit.
+  - 31/10/2026 : PR #171 fusionnée (`ff35a8d`), build `main` vert, `api` et `web` redémarrés. Démarrage sans erreur ni avertissement ; le site sert les nouveaux libellés.
+  - **Reste à constater** : aucune recherche réelle depuis le déploiement au moment du contrôle. Cocher quand un `search_completed` avec `maxLengthUsed` à 10 par défaut apparaît.
 
 ## Workflow follow-up
 
