@@ -120,7 +120,7 @@ Le delta `recherche/cahier-des-charges` modifie des exigences qui n'existeront d
 
 ## Migration Plan
 
-1. Appliquer `api/migrations/2026-11-XX-longueur-maximale-du-projet.sql` (`ADD COLUMN IF NOT EXISTS maxLength INT NULL`) **avant** de déployer l'image. Retour arrière : `ALTER TABLE project DROP COLUMN maxLength`.
+1. Appliquer `api/migrations/2026-11-01-longueur-maximale-du-projet.sql` (`ADD COLUMN IF NOT EXISTS maxLength INT NULL`) **avant** de déployer l'image. Retour arrière : `ALTER TABLE project DROP COLUMN maxLength`.
 2. Déployer l'API et le web ensemble, sur la même image. Un ancien front contre la nouvelle API fonctionne (D3) ; un nouveau front contre l'ancienne API verrait `maxLength: 6` accepté, mais avec l'ancien plancher.
 3. Retour arrière de l'image : l'ancienne API ignore la colonne `maxLength`.
 

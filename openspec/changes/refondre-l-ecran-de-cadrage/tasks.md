@@ -22,8 +22,11 @@
 
 ## 3. Longueur maximale persistée
 
-- [ ] 3.1 Écrire `api/migrations/2026-11-XX-longueur-maximale-du-projet.sql` : `ALTER TABLE project ADD COLUMN IF NOT EXISTS maxLength INT NULL`, avec en en-tête la commande d'application et le retour arrière. Vérification : appliqué deux fois sur la base locale sans erreur, et `SHOW COLUMNS FROM project LIKE 'maxLength'` rend une ligne.
-- [ ] 3.2 Ajouter `maxLength` (nullable) à l'entité `Project` et aux DTO de création et de mise à jour du projet. Cesser d'écrire `minLength`. Vérification : un test du service des projets enregistre puis relit `maxLength: 8`, et un projet créé sans valeur la relit à `null`.
+- [x] 3.1 Écrire `api/migrations/2026-11-01-longueur-maximale-du-projet.sql` : `ALTER TABLE project ADD COLUMN IF NOT EXISTS maxLength INT NULL`, avec en en-tête la commande d'application et le retour arrière. Vérification : appliqué deux fois sur la base locale sans erreur, et `SHOW COLUMNS FROM project LIKE 'maxLength'` rend une ligne.
+  - Appliqué deux fois sur `namorama-db` (local) sans erreur ; `maxLength int(11) NULL`, défaut `NULL`.
+- [x] 3.2 Ajouter `maxLength` (nullable) à l'entité `Project` et aux DTO de création et de mise à jour du projet. Cesser d'écrire `minLength`. Vérification : un test du service des projets enregistre puis relit `maxLength: 8`, et un projet créé sans valeur la relit à `null`.
+  - `api/src/projects/longueur-maximale.spec.ts` : 4 cas, dont « une recherche sans maximum garde celui déjà choisi ». 37 suites, 374 tests passent.
+  - Champ ajouté à `search_started` : `maxLength` (le maximum reçu), à côté de `minLength`.
 
 ## 4. Réglage de longueur à l'écran (web)
 
@@ -44,7 +47,7 @@
 ## 6. Livraison
 
 - [ ] 6.1 Ouvrir la PR depuis `feat/refonte-ecran-de-cadrage`, avec la CI verte. Vérification : `gh pr checks` au vert.
-- [ ] 6.2 Appliquer `2026-11-XX-longueur-maximale-du-projet.sql` en production, sauvegarde datée faite d'abord, **avant** de déployer l'image. Vérification : `SHOW COLUMNS FROM project LIKE 'maxLength'` en production rend une ligne.
+- [ ] 6.2 Appliquer `2026-11-01-longueur-maximale-du-projet.sql` en production, sauvegarde datée faite d'abord, **avant** de déployer l'image. Vérification : `SHOW COLUMNS FROM project LIKE 'maxLength'` en production rend une ligne.
 - [ ] 6.3 Fusionner, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web` sur `namorama-prod`. Vérification : `docker compose ps` affiche les deux conteneurs à jour, et une recherche réelle aboutit.
 
 ## Workflow follow-up
