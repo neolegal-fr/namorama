@@ -98,6 +98,7 @@
           proposait de réparer à la main un défaut qui ne devrait pas exister.
         -->
         <textarea
+          *ngIf="!confirmationReformulation()"
           pInputTextarea
           [(ngModel)]="description"
           rows="5"
@@ -112,22 +113,15 @@
           annoncer un minimum devant un champ vide se lit comme un reproche
           avant la faute. Il disparaît dès le seuil atteint.
         -->
-        <small *ngIf="descriptionLength() > 0 && descriptionTooShort()"
+        <small *ngIf="!confirmationReformulation() && descriptionLength() > 0 && descriptionTooShort()"
                class="text-500"
                style="margin: -0.75rem 0 0 0; font-size: 0.85rem">
           {{ 'WIZARD.STEP1.MIN_LENGTH_HINT' | translate: { count: descriptionRemaining() } }}
         </small>
 
-        <div class="flex align-items-center" style="justify-content: center; gap: 0.75rem; flex-wrap: wrap">
-          <p-button
-            [label]="'WIZARD.STEP1.REFINE_BTN' | translate"
-            icon="pi pi-sparkles"
-            [disabled]="descriptionTooShort()"
-            [loading]="loading()"
-            (onClick)="refine()"
-            styleClass="btn-ai">
-          </p-button>
-
+        <!-- La reformulation n'a plus de bouton à elle : « Continuer » la
+             demande, puis la confirmation ci-dessous attend le choix. -->
+        <div *ngIf="!confirmationReformulation()" class="flex align-items-center" style="justify-content: center; gap: 0.75rem; flex-wrap: wrap">
           <p-button
             [label]="'WIZARD.STEP1.CONTINUE_BTN' | translate"
             icon="pi pi-arrow-right"
@@ -135,6 +129,55 @@
             [loading]="loading()"
             (onClick)="goToKeywords()">
           </p-button>
+        </div>
+
+        <!-- Confirmation de la reformulation : l'étape 2 n'ouvre qu'après le
+             choix. Le texte retenu devient LA description du projet ; l'autre
+             ne sert à rien. Côte à côte, l'une sous l'autre sur mobile ; la
+             version proposée reste modifiable. -->
+        <div *ngIf="confirmationReformulation()" class="p-3 border-left-4 border-solid border-round"
+             style="max-width: 56rem; width: 100%; text-align: left; display: flex; flex-direction: column; gap: 0.75rem; background: var(--nm-app-accent-surface); border-color: var(--nm-app-accent)">
+          <div>
+            <h4 class="font-bold" style="margin: 0 0 0.25rem 0; color: var(--nm-app-accent)">{{ 'WIZARD.STEP1.CONFIRM_TITLE' | translate }}</h4>
+            <p class="text-600" style="margin: 0; font-size: 0.9rem">{{ 'WIZARD.STEP1.CONFIRM_HINT' | translate }}</p>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 1rem">
+            <div style="flex: 1 1 18rem; min-width: 0; display: flex; flex-direction: column">
+              <p class="font-semibold text-700" style="margin: 0 0 0.25rem 0; font-size: 0.85rem">{{ 'WIZARD.STEP1.CONFIRM_ORIGINAL' | translate }}</p>
+              <p class="text-700 nm-prive" style="margin: 0; white-space: pre-line; font-size: 0.9rem">{{ description() }}</p>
+              <button type="button" class="nm-link" style="align-self: flex-start; margin-top: 0.5rem; font-size: 0.85rem" (click)="modifierDescription()">{{ 'WIZARD.STEP1.EDIT_ORIGINAL' | translate }}</button>
+            </div>
+            <div style="flex: 1 1 18rem; min-width: 0">
+              <p class="font-semibold text-700" style="margin: 0 0 0.25rem 0; font-size: 0.85rem">{{ 'WIZARD.STEP1.CONFIRM_PROPOSED' | translate }}</p>
+              <textarea
+                pInputTextarea
+                [ngModel]="propositionReformulee()"
+                (ngModelChange)="propositionReformulee.set($event)"
+                rows="8"
+                class="w-full border-round-md"
+                style="resize: vertical"
+                [attr.maxlength]="DESCRIPTION_MAX_LENGTH"
+                [attr.aria-label]="'WIZARD.STEP1.CONFIRM_PROPOSED' | translate">
+              </textarea>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 0.75rem; flex-wrap: wrap">
+            <p-button
+              [label]="'WIZARD.STEP1.KEEP_ORIGINAL' | translate"
+              severity="secondary"
+              [outlined]="true"
+              [loading]="loading()"
+              (onClick)="choisirDescription('originale')">
+            </p-button>
+            <p-button
+              [label]="'WIZARD.STEP1.USE_VERSION' | translate"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              [disabled]="!propositionUtilisable()"
+              [loading]="loading()"
+              (onClick)="choisirDescription('reformulation')">
+            </p-button>
+          </div>
         </div>
 
         <!-- L'autre entrée du produit, à hauteur de la première étape.
@@ -147,14 +190,6 @@
           {{ 'WIZARD.STEP1.HAVE_NAME' | translate }}
           <a class="nm-link" routerLink="/verifier-disponibilite-nom-de-marque">{{ 'WIZARD.STEP1.HAVE_NAME_CTA' | translate }}</a>
         </p>
-
-        <div *ngIf="refinedDescription()" class="mt-4 p-3 border-left-4 border-solid border-round" style="max-width: 48rem; width: 100%; text-align: left; background: var(--nm-app-accent-surface); border-color: var(--nm-app-accent)">
-          <h4 class="font-bold mb-2" style="color: var(--nm-app-accent)">{{ 'WIZARD.STEP1.SUGGESTION_TITLE' | translate }}</h4>
-          <p class="font-italic text-800 nm-prive" style="white-space: pre-line">{{ refinedDescription() }}</p>
-          <div class="mt-2 text-right">
-             <p-button [label]="'WIZARD.STEP1.USE_VERSION' | translate" size="small" (onClick)="description.set(refinedDescription()); refinedDescription.set('')"></p-button>
-          </div>
-        </div>
 
         <!-- Ligne discrète, pas un encadré : le bloc de signalement était un
              pavé bordé au texte entièrement souligné en gras vert — plus

@@ -186,6 +186,27 @@ const COMPETITORS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const COMPETITORS_CACHE_MAX = 500;
 
 /**
+ * Consigne de la reformulation de l'étape 1, proposée à chaque passage à
+ * l'étape 2 (chantier `reformulation-systematique`).
+ *
+ * Trois défauts de l'ancienne consigne (« reformule et complète ») :
+ *  - le serveur relit le cahier des charges du nom dans la description à
+ *    chaque recherche : une version « percutante » qui perd « 4-5 lettres »
+ *    ou « sans -ora » l'annule pour tout le projet ;
+ *  - « compléter » autorisait à inventer un public ou une fonctionnalité ;
+ *  - rédigée en français, elle ne disait pas dans quelle langue répondre.
+ * En anglais pour ne pencher vers aucune langue de réponse.
+ */
+export const CONSIGNE_REFORMULATION = [
+  'You are a marketing and branding expert. Rewrite the product description you receive so that its essence and value proposition are clear. Be concise but compelling.',
+  'Rules:',
+  '- Write in the SAME LANGUAGE as the description.',
+  '- Clarify and structure only what the description says. NEVER add a feature, an audience, a place, a figure or any other fact that is not in the description.',
+  '- If the description contains instructions about the NAME itself (length or number of letters, words or roots to avoid, forbidden endings, words the name must contain, reference brands to imitate, invented vs descriptive name), copy every one of them, in the user\'s own words, into a final separate paragraph. Do not soften, merge or drop any of them. If there is none, write no such paragraph.',
+  '- Plain text only: no Markdown, no headings (#), no bold or italics (*, **, _), no bullet or numbered lists. One or two short paragraphs, plus the naming paragraph when needed, separated by a blank line.',
+].join('\n');
+
+/**
  * Dédoublonne sans tenir compte de la casse ni des espaces, en gardant l'ORDRE
  * du modèle — il les rend du plus au moins pertinent, et c'est le début de
  * liste qu'on conserve.
@@ -513,9 +534,7 @@ export class DomainService {
     try {
       const response = await this.modele.completer('refine', {
         role: 'simple',
-        systeme:
-          'Tu es un expert en marketing et branding. Reformule et complète la description suivante pour en extraire l\'essence et la valeur ajoutée du produit. Sois concis mais percutant. ' +
-          'Réponds en texte brut uniquement : pas de Markdown, pas de titres (#), pas de gras/italique (*, **, _), pas de listes à puces ni de numérotation. Un ou deux paragraphes simples séparés par un saut de ligne.',
+        systeme: CONSIGNE_REFORMULATION,
         message: description,
         format: { type: 'texte' },
         maxSortie: 500,

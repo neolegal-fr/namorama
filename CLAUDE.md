@@ -572,6 +572,13 @@ l'absence de signal mesurait l'efficacité du pré-calcul, pas la lecture.
 `bandeau` (5 rejets sans favori). Il dit si l'incitation sert, et donc si le défaut
 « noms inventés » doit être revu.
 
+`description_refine_shown` (`longueur` du texte saisi) et `description_refine_chosen`
+(`choix` : `reformulation` ou `originale`, `retouchee`) suivent la reformulation
+confirmée de l'étape 1 (chantier `reformulation-systematique`). Avant, la reformulation
+n'émettait rien : un bouton secondaire dont personne ne savait s'il servait. Jamais de
+texte de description dans ces événements. Si plus de 80 % des descriptions sont gardées,
+la consigne (`CONSIGNE_REFORMULATION`) est à revoir.
+
 ### Parcours utilisateur
 
 Deux canaux complémentaires :
@@ -701,7 +708,13 @@ prérendu devait éviter.
 
 ## Fonctionnalités
 
-- Wizard : Description → Reformulation IA → Mots-clés → Recherche domaines
+- Wizard : Description → Reformulation IA confirmée → Mots-clés → Recherche domaines.
+  « Continuer » reformule la description, puis l'utilisateur retient la version proposée
+  (modifiable) ou garde la sienne. Le texte retenu est **la seule** description : celle
+  du projet, des mots-clés, des contraintes et des recherches. La consigne recopie le
+  cahier des charges du nom (longueur, terminaisons, mots, marques de référence) et
+  n'ajoute aucun fait. Un échec ou plus de 10 s mène à l'étape 2 sans confirmation, et
+  un texte déjà validé n'est pas reformulé à nouveau.
 - Tableau matriciel de disponibilité par extension
 - Favoris (coups de cœur) avec tri prioritaire
 - Projets : sauvegarde, historique, restauration via drawer
