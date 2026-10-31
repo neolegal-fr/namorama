@@ -5,6 +5,7 @@
 - [x] 1.1 Rédiger `docs/systeme-de-design.md` §1 à §10, à partir de `tokens.css`, `theme.css`, `components.css`, du preset, du handoff et de `docs/AUDIT-coherence-pp.md`, chiffres du §10 relevés le 31/10/2026. Vérification : chaque jeton et chaque classe cités existent (`grep` sur `web/src/styles/`).
 - [x] 1.2 Écrire `web/scripts/verifier-design.mjs` (D2, D3) et initialiser `web/design-reference.json`. Vérification : `just design-check` passe sur `main`, avec 677 occurrences héritées. Ajouter `color:#ff0000` à `results-grid.css` le fait échouer (« 0 → 1 », exit 1). Retirer un `!important` de `styles.css` le fait échouer en demandant le resserrement (« 12 → 11 »). Les deux fichiers restaurés, il repasse.
 - [x] 1.3 Ajouter les recettes `design-check` et `design-resserrer` au `justfile`, et le job `design-web` à `docker-publish.yml`, dont `build-web` dépend. Vérification : `just design-check` passe en local et le YAML se charge (`yaml.safe_load`). Le job doit être vert sur la PR de ce chantier, case cochée après lecture du résultat de la CI.
+  - PR #175, 31/10/2026 : « Système de design (web) » vert en 9 s ; « Build Web image » a attendu le job.
 
 ## 2. Règles d'application
 
