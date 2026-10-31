@@ -5,24 +5,40 @@ context: |
   All artifacts must be written in French.
   Keep OpenSpec structural headings and SHALL/MUST keywords in English.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Project: Namorama, SaaS that suggests brand names and checks domain
+  availability. NestJS API (api/), Angular 21 + PrimeNG front (web/),
+  MariaDB, production on namorama-prod. CLAUDE.md holds the conventions
+  and the measured facts behind them; read the sections that touch the
+  change before writing any artifact.
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+  Facts come from production, dated: logs (scripts/analyze-logs.py over
+  ssh), database read-only queries, and user feedback. Never quote a user
+  description, email or name verbatim in an artifact: paraphrase it.
+
+rules:
+  proposal:
+    - Ground the Why in measured, dated production facts (counts, log events, examples), not in assumptions.
+    - Cite the code that explains each problem with file:line when it exists.
+    - End What Changes with an explicit out-of-scope list.
+  specs:
+    - One behavior per requirement; examples and edge cases go into scenarios.
+    - Scenarios use concrete values taken from (paraphrased) real cases.
+  design:
+    - For each decision, state the alternative that was rejected and why.
+    - Record any change to an external contract (API, SSE events, OpenAI request parity, logged events) explicitly.
+  tasks:
+    - Every task states how it is verified (test file, command, or browser check).
+    - Each group lands its own tests and CLAUDE.md updates; no final testing or documentation group.
+    - UI work is verified in a browser with non-empty data, not only by a build.
+    - Any SQL migration task comes before the deploy task, as CLAUDE.md requires.
+    - Production checks after deployment go in Workflow follow-up, then the change is archived.
+
+operations:
+  apply:
+    guidance:
+      - Work on a dedicated branch from up-to-date origin/main, one change per pull request.
+      - Tick a task only once its stated verification has actually passed; note real-model or browser results under the task.
+  archive:
+    guidance:
+      - Archive only after the production follow-up has been read and noted in tasks.md.
+      - After archiving, check that openspec/specs/ received the capabilities and that openspec validate --all passes.

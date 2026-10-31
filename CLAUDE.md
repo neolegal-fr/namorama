@@ -355,6 +355,29 @@ la **suppression de compte**, qui la précède.
 > Le SMTP du realm reste utile en dehors du partage : sans lui, « mot de passe
 > oublié » échoue en silence pour tout le monde.
 
+## Méthode : tout chantier passe par OpenSpec
+
+Une évolution de comportement — fonctionnalité, changement de règle, correctif qui
+modifie ce que voit l'utilisateur — commence par un **chantier OpenSpec**
+(`openspec/changes/<nom>/`) : proposition, spécifications, design, tâches. Le code
+vient ensuite, tâche par tâche. Les règles de rédaction propres au projet sont dans
+`openspec/config.yaml` (CLI ≥ 1.16, `npm i -g @fission-ai/openspec`).
+
+- **Cycle** : `/opsx:explore` pour réfléchir, `/opsx:propose` pour rédiger,
+  `/opsx:apply` pour réaliser, `/opsx:archive` une fois le suivi en production lu.
+  Les commandes et compétences sont versionnées (`.claude/commands/opsx/`,
+  `.claude/skills/openspec-*`) ; `openspec update` les régénère après une mise à jour
+  de la CLI.
+- **Une décision produit se tranche avant les tâches**, avec l'utilisateur, et se
+  consigne dans le design avec l'alternative écartée.
+- **Une tâche se coche quand sa vérification est passée**, pas quand le code est écrit.
+  Une vérification sur le vrai modèle ou au navigateur se note sous la tâche.
+- **L'archivage alimente `openspec/specs/`**, la référence de ce que le produit
+  garantit. Un chantier livré mais non archivé laisse cette référence vide : c'était
+  le cas des deux premiers chantiers jusqu'au 31/10/2026.
+- **Hors OpenSpec** : correctif urgent sans changement de comportement voulu,
+  dépendance, réglage d'infrastructure. Le commit suffit.
+
 ## Déploiement en production
 
 Le serveur de prod est accessible via SSH à `192.168.1.95` (user `nicolas`) **depuis le LAN uniquement**.
