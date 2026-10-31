@@ -48,7 +48,11 @@
 
 ## 5. Livraison
 
-- [ ] 5.1 Merger la PR, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web`. Vérification : conteneurs `Up`, et un passage à l'étape 2 en production affiche la confirmation.
+- [x] 5.1 Merger la PR, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web`. Vérification : conteneurs `Up`, et un passage à l'étape 2 en production affiche la confirmation.
+  - Livré le 31/10/2026 : PR #172 mergée (`fb89da2`), build `main` vert, déploiement à 15 h 44. Conteneurs `api` et `web` `Up`, démarrage de l'API sans erreur ni avertissement.
+  - Image déployée : celle de `fb89da2` seule. La PR #171, mergée quatre minutes plus tard par une autre session, n'avait pas encore d'image au moment du `pull`.
+  - Navigateur sur namorama.com : plus de bouton « Reformuler avec l'IA ». « Continuer » affiche la confirmation, et la version proposée recopie « nom inventé, court, dans l'esprit de Qonto ou Alan ».
+  - La tâche 1.1 reste ouverte. L'agent n'a pas accès aux logs de prod, et la mesure de départ (`refine` / `keywords` sur les 30 jours avant le 31/10/2026) peut encore se lire tant que ces jours restent dans la rétention.
 
 ## Workflow follow-up
 
