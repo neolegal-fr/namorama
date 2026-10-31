@@ -157,7 +157,9 @@
       "MIN_LENGTH_ERROR": "Describe your project in at least {{count}} characters.",
       "ERROR_SUMMARY": "Error",
       "REFINE_ERROR": "Could not refine the description. Please try again.",
-      "KEYWORDS_ERROR": "Could not generate keywords. Please try again."
+      "KEYWORDS_ERROR": "Could not generate keywords. Please try again.",
+      "KEYWORDS_EMPTY_SUMMARY": "No keywords found",
+      "KEYWORDS_EMPTY": "Your description is too short to extract keywords. Add a few below, or go back and describe your project in more detail."
     },
     "STEP2": {
       "TITLE": "Your preferences",
@@ -414,7 +416,9 @@
       "REPORT_SHARE_BY_MAIL": "Send by email",
       "REPORT_SHARE_COPY_LINK": "Copy the public link",
       "SEARCH_COST_HINT": "1 credit per suggestion found, 10 at most.",
-      "CREDITS_LOW": "Only {{n}} credits left — 1 per suggestion, {{report}} for a brand report."
+      "CREDITS_LOW": "Only {{n}} credits left — 1 per suggestion, {{report}} for a brand report.",
+      "SEARCH_ERROR_SUMMARY": "Search unavailable",
+      "SEARCH_ERROR": "The search failed. Please try again in a moment."
     },
     "TIMEOUT": {
       "MESSAGE": "The search is taking longer than expected. Do you want to keep waiting?",

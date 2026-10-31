@@ -160,6 +160,71 @@ export function dedupeKeywords(raw: string[]): string[] {
   return out;
 }
 
+/**
+ * Longueur au-delà de laquelle un « mot-clé » est une phrase. L'API refuse
+ * toute recherche portant un mot-clé de plus de 100 caractères ; un vrai
+ * mot-clé en fait rarement plus de 30.
+ */
+export const MOT_CLE_MAX_CARACTERES = 40;
+const MOT_CLE_MAX_MOTS = 5;
+
+/**
+ * Lit la liste de mots-clés rendue par le modèle, sans lui faire confiance.
+ *
+ * La consigne demande une liste séparée par des virgules, et OpenAI s'y
+ * tenait. Haiku 5.5, non : il ajoute un préambule (« Les 15 mots-clés les plus
+ * pertinents… :\n\n ») ou, devant une description vague, fait la conversation
+ * (« Pourriez-vous me dire : … ? »). Découpée sur les virgules, une phrase
+ * devenait un mot-clé de plus de 100 caractères, et l'API refusait ensuite
+ * CHAQUE recherche du projet — 100 refus du 22 au 29/10/2026, quatre comptes
+ * repartis sans avoir jamais vu un nom.
+ *
+ * Une question posée par le modèle ne contient aucun mot-clé : la réponse est
+ * écartée entière. Sinon, les lignes d'introduction (terminées par « : ») sont
+ * retirées, la mise en forme (puces, numéros, gras) effacée, et ce qui a la
+ * forme d'une phrase est ignoré.
+ */
+export function lireMotsCles(texte: string): string[] {
+  if (!texte || texte.includes('?')) return [];
+  const morceaux = texte
+    .split(/\r?\n/)
+    .map((ligne) => ligne.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, ''))
+    // Introduction (« … :») ou prose (une fin de phrase en cours de ligne) :
+    // la ligne entière part, sans quoi ses fragments passeraient pour des mots.
+    .filter((ligne) => !/:\s*$/.test(ligne) && !/[.!]\s+\S/.test(ligne))
+    .flatMap((ligne) => ligne.split(/[,;]/))
+    .map((m) =>
+      m
+        .replace(/[*_`"«»]/g, '')
+        .replace(/\.$/, '')
+        .trim(),
+    )
+    .filter(
+      (m) =>
+        m.length > 0 &&
+        m.length <= MOT_CLE_MAX_CARACTERES &&
+        m.split(/\s+/).length <= MOT_CLE_MAX_MOTS &&
+        !/[.:!]\s/.test(m),
+    );
+  return dedupeKeywords(morceaux).slice(0, KEYWORD_LIMIT);
+}
+
+/** Au-delà, le modèle a écrit une phrase, pas un nom de projet. */
+const NOM_DE_PROJET_MAX = 24;
+
+/**
+ * Le nom de projet suggéré, ou rien. Haiku répond parfois par une question
+ * (« Pour te proposer le bon nom, j'ai besoin… ») que l'ancien nettoyage
+ * collait en « Pourteproposerlebonnom… ». Plusieurs mots ou une phrase :
+ * pas de suggestion, le projet garde son nom par défaut.
+ */
+export function lireNomDeProjet(texte: string): string {
+  const brut = (texte ?? '').trim().replace(/[*_`"«».!]/g, '').trim();
+  if (!brut || /\s/.test(brut)) return '';
+  const nom = brut.replace(/[^a-zA-Z0-9]/g, '');
+  return nom.length <= NOM_DE_PROJET_MAX ? nom : '';
+}
+
 export const DEFAULT_MIN_NAME_LENGTH = 7;
 /** Plancher absolu réglable depuis l'UI (avec avertissement « difficile »). */
 export const MIN_NAME_LENGTH_FLOOR = 5;
@@ -298,7 +363,7 @@ export class DomainService {
     try {
       const response = await this.modele.completer('suggest_name', {
         role: 'simple',
-        systeme: 'Tu es un expert en branding. Suggère UNIQUEMENT un seul mot (nom propre ou mot inventé) qui soit extrêmement évocateur, moderne et mémorisable pour le projet décrit. Pas de ponctuation, pas de phrase.',
+        systeme: 'Tu es un expert en branding. Suggère UNIQUEMENT un seul mot (nom propre ou mot inventé) qui soit extrêmement évocateur, moderne et mémorisable pour le projet décrit. Pas de ponctuation, pas de phrase. Ne pose jamais de question : même si la description est courte ou vague, réponds par un seul mot.',
         message: description,
         format: { type: 'texte' },
         // Budget généreux : sur un modèle à raisonnement, une limite trop basse
@@ -307,7 +372,7 @@ export class DomainService {
         raisonnement: 'none',
       });
 
-      return response.texte.trim().replace(/[^a-zA-Z0-9]/g, '');
+      return lireNomDeProjet(response.texte);
     } catch (error) {
       this.logger.error('Erreur lors de la suggestion du nom de projet:', error);
       return '';
@@ -338,7 +403,8 @@ export class DomainService {
             Vary the angles: synonyms, technical terms, user benefits, and abstract concepts related to the domain.
             Prefer precision over coverage: a shorter, sharper list is better than an exhaustive one.
             ${localeInstruction}
-            Return ONLY a comma-separated list of words, no numbering.`,
+            Return ONLY a comma-separated list of keywords (1 to 3 words each), no numbering, no introduction, no explanation.
+            Never ask questions: if the description is short or vague, still infer the most plausible keywords.`,
         message: description,
         format: { type: 'texte' },
         maxSortie: 600,
@@ -347,7 +413,11 @@ export class DomainService {
 
       const content = response.texte;
       if (!content) return [];
-      return dedupeKeywords(content.split(',')).slice(0, KEYWORD_LIMIT);
+      const motsCles = lireMotsCles(content);
+      // Une réponse sans aucun mot-clé lisible : le modèle a posé une question
+      // ou fait une phrase. Visible dans `python3 - errors`.
+      if (!motsCles.length) this.logger.warn(`keywords : réponse sans mot-clé lisible (${content.length} caractères)`);
+      return motsCles;
     } catch (error) {
       this.logger.error('Erreur lors de la génération des mots-clés:', error);
       throw error;

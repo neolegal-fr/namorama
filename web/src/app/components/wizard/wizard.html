@@ -217,7 +217,7 @@
             </span>
           </div>
           <div class="flex gap-2">
-            <input pInputText type="text" [(ngModel)]="newKeyword" class="flex-1" [disabled]="keywordsFull()" [placeholder]="'WIZARD.STEP2.ADD_PLACEHOLDER' | translate" (keydown.enter)="addKeyword()">
+            <input pInputText type="text" [(ngModel)]="newKeyword" class="flex-1" [attr.maxlength]="MAX_KEYWORD_LENGTH" [disabled]="keywordsFull()" [placeholder]="'WIZARD.STEP2.ADD_PLACEHOLDER' | translate" (keydown.enter)="addKeyword()">
             <p-button icon="pi pi-plus" [disabled]="keywordsFull()" (onClick)="addKeyword()"></p-button>
           </div>
           <div class="chips-container">
