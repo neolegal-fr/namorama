@@ -4,7 +4,7 @@ SaaS pour trouver des noms de marque et domaines disponibles à partir d'une des
 
 ## Stack
 
-- **Frontend** : Angular 21, PrimeNG 21 (Aura theme), Tailwind CSS 4
+- **Frontend** : Angular 21, PrimeNG 21 (preset Aura retouché), utilitaires PrimeFlex 4 — **pas Tailwind**, qui n'est pas installé (`web/src/styles/tokens.css`)
 - **Backend** : NestJS, TypeORM, MariaDB 10.6
 - **Auth** : Keycloak SSO (realm `namorama`, auto-importé depuis `infra/keycloak/realm-export.json`)
 - **IA** : OpenAI GPT-5.6 par défaut, ou Claude (Anthropic) — `AI_PROVIDER`, voir « Fournisseur du modèle »
@@ -71,7 +71,8 @@ web/src/
 │   ├── app.routes.ts           # Routes (/ et /projects/:id)
 │   ├── components/wizard/      # Wizard 3 étapes (Description → Mots-clés → Domaines)
 │   └── services/               # domain.ts, project.ts, user.ts
-├── styles.css                  # Tailwind + styles globaux
+├── styles.css                  # PrimeFlex + styles globaux
+├── styles/                     # tokens.css, theme.css, components.css : le système de design
 └── index.html
 api/src/
 ├── domain/                     # Recherche domaines, disponibilité (rdap.service.ts + repli whois)
@@ -82,10 +83,31 @@ api/src/
 
 ## Conventions importantes
 
-### CSS / Styles
-- **PrimeNG écrase les classes Tailwind** dans ses composants (Card, Table, Drawer, Dialog, etc.). Utiliser des **inline styles** pour les propriétés de layout critiques (`display`, `flex-direction`, `align-items`, `justify-content`, `gap`, `text-align`, `margin`, `max-width`).
-- Tailwind reste utilisable pour les éléments hors PrimeNG et pour les propriétés décoratives.
-- Les hover effects nécessitent des classes CSS dans `styles.css` (pas d'inline styles possibles).
+### Système de design — à lire avant de toucher `web/`
+
+**Tout écran, composant, texte, toast, dialogue ou e-mail suit
+[`docs/systeme-de-design.md`](docs/systeme-de-design.md)** : le lire avant d'écrire le
+chantier OpenSpec, et nommer dans sa proposition les sections sur lesquelles il s'appuie.
+Les valeurs font foi dans `web/src/styles/tokens.css`, `theme.css` et le preset de
+`app.config.ts`. L'essentiel :
+
+- **Des jetons, jamais des valeurs** : `var(--nm-app-…)` dans l'application (il suit le
+  thème), `var(--nm-…-dark|light)` dans l'accueil éditorial (il ne bascule pas). Une valeur
+  qui manque devient un jeton, contraste mesuré en commentaire.
+- **Pas de style en ligne.** La mise en page va dans la feuille du composant ou dans un
+  utilitaire PrimeFlex ; un composant PrimeNG se retouche par `styleClass` ou `pt`. L'ancienne
+  règle « inline styles pour le layout, PrimeNG écrase Tailwind » partait d'un Tailwind qui
+  n'est pas installé — elle a laissé 437 `style=` qu'on résorbe désormais.
+- **Le composant existant d'abord** (`.nm-btn-primary`, `.nm-verdict--*`, `.nm-filter`,
+  `app-reserver`…), **un seul bouton principal par zone**, verdicts en **trois états**.
+- **Vérifié au navigateur en clair et en sombre, à 390 px et sur bureau.**
+- **`just design-check`** — un cliquet, aussi en CI sur chaque PR, qui refuse toute couleur,
+  `style=`, `font-size` en px ou `!important` ajouté hors des jetons. Après un nettoyage :
+  `just design-resserrer`, et committer `web/design-reference.json`. Ne jamais relever cette
+  référence à la main sans une décision de `design.md`.
+- Un composant ou motif nouveau, ou un écart assumé, s'écrit dans `docs/systeme-de-design.md`
+  **dans le même chantier**.
+- Les effets de survol vont dans une feuille CSS (pas de style en ligne possible).
 - **`nm-prive` sur tout texte affiché qui reprend une saisie ou une adresse e-mail**
   (description, mots-clés, adresses). L'enregistrement de session masque d'office les
   champs de saisie, pas ce qu'on en réaffiche. Une adresse portée par un **attribut**
@@ -499,7 +521,9 @@ vient ensuite, tâche par tâche. Les règles de rédaction propres au projet so
   garantit. Un chantier livré mais non archivé laisse cette référence vide : c'était
   le cas des deux premiers chantiers jusqu'au 31/10/2026.
 - **Hors OpenSpec** : correctif urgent sans changement de comportement voulu,
-  dépendance, réglage d'infrastructure. Le commit suffit.
+  dépendance, réglage d'infrastructure. Le commit suffit. **Même hors OpenSpec, une
+  retouche de `web/` suit `docs/systeme-de-design.md` et passe `just design-check`** : la
+  CI le contrôle sur la PR, chantier ou non.
 
 ## Déploiement en production
 

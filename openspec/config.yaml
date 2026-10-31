@@ -15,21 +15,31 @@ context: |
   ssh), database read-only queries, and user feedback. Never quote a user
   description, email or name verbatim in an artifact: paraphrase it.
 
+  Design system: docs/systeme-de-design.md governs every screen, component,
+  e-mail and user-facing text of web/. Any change that touches what the
+  user sees reads it before writing an artifact, uses its tokens (--nm-*)
+  and components, and follows its voice rules. The capability
+  `systeme-de-design` in openspec/specs/ states these obligations.
+
 rules:
   proposal:
     - Ground the Why in measured, dated production facts (counts, log events, examples), not in assumptions.
     - Cite the code that explains each problem with file:line when it exists.
     - End What Changes with an explicit out-of-scope list.
+    - If the change touches anything the user sees (screen, component, text, e-mail, toast), add an « Interface » line in Impact naming the design-system sections it relies on (docs/systeme-de-design.md §n), or stating that it adds a new pattern.
   specs:
     - One behavior per requirement; examples and edge cases go into scenarios.
     - Scenarios use concrete values taken from (paraphrased) real cases.
   design:
     - For each decision, state the alternative that was rejected and why.
     - Record any change to an external contract (API, SSE events, OpenAI request parity, logged events) explicitly.
+    - For UI work, state which existing tokens and components are reused. A new token, component or pattern, or any deviation from docs/systeme-de-design.md, is a decision of its own, with the rejected alternative (usually « reuse the existing one »).
   tasks:
     - Every task states how it is verified (test file, command, or browser check).
     - Each group lands its own tests and CLAUDE.md updates; no final testing or documentation group.
-    - UI work is verified in a browser with non-empty data, not only by a build.
+    - UI work is verified in a browser with non-empty data, not only by a build, in light AND dark theme for app screens, and at 390 px width as well as desktop.
+    - Every group that touches web/ ends with `just design-check` passing; a group that removes hardcoded values runs `just design-resserrer` and commits web/design-reference.json.
+    - A new pattern, token or component, or a deviation, gets its own task updating docs/systeme-de-design.md in the same group as the code.
     - Any SQL migration task comes before the deploy task, as CLAUDE.md requires.
     - Production checks after deployment go in Workflow follow-up, then the change is archived.
 
@@ -38,6 +48,7 @@ operations:
     guidance:
       - Work on a dedicated branch from up-to-date origin/main, one change per pull request.
       - Tick a task only once its stated verification has actually passed; note real-model or browser results under the task.
+      - Before touching web/, read docs/systeme-de-design.md §1 (règles) and the sections of the components involved. Never raise web/design-reference.json by hand without a design.md decision justifying it.
   archive:
     guidance:
       - Archive only after the production follow-up has been read and noted in tasks.md.

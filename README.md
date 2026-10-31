@@ -3,7 +3,7 @@
 Namespoter vous aide à trouver le nom de domaine idéal pour votre prochain produit en utilisant la puissance de l'IA et une vérification Whois en temps réel.
 
 ## 🛠 Stack
-- **Web**: Angular 21 + PrimeNG 21 + Tailwind 4
+- **Web**: Angular 21 + PrimeNG 21 + PrimeFlex 4 — système de design : `docs/systeme-de-design.md`
 - **API**: NestJS + TypeORM + PostgreSQL
 - **Auth**: Keycloak (SSO)
 - **IA**: OpenAI GPT-3.5
