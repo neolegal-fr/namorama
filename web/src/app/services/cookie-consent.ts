@@ -137,6 +137,13 @@ const TEXTES_FR = {
         title: 'Cookies strictement nécessaires',
         description: 'Ces cookies sont indispensables au fonctionnement du site (session, authentification). Ils ne peuvent pas être désactivés.',
         linkedCategory: 'necessary',
+        cookieTable: {
+          headers: { name: 'Nom', domain: 'Stockage', desc: 'Description' },
+          body: [
+            { name: 'cc_cookie', domain: 'cookie', desc: 'Vos choix de cookies (6 mois)' },
+            { name: 'nm_sid', domain: 'onglet', desc: 'Identifiant de visite anonyme, effacé à la fermeture de l\'onglet' },
+          ],
+        },
       },
       {
         title: 'Cookies analytiques',
@@ -154,6 +161,12 @@ const TEXTES_FR = {
         title: 'Enregistrement de session',
         description: 'Nous enregistrons vos actions dans l\'application (clics, défilement, pages, erreurs) pour comprendre ce qui vous gêne. Tout ce que vous tapez est masqué avant de quitter votre navigateur, ainsi que vos descriptions, mots-clés et adresses e-mail. Les enregistrements restent sur le serveur de Namorama, sans sous-traitant, et sont effacés après 30 jours.',
         linkedCategory: 'replay',
+        cookieTable: {
+          headers: { name: 'Nom', domain: 'Stockage', desc: 'Description' },
+          body: [
+            { name: 'nm_replay_seg', domain: 'onglet', desc: 'Numéro de séquence de l\'enregistrement, effacé à la fermeture de l\'onglet' },
+          ],
+        },
       },
     ],
   },
@@ -180,6 +193,13 @@ const TEXTES_EN = {
         title: 'Strictly necessary cookies',
         description: 'These cookies are required for the site to work (session, authentication). They cannot be disabled.',
         linkedCategory: 'necessary',
+        cookieTable: {
+          headers: { name: 'Name', domain: 'Storage', desc: 'Description' },
+          body: [
+            { name: 'cc_cookie', domain: 'cookie', desc: 'Your cookie choices (6 months)' },
+            { name: 'nm_sid', domain: 'tab', desc: 'Anonymous visit identifier, erased when the tab closes' },
+          ],
+        },
       },
       {
         title: 'Analytics cookies',
@@ -197,6 +217,12 @@ const TEXTES_EN = {
         title: 'Session recording',
         description: 'We record your actions in the app (clicks, scrolling, pages, errors) to understand what gets in your way. Everything you type is masked before it leaves your browser, as are your descriptions, keywords and email addresses. Recordings stay on Namorama\'s own server, with no third party, and are deleted after 30 days.',
         linkedCategory: 'replay',
+        cookieTable: {
+          headers: { name: 'Name', domain: 'Storage', desc: 'Description' },
+          body: [
+            { name: 'nm_replay_seg', domain: 'tab', desc: 'Recording sequence number, erased when the tab closes' },
+          ],
+        },
       },
     ],
   },

@@ -11,7 +11,7 @@ import { applyContentSeo } from '../content/content-seo';
     <div class="max-w-3xl mx-auto px-4 py-12 text-900">
       @if (lang() === 'fr') {
         <h1 class="text-3xl font-bold mb-2">Politique de confidentialité</h1>
-        <p class="text-500 text-sm mb-8">Dernière mise à jour : mars 2026</p>
+        <p class="text-500 text-sm mb-8">Dernière mise à jour : octobre 2026</p>
 
         <h2 class="text-xl font-semibold mt-8 mb-3">1. Responsable du traitement</h2>
         <p>
@@ -85,9 +85,21 @@ import { applyContentSeo } from '../content/content-seo';
           Nous répondrons dans un délai d'un mois. En cas de réponse insatisfaisante, vous pouvez saisir la <a href="https://www.cnil.fr" target="_blank" rel="noopener" class="text-primary">CNIL</a>.
         </p>
 
-        <h2 class="text-xl font-semibold mt-8 mb-3">8. Cookies</h2>
+        <h2 class="text-xl font-semibold mt-8 mb-3">8. Cookies et mesure d'usage</h2>
         <p>
-          Namorama utilise uniquement des cookies strictement nécessaires au fonctionnement du service (session d'authentification, préférences de langue). Aucun cookie publicitaire ou de tracking tiers n'est déposé.
+          Les cookies et identifiants <strong>strictement nécessaires</strong> sont toujours actifs : session d'authentification, préférences de langue et de thème, mémorisation de vos choix de cookies (<code>cc_cookie</code>), et un identifiant de visite anonyme, propre à l'onglet et effacé à sa fermeture (<code>nm_sid</code>), qui nous permet de compter les visites sans vous identifier.
+        </p>
+        <p class="mt-3">Deux usages facultatifs ne fonctionnent qu'avec votre accord, demandé séparément :</p>
+        <ul class="list-disc pl-6 space-y-1 mt-2">
+          <li>
+            <strong>Mesure d'audience (Google Analytics 4)</strong> : pages consultées et durée des visites, pour comprendre comment Namorama est utilisé. Ces données sont traitées par Google.
+          </li>
+          <li>
+            <strong>Enregistrement de session</strong> : vos actions dans l'application (clics, défilement, pages vues, erreurs techniques) sont enregistrées pour que nous puissions revoir un parcours et repérer ce qui vous a bloqué. Tout ce que vous tapez est masqué <em>dans votre navigateur, avant tout envoi</em>, de même que vos descriptions de projet, mots-clés et adresses e-mail. Ni vos échanges réseau ni vos pages d'administration ne sont enregistrés. Les enregistrements restent sur le serveur de Namorama, sans sous-traitant, ne sont consultés que par l'équipe, et sont <strong>effacés après 30 jours</strong>.
+          </li>
+        </ul>
+        <p class="mt-3">
+          Vous pouvez donner ou retirer votre accord à tout moment, catégorie par catégorie, grâce au lien <strong>« Gérer les cookies »</strong> en pied de page. Le retrait prend effet immédiatement : plus rien n'est enregistré à partir de cet instant. Aucun cookie publicitaire n'est déposé.
         </p>
 
         <h2 class="text-xl font-semibold mt-8 mb-3">9. Sécurité</h2>
@@ -107,7 +119,7 @@ import { applyContentSeo } from '../content/content-seo';
         </div>
       } @else {
         <h1 class="text-3xl font-bold mb-2">Privacy Policy</h1>
-        <p class="text-500 text-sm mb-8">Last updated: March 2026</p>
+        <p class="text-500 text-sm mb-8">Last updated: October 2026</p>
 
         <h2 class="text-xl font-semibold mt-8 mb-3">1. Data Controller</h2>
         <p>
@@ -181,9 +193,21 @@ import { applyContentSeo } from '../content/content-seo';
           We will respond within one month. If unsatisfied, you may lodge a complaint with your national data protection authority.
         </p>
 
-        <h2 class="text-xl font-semibold mt-8 mb-3">8. Cookies</h2>
+        <h2 class="text-xl font-semibold mt-8 mb-3">8. Cookies and usage measurement</h2>
         <p>
-          Namorama uses only strictly necessary cookies for the operation of the service (authentication session, language preferences). No advertising or third-party tracking cookies are used.
+          <strong>Strictly necessary</strong> cookies and identifiers are always active: authentication session, language and theme preferences, your cookie choices (<code>cc_cookie</code>), and an anonymous visit identifier scoped to the browser tab and erased when it closes (<code>nm_sid</code>), which lets us count visits without identifying you.
+        </p>
+        <p class="mt-3">Two optional uses only run with your consent, asked for separately:</p>
+        <ul class="list-disc pl-6 space-y-1 mt-2">
+          <li>
+            <strong>Audience measurement (Google Analytics 4)</strong>: pages visited and visit duration, to understand how Namorama is used. This data is processed by Google.
+          </li>
+          <li>
+            <strong>Session recording</strong>: your actions in the app (clicks, scrolling, pages viewed, technical errors) are recorded so that we can review a journey and find what got in your way. Everything you type is masked <em>in your browser, before anything is sent</em>, as are your project descriptions, keywords and email addresses. Neither your network traffic nor administration pages are recorded. Recordings stay on Namorama's own server, with no third-party processor, are only viewed by the team, and are <strong>deleted after 30 days</strong>.
+          </li>
+        </ul>
+        <p class="mt-3">
+          You can give or withdraw consent at any time, category by category, with the <strong>“Manage cookies”</strong> link in the footer. Withdrawal takes effect immediately: nothing more is recorded from that moment. No advertising cookies are used.
         </p>
 
         <h2 class="text-xl font-semibold mt-8 mb-3">9. Security</h2>

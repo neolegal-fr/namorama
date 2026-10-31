@@ -1,6 +1,7 @@
 import { BadRequestException, Body, Controller, DefaultValuePipe, Get, HttpCode, Param, ParseIntPipe, Post, Query } from '@nestjs/common';
-import { Roles } from 'nest-keycloak-connect';
-import { Public } from '../common/decorators/public.decorator';
+// Le `Public` de nest-keycloak-connect, comme `POST /events` : celui de
+// `common/decorators` n'est pas lu par la garde, et la route répondait 401.
+import { Public, Roles } from 'nest-keycloak-connect';
 import { ReplayChunkDto } from './dto/replay-chunk.dto';
 import { FILTRES, FiltreRejeu, ReplayService } from './replay.service';
 
@@ -43,6 +44,13 @@ export class AdminReplayController {
     });
   }
 
+  /** Comptes ayant au moins une visite enregistrée — pour le raccourci du tableau des utilisateurs. */
+  @Get('comptes')
+  comptes() {
+    return this.replay.comptesEnregistres();
+  }
+
+  // Après `comptes` : déclarée avant, `:sessionId` capturerait ce chemin.
   @Get(':sessionId')
   lire(@Param('sessionId') sessionId: string) {
     return this.replay.lire(sessionId);

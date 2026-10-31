@@ -269,6 +269,17 @@ export class ReplayService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  /** Identifiants Keycloak des comptes rattachés à au moins une visite enregistrée. */
+  async comptesEnregistres(): Promise<string[]> {
+    const rows: { keycloakId: string }[] = await this.dataSource.query(
+      `SELECT DISTINCT v.keycloakId
+         FROM session_replay_chunk c
+         JOIN visitor_session v ON v.sessionId = c.sessionId
+        WHERE v.keycloakId IS NOT NULL`,
+    );
+    return rows.map(r => r.keycloakId);
+  }
+
   /** Les événements d'une visite, un tableau par segment, dans l'ordre. 404 si rien (purgé). */
   async lire(sessionId: string): Promise<{ sessionId: string; segments: unknown[][] }> {
     const lots: { segment: number; seq: number; data: Buffer }[] = await this.dataSource.query(

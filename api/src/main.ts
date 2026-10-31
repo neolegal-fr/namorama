@@ -4,10 +4,7 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { AppLoggerService } from './common/logging/app-logger.service';
 import { RequestLoggingInterceptor } from './common/logging/request-logging.interceptor';
-import { json } from 'express';
-
-/** Taille maximale d'un lot du rejeu, JSON non compressé. */
-const LIMITE_CORPS_REJEU = '1mb';
+import { parseurDuRejeu } from './replay/parseur-du-rejeu';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true, bufferLogs: true });
@@ -23,7 +20,12 @@ async function bootstrap() {
   // page, feuilles de style comprises, bien au-delà des 100 ko par défaut.
   // Monté sur CE SEUL chemin, avant les parseurs de Nest (posés à `listen`) :
   // partout ailleurs, la limite par défaut reste en vigueur.
-  app.use('/replay', json({ limit: LIMITE_CORPS_REJEU }));
+  //
+  // ⚠ Enveloppé, et non passé tel quel : Nest ne pose son propre parseur JSON
+  // que s'il ne trouve aucune couche nommée `jsonParser` dans la pile. Monté
+  // directement, celui-ci DÉSACTIVAIT le parsage JSON de toute l'API — chaque
+  // `POST` arrivait avec un corps vide. `rejeu-corps.spec.ts` le vérifie.
+  app.use('/replay', parseurDuRejeu());
   app.useGlobalInterceptors(new RequestLoggingInterceptor(logger));
 
   app.enableCors({

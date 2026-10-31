@@ -528,10 +528,18 @@ et **Administration → Sessions** (`/admin/replays`) la rejoue.
   visites enregistrables : le rejeu ne voit qu'elles, comme GA.
 - **Masquage dans le navigateur**, avant tout envoi. Les saisies sont masquées d'office
   (`maskAllInputs`), les textes réaffichés le sont par `nm-prive` (voir « CSS / Styles »).
-  Les pages `/admin` et les administrateurs ne sont jamais enregistrés. Ni réseau, ni
-  canvas.
+  rrweb ne masque **pas les attributs** : la puce PrimeNG d'un mot-clé recopie son libellé
+  en `aria-label`, et le mot-clé partait en clair. `masquage-attributs.ts` s'en charge
+  pour les nœuds sous `nm-prive`. Les pages `/admin` et les administrateurs ne sont jamais
+  enregistrés. Ni réseau, ni canvas.
+- **Envoi** : l'instantané complet part **sur-le-champ**, le reste toutes les 3 s, en
+  **`text/plain`**, une requête « simple » sans `OPTIONS` préalable. Envoyé plus tard,
+  l'instantané (700 à 920 ko) restait dans le tampon quand la page partait vers Keycloak.
+  Trop gros pour `keepalive` (64 ko), il était perdu avec tout le parcours avant la
+  connexion.
 - **Trois plafonds**, parce que `POST /replay` est `@Public()` et sans limite de débit :
-  le corps (limite propre à la route dans `main.ts`), la visite
+  le corps (4 Mo, parseur propre à la route : `parseurDuRejeu()`, à ne jamais remplacer
+  par un `json()` nu, qui désactiverait le parseur JSON de toute l'API), la visite
   (`REPLAY_MAX_SESSION_MB`, 5 Mo compressés, 413) et le jour (`REPLAY_MAX_DAY_MB`,
   200 Mo, 429). Chaque plafond atteint journalise `replay_capped` une fois. Un 4xx
   arrête la capture pour la visite. Une visite inconnue de `visitor_session` est
