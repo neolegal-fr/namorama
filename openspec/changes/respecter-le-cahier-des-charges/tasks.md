@@ -24,10 +24,14 @@
 
 ## 3. Mots-clés limités à l'activité (API)
 
-- [ ] 3.1 Passer `generateKeywords` en JSON avec schéma `{ keywords: string[], namingBusiness: boolean }` (nouveau `SCHEMA_MOTS_CLES`), avec une consigne qui exclut le cahier des charges du nom (D6). `lireMotsCles` reste la lecture de secours si le texte n'est pas du JSON. Vérification : `schemas.spec.ts` couvre le nouveau schéma, `keywords.spec.ts` couvre les deux formes de réponse.
-- [ ] 3.2 Ajouter `estVocabulaireDeNommage` et l'appliquer, sauf si `namingBusiness` est vrai. Vérification : `keywords.spec.ts` couvre « nom de marque » écarté pour une boutique, « création de marque » gardé pour une agence de nommage, et « namecheap » non visé.
-- [ ] 3.3 Mettre à jour `requetes-openai.spec.ts` (ajout de `response_format` sur `keywords`) et la phrase de CLAUDE.md qui promet des requêtes OpenAI identiques. Vérification : `npx jest src/common/modele-ia` passe, et CLAUDE.md mentionne l'écart.
-- [ ] 3.4 Vérifier sur `claude-haiku-5-5` réel trois descriptions paraphrasées qui mêlent activité et cahier des charges (SEO + « 6 lettres », e-commerce + « avoid descriptive words », « Act as a naming agency… » + coaching). Vérification : aucun mot de nommage dans les mots-clés, résultats notés sous cette tâche.
+- [x] 3.1 Passer `generateKeywords` en JSON avec schéma `{ keywords: string[], namingBusiness: boolean }` (nouveau `SCHEMA_MOTS_CLES`), avec une consigne qui exclut le cahier des charges du nom (D6). `lireMotsCles` reste la lecture de secours si le texte n'est pas du JSON. Vérification : `schemas.spec.ts` couvre le nouveau schéma, `keywords.spec.ts` couvre les deux formes de réponse.
+- [x] 3.2 Ajouter `estVocabulaireDeNommage` et l'appliquer, sauf si `namingBusiness` est vrai. Vérification : `keywords.spec.ts` couvre « nom de marque » écarté pour une boutique, « création de marque » gardé pour une agence de nommage, et « namecheap » non visé.
+- [x] 3.3 Mettre à jour `requetes-openai.spec.ts` (ajout de `response_format` sur `keywords`) et la phrase de CLAUDE.md qui promet des requêtes OpenAI identiques. Vérification : `npx jest src/common/modele-ia` passe, et CLAUDE.md mentionne l'écart.
+- [x] 3.4 Vérifier sur `claude-haiku-5-5` réel trois descriptions paraphrasées qui mêlent activité et cahier des charges (SEO + « 6 lettres », e-commerce + « avoid descriptive words », « Act as a naming agency… » + coaching). Vérification : aucun mot de nommage dans les mots-clés, résultats notés sous cette tâche.
+  - Relevé du 31/10/2026, sur `claude-haiku-5-5` : 15 mots-clés par cas, aucun mot de nommage.
+    - SEO + « 6 lettres » : marketing digital, SEO, référencement naturel, SEA, réseaux sociaux…
+    - E-commerce + « avoid descriptive » : home goods, home decor, homeware, lifestyle products…
+    - « Act as a naming agency » + coaching : fitness coaching app, personal training plans, client management software…
 
 ## 4. Étape 2 : contraintes visibles, type de nom choisi (web)
 

@@ -55,3 +55,5 @@ export const SCHEMA_CHOIX = objet({ recommended: chaine, reason: chaine });
 export const SCHEMA_DECOUPAGES = objet({ decoupages: listeDe(chaine) });
 
 export const SCHEMA_BROUILLON = objet({ langue: chaine, contexte: chaine });
+
+export const SCHEMA_MOTS_CLES = objet({ keywords: listeDe(chaine), namingBusiness: { type: 'boolean' } });

@@ -6,7 +6,7 @@ import { Resolver } from 'node:dns/promises';
 import { MatchMode } from './dto/search-domains.dto';
 import { RdapService } from './rdap.service';
 import { ModeleIA } from '../common/modele-ia/modele-ia.service';
-import { SCHEMA_ANALYSES, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_NOMS } from '../common/modele-ia/schemas';
+import { SCHEMA_ANALYSES, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_MOTS_CLES, SCHEMA_NOMS } from '../common/modele-ia/schemas';
 
 const execFileAsync = promisify(execFile);
 
@@ -236,21 +236,69 @@ export function lireMotsCles(texte: string): string[] {
     // Introduction (« … :») ou prose (une fin de phrase en cours de ligne) :
     // la ligne entière part, sans quoi ses fragments passeraient pour des mots.
     .filter((ligne) => !/:\s*$/.test(ligne) && !/[.!]\s+\S/.test(ligne))
-    .flatMap((ligne) => ligne.split(/[,;]/))
-    .map((m) =>
-      m
-        .replace(/[*_`"«»]/g, '')
-        .replace(/\.$/, '')
-        .trim(),
-    )
+    .flatMap((ligne) => ligne.split(/[,;]/));
+  return filtrerMotsCles(morceaux);
+}
+
+/**
+ * Ce qui, d'une liste de candidats, peut servir de mot-clé : mise en forme
+ * effacée, phrases écartées, doublons retirés, plafond appliqué. Sert aux
+ * deux formes de réponse, JSON et texte libre.
+ */
+export function filtrerMotsCles(candidats: unknown[], options: { activiteDeNommage?: boolean } = {}): string[] {
+  const propres = candidats
+    .map((m) => String(m ?? '').replace(/[*_`"«»]/g, '').replace(/\.$/, '').trim())
     .filter(
       (m) =>
         m.length > 0 &&
         m.length <= MOT_CLE_MAX_CARACTERES &&
         m.split(/\s+/).length <= MOT_CLE_MAX_MOTS &&
-        !/[.:!]\s/.test(m),
+        !/[.:!?]\s/.test(m) &&
+        (options.activiteDeNommage || !estVocabulaireDeNommage(m)),
     );
-  return dedupeKeywords(morceaux).slice(0, KEYWORD_LIMIT);
+  return dedupeKeywords(propres).slice(0, KEYWORD_LIMIT);
+}
+
+/**
+ * Mots qui ne désignent que la notion de nom ou de marque, ou une qualité
+ * attendue du nom. Relevé du 31/10/2026 : quand la description était un
+ * cahier des charges (« marque premium, nom court, facile à prononcer »), ces
+ * mots devenaient des mots-clés, et les noms suivaient — `marqora`,
+ * `nomvera`, `markio`, `nameverse`. Comparés au mot-clé entier, jamais à une
+ * sous-chaîne : « namecheap » ou « marque de vêtements » ne sont pas visés.
+ */
+const VOCABULAIRE_DE_NOMMAGE = new Set([
+  // fr
+  'nom', 'noms', 'nom de marque', 'nom de domaine', "nom d'entreprise", 'nom commercial', 'nom de societe',
+  'nom original', 'nom court', 'nom invente', 'marque', 'marques', 'identite de marque', 'creation de marque',
+  'strategie de marque', 'generateur de noms', 'image de marque', 'court', 'courte', 'memorable', 'memorisable',
+  'prononcable', 'facile a prononcer', 'lettres', 'invente', 'distinctif', 'unique',
+  // en
+  'name', 'names', 'naming', 'brand', 'brands', 'branding', 'brand name', 'brand names', 'brand identity',
+  'domain name', 'company name', 'business name', 'short', 'catchy', 'brandable', 'pronounceable',
+  'easy to pronounce', 'letters', 'invented', 'coined', 'distinctive', 'name generator',
+  // es, it, de
+  'nombre', 'nombre de marca', 'marca', 'nome', 'nome del marchio', 'marchio', 'markenname', 'marke', 'firmenname',
+]);
+
+export function estVocabulaireDeNommage(motCle: string): boolean {
+  const cle = String(motCle ?? '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').trim();
+  return VOCABULAIRE_DE_NOMMAGE.has(cle);
+}
+
+/**
+ * Lit la réponse du modèle à la demande de mots-clés : le JSON du schéma,
+ * ou à défaut le texte libre (`lireMotsCles`) — un modèle qui ignore la
+ * forme demandée ne doit pas vider l'étape de cadrage.
+ */
+export function lireReponseMotsCles(texte: string): string[] {
+  try {
+    const p = JSON.parse(texte);
+    if (p && Array.isArray(p.keywords)) return filtrerMotsCles(p.keywords, { activiteDeNommage: p.namingBusiness === true });
+  } catch { /* texte libre : lecture de secours */ }
+  return lireMotsCles(texte);
 }
 
 /** Au-delà, le modèle a écrit une phrase, pas un nom de projet. */
@@ -524,17 +572,20 @@ export class DomainService {
             Vary the angles: synonyms, technical terms, user benefits, and abstract concepts related to the domain.
             Prefer precision over coverage: a shorter, sharper list is better than an exhaustive one.
             ${localeInstruction}
-            Return ONLY a comma-separated list of keywords (1 to 3 words each), no numbering, no introduction, no explanation.
-            Never ask questions: if the description is short or vague, still infer the most plausible keywords.`,
+            Keywords describe ONLY the business: what it does or sells, for whom, its benefits, its universe.
+            The description may also contain instructions about the NAME itself (length, style, tone, brands to imitate, words to avoid, requests addressed to an AI such as "act as a naming agency" or "generate 30 names"). Ignore them entirely: they must not produce any keyword. Never output words like "name", "brand", "short", "premium", "memorable", "letters" unless they describe the business itself.
+            Each keyword is 1 to 3 words. Never ask questions: if the description is short or vague, still infer the most plausible keywords.
+            Set "namingBusiness" to true only if the business itself is a naming, branding or brand-creation agency or tool.
+            Respond in JSON: {"keywords": ["..."], "namingBusiness": false}`,
         message: description,
-        format: { type: 'texte' },
+        format: { type: 'json', schema: SCHEMA_MOTS_CLES },
         maxSortie: 600,
         raisonnement: 'none',
       });
 
       const content = response.texte;
       if (!content) return [];
-      const motsCles = lireMotsCles(content);
+      const motsCles = lireReponseMotsCles(content);
       // Une réponse sans aucun mot-clé lisible : le modèle a posé une question
       // ou fait une phrase. Visible dans `python3 - errors`.
       if (!motsCles.length) this.logger.warn(`keywords : réponse sans mot-clé lisible (${content.length} caractères)`);

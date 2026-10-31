@@ -196,8 +196,10 @@ sur l'organisation Console liée à l'abonnement : c'est ce qui rend Claude int�
 - **Pas de carte sur l'organisation Console** : sinon, les crédits épuisés, la dépense
   continue sur la carte au lieu de passer au secours.
 - Avec `AI_PROVIDER=openai`, les requêtes sont celles d'avant, paramètre pour paramètre
-  (`requetes-openai.spec.ts`). Seul écart : le brouillon admin suit le rôle créatif, alors
-  qu'il retombait sur luna quand `OPENAI_MODEL_CREATIVE` manquait.
+  (`requetes-openai.spec.ts`). Deux écarts : le brouillon admin suit le rôle créatif, alors
+  qu'il retombait sur luna quand `OPENAI_MODEL_CREATIVE` manquait ; et `keywords` passe en
+  JSON (`{ keywords, namingBusiness }`, 31/10/2026) pour écarter du cadrage le vocabulaire
+  du nommage (`estVocabulaireDeNommage`), sauf pour une activité de nommage.
 
 Trois règles, chacune tirée d'une dépense qu'on a vraiment payée :
 
