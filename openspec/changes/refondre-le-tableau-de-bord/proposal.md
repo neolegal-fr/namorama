@@ -97,7 +97,7 @@ bord doit le montrer en premier.
   `retention.service.ts`, `admin.controller.ts` (`stats`, `series`) ;
   `api/src/payments/payments.service.ts` (`fulfillSession`, `handleWebhook`) ; nouvelle
   entité `paiement`.
-- **Base** : migration `api/migrations/2026-11-…-registre-des-paiements.sql`, à appliquer
+- **Base** : migration `api/migrations/2026-10-31-registre-des-paiements.sql`, à appliquer
   avant le déploiement ; script de rattrapage des paiements passés (2 sessions).
 - **Web** : `admin-dashboard.component.ts`, `admin-retention.component.ts`,
   `admin-weekly-chart.component.ts` (granularité mensuelle), nouvel onglet Coûts IA

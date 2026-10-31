@@ -140,6 +140,36 @@ Ce qui subsiste et reste utile :
   l'administration, elle, lit le solde **disponible** (`creditsGratuitsSql`) et marque
   d'un ↻ les comptes dont le renouvellement reste à écrire.
 - Vérification de disponibilité : **RDAP d'abord, WHOIS en repli**
+- `extraCredits` reçoit **à la fois** les packs achetés et les crédits offerts à la main
+  (ajustements admin, récompenses de retours) : son stock ne dit rien des ventes —
+  relevé le 31/10/2026, 7 comptes en avaient pour 2 paiements.
+- ⚠ Le **webhook Stripe crédite sans vérifier `payment_status`**, et `fulfillSession`
+  accepte une session `complete` non payée. Sans conséquence tant que seuls les moyens de
+  paiement immédiats sont activés ; à corriger dans un changement dédié avant d'en
+  activer un différé (virement, SEPA).
+
+### Registre des paiements
+
+`stripe_event` n'est qu'un verrou d'idempotence : écrit avant de savoir si la session
+est payée, pour tout type de session, sans montant ni compte. Le chiffre d'affaires se
+lit dans **`paiement`** (depuis le 31/10/2026) : une ligne par session de pack
+**payée** (`payment_status = 'paid'`) — compte, pack, crédits, montant en centimes,
+devise, date Stripe.
+
+- **Deux chemins, une ligne.** Le retour du navigateur (`fulfillSession`) et le webhook
+  appellent tous deux `enregistrerPaiement`, **après** l'ajout des crédits ;
+  `sessionId` est unique et l'insertion ignore un doublon.
+- **Le registre ne bloque jamais les crédits.** Un échec d'écriture se journalise en
+  erreur `payment_record_failed sessionId=…` (`python3 - errors`) et se rattrape.
+- **Aucune conversion de devise** : les montants restent dans la devise de la session.
+  Le coût IA étant en dollars, le tableau de bord affiche les deux côte à côte, sans
+  marge calculée — un taux figé finirait faux sans que rien ne le signale.
+- **Rattrapage** des sessions antérieures ou d'un échec, rejouable sans effet et sans
+  toucher aux crédits :
+  `docker compose exec api node dist/scripts/rattraper-paiements.js`
+  (une ligne JSON par session, avec `livemode`).
+
+> Migration : `2026-10-31-registre-des-paiements.sql`, avant de déployer l'image.
 
 ### Coût des appels au modèle
 

@@ -140,7 +140,7 @@ Le front et l'API partent dans la même image : aucune compatibilité ascendante
 
 ## Migration Plan
 
-1. Appliquer `api/migrations/2026-11-xx-registre-des-paiements.sql` en prod
+1. Appliquer `api/migrations/2026-10-31-registre-des-paiements.sql` en prod
    (`CREATE TABLE IF NOT EXISTS paiement …`, retour arrière `DROP TABLE paiement` en
    en-tête), après sauvegarde datée.
 2. Déployer l'image (API + web).
