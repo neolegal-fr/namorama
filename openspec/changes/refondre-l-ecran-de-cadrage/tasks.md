@@ -64,7 +64,8 @@
 
 ## 6. Livraison
 
-- [ ] 6.1 Ouvrir la PR depuis `feat/refonte-ecran-de-cadrage`, avec la CI verte. Vérification : `gh pr checks` au vert.
+- [x] 6.1 Ouvrir la PR depuis `feat/refonte-ecran-de-cadrage`, avec la CI verte. Vérification : `gh pr checks` au vert.
+  - PR #171 (brouillon), run 41201586709 : Test API, Build Web image et Build API image en succès.
 - [ ] 6.2 Appliquer `2026-11-01-longueur-maximale-du-projet.sql` en production, sauvegarde datée faite d'abord, **avant** de déployer l'image. Vérification : `SHOW COLUMNS FROM project LIKE 'maxLength'` en production rend une ligne.
 - [ ] 6.3 Fusionner, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web` sur `namorama-prod`. Vérification : `docker compose ps` affiche les deux conteneurs à jour, et une recherche réelle aboutit.
 
