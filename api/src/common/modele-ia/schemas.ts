@@ -26,6 +26,9 @@ export const SCHEMA_CONTRAINTES = objet({
   maxLength: entierOuNul,
   avoidWords: listeDe(chaine),
   referenceBrands: listeDe(chaine),
+  avoidEndings: listeDe(chaine),
+  requiredWords: listeDe(chaine),
+  nameType: { anyOf: [{ type: 'string', enum: ['invented', 'descriptive', 'any'] }, { type: 'null' }] },
 });
 
 export const SCHEMA_CONCURRENTS = objet({
@@ -52,3 +55,5 @@ export const SCHEMA_CHOIX = objet({ recommended: chaine, reason: chaine });
 export const SCHEMA_DECOUPAGES = objet({ decoupages: listeDe(chaine) });
 
 export const SCHEMA_BROUILLON = objet({ langue: chaine, contexte: chaine });
+
+export const SCHEMA_MOTS_CLES = objet({ keywords: listeDe(chaine), namingBusiness: { type: 'boolean' } });

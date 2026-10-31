@@ -10,6 +10,12 @@ export interface NamingConstraints {
   maxLength: number;
   avoidWords: string[];
   referenceBrands: string[];
+  avoidEndings?: string[];
+  requiredWords?: string[];
+  nameType?: 'invented' | 'descriptive' | 'any' | null;
+  /** Bornes écrites dans la description ; `null` quand elle n'en dit rien. */
+  briefMinLength?: number | null;
+  briefMaxLength?: number | null;
 }
 
 /** Produit existant du même secteur, avec son domaine. */
@@ -82,7 +88,7 @@ export class DomainService {
   }
 
   searchDomainsStream(
-    params: { description: string; keywords: string[]; extensions: string[]; matchMode: string; projectId?: string; projectName?: string; locale?: string | null; excludeNames?: string[]; descriptiveNames?: boolean; culturalNames?: boolean; likedNames?: string[]; dislikedNames?: string[]; minLength?: number; likedExamples?: string[]; competitorDomains?: string[]; dislikedStyleDomains?: string[] },
+    params: { description: string; keywords: string[]; extensions: string[]; matchMode: string; projectId?: string; projectName?: string; locale?: string | null; excludeNames?: string[]; descriptiveNames?: boolean; culturalNames?: boolean; likedNames?: string[]; dislikedNames?: string[]; minLength?: number; maxLength?: number; contraintesRetirees?: string[]; likedExamples?: string[]; competitorDomains?: string[]; dislikedStyleDomains?: string[] },
     token: string,
   ): Observable<any> {
     return new Observable(observer => {

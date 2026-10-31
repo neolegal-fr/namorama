@@ -3,7 +3,7 @@ import { NameVariantsService } from '../../brand-report/trademark/name-variants.
 import { lireBrouillon } from '../../admin/admin-mail.service';
 import { modeleAnthropicFactice, reponseAnthropic } from './modele-ia.testing';
 import {
-  SCHEMA_ANALYSES, SCHEMA_BROUILLON, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_DECOUPAGES, SCHEMA_NOMS,
+  SCHEMA_ANALYSES, SCHEMA_BROUILLON, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_DECOUPAGES, SCHEMA_MOTS_CLES, SCHEMA_NOMS,
 } from './schemas';
 
 /**
@@ -18,7 +18,10 @@ function conforme(v: unknown, s: any, chemin = '$'): string[] {
   if (s.anyOf) return s.anyOf.some((x: any) => conforme(v, x, chemin).length === 0) ? [] : [`${chemin} : aucune branche`];
   switch (s.type) {
     case 'null': return v === null ? [] : [`${chemin} : null attendu`];
-    case 'string': return typeof v === 'string' ? [] : [`${chemin} : chaîne attendue`];
+    case 'string':
+      if (typeof v !== 'string') return [`${chemin} : chaîne attendue`];
+      return s.enum && !s.enum.includes(v) ? [`${chemin} : hors énumération`] : [];
+    case 'boolean': return typeof v === 'boolean' ? [] : [`${chemin} : booléen attendu`];
     case 'integer': return Number.isInteger(v) ? [] : [`${chemin} : entier attendu`];
     case 'array':
       return Array.isArray(v) ? v.flatMap((x, i) => conforme(x, s.items, `${chemin}[${i}]`)) : [`${chemin} : liste attendue`];
@@ -52,11 +55,25 @@ const notice = {
 };
 
 describe('Schémas de sortie structurée', () => {
+  it('keywords', async () => {
+    const ex = { keywords: ['référencement', 'acquisition', 'nom de marque'], namingBusiness: false };
+    expect(conforme(ex, SCHEMA_MOTS_CLES)).toEqual([]);
+    const motsCles = await service(ex).svc.generateKeywords('desc', 'fr');
+    expect(motsCles).toEqual(['référencement', 'acquisition']);
+  });
+
   it('constraints', async () => {
-    const ex = { minLength: 5, maxLength: null, avoidWords: ['tech'], referenceBrands: ['Qonto'] };
+    const ex = {
+      minLength: 5, maxLength: null, avoidWords: ['tech'], referenceBrands: ['Qonto'],
+      avoidEndings: ['ora'], requiredWords: ['bloom'], nameType: 'invented',
+    };
     expect(conforme(ex, SCHEMA_CONTRAINTES)).toEqual([]);
-    const c = await service(ex).svc.extractNamingConstraints('desc');
-    expect(c).toMatchObject({ minLength: 5, avoidWords: ['tech'], referenceBrands: ['Qonto'] });
+    expect(conforme({ ...ex, nameType: 'autre' }, SCHEMA_CONTRAINTES)).not.toEqual([]);
+    const c = await service(ex).svc.extractNamingConstraints('un nom composé avec Bloom, sans -ora');
+    expect(c).toMatchObject({
+      minLength: 5, avoidWords: ['tech'], referenceBrands: ['Qonto'],
+      avoidEndings: ['ora'], requiredWords: ['bloom'], nameType: 'invented', briefMinLength: 5, briefMaxLength: null,
+    });
   });
 
   it('competitors (repli sans outil)', async () => {

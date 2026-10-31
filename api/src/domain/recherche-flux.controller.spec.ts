@@ -53,7 +53,10 @@ function service(n: number, stopReason: string, avant?: (opts: any) => void) {
     for (let i = 0; i < n; i++) opts.onEvent({ type: 'result', domain: { name: `nom${i}` } });
     return {
       results: [], totalChecked: 40, verifiedNames: ['pris1', 'pris2', 'nom0'],
-      attempts: 7, stopReason, minLengthUsed: 7, unresolved: {}, sources: { dns: 0, registre: 0 },
+      attempts: 7, stopReason, minLengthUsed: 7, maxLengthUsed: 9, origineDesBornes: 'brief',
+      constraints: { avoidEndings: ['ora', 'ia'], avoidWords: ['cyber'], requiredWords: [], nameType: 'invented' },
+      ecartes: { longueur: 4, terminaison: 2, mot_a_eviter: 0, mot_impose: 0 },
+      unresolved: {}, sources: { dns: 0, registre: 0 },
     };
   });
 }
@@ -68,9 +71,17 @@ describe('DomainController.searchStream — débit et noms vérifiés', () => {
     expect(decrementCredits).toHaveBeenCalledWith('kc-123', 6, expect.anything());
     const done = res.ecrits.find((e: any) => e.type === 'done');
     expect(done.checkedNames).toEqual(['pris1', 'pris2', 'nom0']);
+    expect(done.ecartes).toEqual({ longueur: 4, terminaison: 2, mot_a_eviter: 0, mot_impose: 0 });
     expect(done.found).toBe(6);
     const fin = event.mock.calls.find((c: any[]) => c[0] === 'search_completed')[1];
     expect(fin).toMatchObject({ attempts: 7, stopReason: 'time', found: 6 });
+    // Le cahier des charges est journalisé en décomptes, jamais en clair.
+    expect(fin).toMatchObject({
+      minLengthUsed: 7, maxLengthUsed: 9, origineDesBornes: 'brief',
+      terminaisonsInterdites: 2, motsAEviter: 1, motsImposes: 0, typeDuBrief: 'invented', styles: 'standard',
+      ecartes: { longueur: 4, terminaison: 2, mot_a_eviter: 0, mot_impose: 0 },
+    });
+    expect(JSON.stringify(fin)).not.toMatch(/ora|cyber|description/);
   });
 
   it('transmet au service un signal qui se déclenche à la fermeture de la connexion', async () => {

@@ -6,7 +6,7 @@ import { Resolver } from 'node:dns/promises';
 import { MatchMode } from './dto/search-domains.dto';
 import { RdapService } from './rdap.service';
 import { ModeleIA } from '../common/modele-ia/modele-ia.service';
-import { SCHEMA_ANALYSES, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_NOMS } from '../common/modele-ia/schemas';
+import { SCHEMA_ANALYSES, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_MOTS_CLES, SCHEMA_NOMS } from '../common/modele-ia/schemas';
 
 const execFileAsync = promisify(execFile);
 
@@ -106,6 +106,50 @@ export interface NamingConstraints {
   avoidWords: string[];
   /** Marques citées comme références de style (ex. Qonto, Stripe). */
   referenceBrands: string[];
+  /** Terminaisons interdites (« sans -ora ni -ia »), en minuscules. */
+  avoidEndings: string[];
+  /** Mots ou racines que chaque nom doit contenir (« composé avec bloom », un prénom). */
+  requiredWords: string[];
+  /** Type de nom attendu d'après le brief ; `null` quand il n'en dit rien. */
+  nameType: TypeDeNom | null;
+  /**
+   * Bornes de longueur écrites dans le brief, avant plancher et défauts.
+   * `null` : le brief n'en dit rien. C'est ce qui distingue « le brief
+   * demande 12 » de « 12 par défaut » — seule une borne du brief s'impose.
+   */
+  briefMinLength: number | null;
+  briefMaxLength: number | null;
+}
+
+export type TypeDeNom = 'invented' | 'descriptive' | 'any';
+const TYPES_DE_NOM: readonly TypeDeNom[] = ['invented', 'descriptive', 'any'];
+
+/** Minuscules, lettres et chiffres seuls, accents retirés : la forme d'un nom de domaine. */
+export function normaliserPourNom(texte: string): string {
+  return String(texte ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/**
+ * Nettoie ce que le modèle a compris des terminaisons, des mots imposés et du
+ * type de nom. Le modèle propose, le code décide : une terminaison hors 2 à 5
+ * caractères n'en est pas une, et un mot imposé qu'on ne retrouve pas dans la
+ * description est une obligation inventée — il écarterait tous les noms.
+ */
+export function nettoyerContraintesDuBrief(
+  brut: { avoidEndings?: unknown; requiredWords?: unknown; nameType?: unknown },
+  description: string,
+): Pick<NamingConstraints, 'avoidEndings' | 'requiredWords' | 'nameType'> {
+  const liste = (v: unknown): string[] => (Array.isArray(v) ? v.map((x) => normaliserPourNom(String(x))) : []);
+  const descriptionNormalisee = normaliserPourNom(description);
+  const avoidEndings = [...new Set(liste(brut.avoidEndings).filter((t) => t.length >= 2 && t.length <= 5))].slice(0, 10);
+  const requiredWords = [...new Set(liste(brut.requiredWords)
+    .filter((m) => m.length >= 3 && m.length <= 15 && descriptionNormalisee.includes(m)))].slice(0, 3);
+  const nameType = TYPES_DE_NOM.includes(brut.nameType as TypeDeNom) ? (brut.nameType as TypeDeNom) : null;
+  return { avoidEndings, requiredWords, nameType };
 }
 
 /** Longueur mini par défaut d'un nom généré — en dessous, presque tout est déposé. */
@@ -192,21 +236,69 @@ export function lireMotsCles(texte: string): string[] {
     // Introduction (« … :») ou prose (une fin de phrase en cours de ligne) :
     // la ligne entière part, sans quoi ses fragments passeraient pour des mots.
     .filter((ligne) => !/:\s*$/.test(ligne) && !/[.!]\s+\S/.test(ligne))
-    .flatMap((ligne) => ligne.split(/[,;]/))
-    .map((m) =>
-      m
-        .replace(/[*_`"«»]/g, '')
-        .replace(/\.$/, '')
-        .trim(),
-    )
+    .flatMap((ligne) => ligne.split(/[,;]/));
+  return filtrerMotsCles(morceaux);
+}
+
+/**
+ * Ce qui, d'une liste de candidats, peut servir de mot-clé : mise en forme
+ * effacée, phrases écartées, doublons retirés, plafond appliqué. Sert aux
+ * deux formes de réponse, JSON et texte libre.
+ */
+export function filtrerMotsCles(candidats: unknown[], options: { activiteDeNommage?: boolean } = {}): string[] {
+  const propres = candidats
+    .map((m) => String(m ?? '').replace(/[*_`"«»]/g, '').replace(/\.$/, '').trim())
     .filter(
       (m) =>
         m.length > 0 &&
         m.length <= MOT_CLE_MAX_CARACTERES &&
         m.split(/\s+/).length <= MOT_CLE_MAX_MOTS &&
-        !/[.:!]\s/.test(m),
+        !/[.:!?]\s/.test(m) &&
+        (options.activiteDeNommage || !estVocabulaireDeNommage(m)),
     );
-  return dedupeKeywords(morceaux).slice(0, KEYWORD_LIMIT);
+  return dedupeKeywords(propres).slice(0, KEYWORD_LIMIT);
+}
+
+/**
+ * Mots qui ne désignent que la notion de nom ou de marque, ou une qualité
+ * attendue du nom. Relevé du 31/10/2026 : quand la description était un
+ * cahier des charges (« marque premium, nom court, facile à prononcer »), ces
+ * mots devenaient des mots-clés, et les noms suivaient — `marqora`,
+ * `nomvera`, `markio`, `nameverse`. Comparés au mot-clé entier, jamais à une
+ * sous-chaîne : « namecheap » ou « marque de vêtements » ne sont pas visés.
+ */
+const VOCABULAIRE_DE_NOMMAGE = new Set([
+  // fr
+  'nom', 'noms', 'nom de marque', 'nom de domaine', "nom d'entreprise", 'nom commercial', 'nom de societe',
+  'nom original', 'nom court', 'nom invente', 'marque', 'marques', 'identite de marque', 'creation de marque',
+  'strategie de marque', 'generateur de noms', 'image de marque', 'court', 'courte', 'memorable', 'memorisable',
+  'prononcable', 'facile a prononcer', 'lettres', 'invente', 'distinctif', 'unique',
+  // en
+  'name', 'names', 'naming', 'brand', 'brands', 'branding', 'brand name', 'brand names', 'brand identity',
+  'domain name', 'company name', 'business name', 'short', 'catchy', 'brandable', 'pronounceable',
+  'easy to pronounce', 'letters', 'invented', 'coined', 'distinctive', 'name generator',
+  // es, it, de
+  'nombre', 'nombre de marca', 'marca', 'nome', 'nome del marchio', 'marchio', 'markenname', 'marke', 'firmenname',
+]);
+
+export function estVocabulaireDeNommage(motCle: string): boolean {
+  const cle = String(motCle ?? '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[’`]/g, "'").replace(/\s+/g, ' ').trim();
+  return VOCABULAIRE_DE_NOMMAGE.has(cle);
+}
+
+/**
+ * Lit la réponse du modèle à la demande de mots-clés : le JSON du schéma,
+ * ou à défaut le texte libre (`lireMotsCles`) — un modèle qui ignore la
+ * forme demandée ne doit pas vider l'étape de cadrage.
+ */
+export function lireReponseMotsCles(texte: string): string[] {
+  try {
+    const p = JSON.parse(texte);
+    if (p && Array.isArray(p.keywords)) return filtrerMotsCles(p.keywords, { activiteDeNommage: p.namingBusiness === true });
+  } catch { /* texte libre : lecture de secours */ }
+  return lireMotsCles(texte);
 }
 
 /** Au-delà, le modèle a écrit une phrase, pas un nom de projet. */
@@ -231,11 +323,104 @@ export const MIN_NAME_LENGTH_FLOOR = 5;
 /** Plafond du réglage de longueur mini côté UI. */
 export const MAX_NAME_LENGTH_FLOOR = 12;
 
+export type OrigineDesBornes = 'utilisateur' | 'brief' | 'defaut';
+
+/**
+ * Bornes de longueur d'une recherche, et d'où elles viennent.
+ *
+ * Un réglage de l'écran prime ; à défaut, le brief ; à défaut, les valeurs
+ * par défaut. Le front n'envoie un réglage que si l'utilisateur l'a touché :
+ * auparavant il envoyait toujours la longueur minimale, que le serveur
+ * prenait pour un choix explicite, et dont il déduisait un maximum élargi à
+ * « minimum + 3 ». « Nom court : 4-5 lettres » rendait ainsi `duopawear`.
+ * Une borne maximale venue du brief n'est jamais élargie ; seul le plancher
+ * technique relève un minimum trop bas.
+ */
+export function bornesDeLongueur(
+  contraintes: Pick<NamingConstraints, 'briefMinLength' | 'briefMaxLength'>,
+  reglage: { minLength?: number; maxLength?: number } = {},
+): { min: number; max: number; origine: OrigineDesBornes } {
+  const plancher = (n: number) => Math.min(Math.max(Math.round(n), MIN_NAME_LENGTH_FLOOR), MAX_NAME_LENGTH_FLOOR);
+  const defautMax = DEFAULT_CONSTRAINTS.maxLength;
+  if (typeof reglage.minLength === 'number' || typeof reglage.maxLength === 'number') {
+    const min = typeof reglage.minLength === 'number'
+      ? plancher(reglage.minLength)
+      : plancher(contraintes.briefMinLength ?? DEFAULT_MIN_NAME_LENGTH);
+    const maxBrief = contraintes.briefMaxLength;
+    const max = typeof reglage.maxLength === 'number'
+      ? reglage.maxLength
+      : maxBrief !== null && maxBrief >= min ? maxBrief : Math.max(defautMax, min + 3);
+    return { min, max: Math.max(max, min), origine: 'utilisateur' };
+  }
+  const { briefMinLength, briefMaxLength } = contraintes;
+  if (briefMinLength === null && briefMaxLength === null) {
+    return { min: DEFAULT_MIN_NAME_LENGTH, max: defautMax, origine: 'defaut' };
+  }
+  const min = briefMinLength !== null
+    ? plancher(briefMinLength)
+    : Math.min(DEFAULT_MIN_NAME_LENGTH, Math.max(briefMaxLength!, MIN_NAME_LENGTH_FLOOR));
+  const max = briefMaxLength !== null ? briefMaxLength : Math.max(min + 5, defautMax);
+  return { min, max: Math.max(max, min), origine: 'brief' };
+}
+
+/**
+ * Retire du brief les contraintes que l'utilisateur a écartées à l'étape 2.
+ * Clés : `longueur`, `fin:<terminaison>`, `eviter:<mot>`, `avec:<mot>`. Une
+ * contrainte mal comprise par le modèle ne doit pas coûter une recherche.
+ */
+export function retirerContraintes(c: NamingConstraints, retirees: string[] = []): NamingConstraints {
+  if (!retirees.length) return c;
+  const r = new Set(retirees.map((k) => k.toLowerCase()));
+  const longueur = r.has('longueur');
+  return {
+    ...c,
+    ...(longueur ? { briefMinLength: null, briefMaxLength: null } : {}),
+    avoidEndings: c.avoidEndings.filter((t) => !r.has(`fin:${t}`)),
+    avoidWords: c.avoidWords.filter((w) => !r.has(`eviter:${w}`)),
+    requiredWords: c.requiredWords.filter((m) => !r.has(`avec:${m}`)),
+  };
+}
+
+export type MotifDEcart = 'longueur' | 'terminaison' | 'mot_a_eviter' | 'mot_impose';
+export type Ecartes = Record<MotifDEcart, number>;
+export const aucunEcart = (): Ecartes => ({ longueur: 0, terminaison: 0, mot_a_eviter: 0, mot_impose: 0 });
+
+/**
+ * Le nom respecte-t-il le cahier des charges ? Rend le motif du premier
+ * manquement, ou `null`. C'est ce filtre, et non la consigne donnée au
+ * modèle, qui garantit le résultat : relevé du 31/10/2026, une consigne
+ * « sans -ora ni -ia » rendait encore `velmira` et `premina`.
+ *
+ * Longueur : bornes exactes pour les noms inventés quand le brief fixe un
+ * maximum, une lettre de tolérance sinon ; les noms descriptifs et
+ * culturels, plus longs par nature, ne sont bornés que par le bas. Le reste
+ * vaut pour tous les styles.
+ */
+export function respecteLesContraintes(
+  nom: string,
+  style: string,
+  c: Pick<NamingConstraints, 'minLength' | 'maxLength' | 'avoidWords' | 'avoidEndings' | 'requiredWords' | 'briefMaxLength'>,
+): MotifDEcart | null {
+  const inventé = style === 'standard';
+  const min = inventé ? c.minLength : Math.min(c.minLength, DEFAULT_MIN_NAME_LENGTH);
+  const max = inventé ? Math.max(c.maxLength, c.minLength) + (c.briefMaxLength !== null ? 0 : 1) : 63;
+  if (nom.length < min || nom.length > max) return 'longueur';
+  if (c.avoidEndings.some((t) => nom.endsWith(t))) return 'terminaison';
+  if (c.avoidWords.some((w) => w.length > 2 && nom.includes(w))) return 'mot_a_eviter';
+  if (c.requiredWords.some((m) => !nom.includes(m))) return 'mot_impose';
+  return null;
+}
+
 const DEFAULT_CONSTRAINTS: NamingConstraints = {
   minLength: DEFAULT_MIN_NAME_LENGTH,
   maxLength: 12,
   avoidWords: [],
   referenceBrands: [],
+  avoidEndings: [],
+  requiredWords: [],
+  nameType: null,
+  briefMinLength: null,
+  briefMaxLength: null,
 };
 
 /** Un acteur déjà présent sur le marché décrit. */
@@ -265,6 +450,10 @@ export interface FindDomainsOptions {
   dislikedNames?: string[];
   /** Longueur mini choisie explicitement dans l'UI — prime sur celle extraite du brief. */
   minLength?: number;
+  /** Longueur maxi choisie explicitement dans l'UI — prime sur celle extraite du brief. */
+  maxLength?: number;
+  /** Contraintes du brief écartées par l'utilisateur (voir `retirerContraintes`). */
+  contraintesRetirees?: string[];
   /** Noms/domaines cités par l'utilisateur comme références de style. */
   likedExamples?: string[];
   /** Domaines de produits existants du même secteur (à ne pas imiter de trop près). */
@@ -403,17 +592,20 @@ export class DomainService {
             Vary the angles: synonyms, technical terms, user benefits, and abstract concepts related to the domain.
             Prefer precision over coverage: a shorter, sharper list is better than an exhaustive one.
             ${localeInstruction}
-            Return ONLY a comma-separated list of keywords (1 to 3 words each), no numbering, no introduction, no explanation.
-            Never ask questions: if the description is short or vague, still infer the most plausible keywords.`,
+            Keywords describe ONLY the business: what it does or sells, for whom, its benefits, its universe.
+            The description may also contain instructions about the NAME itself (length, style, tone, brands to imitate, words to avoid, requests addressed to an AI such as "act as a naming agency" or "generate 30 names"). Ignore them entirely: they must not produce any keyword. Never output words like "name", "brand", "short", "premium", "memorable", "letters" unless they describe the business itself.
+            Each keyword is 1 to 3 words. Never ask questions: if the description is short or vague, still infer the most plausible keywords.
+            Set "namingBusiness" to true only if the business itself is a naming, branding or brand-creation agency or tool.
+            Respond in JSON: {"keywords": ["..."], "namingBusiness": false}`,
         message: description,
-        format: { type: 'texte' },
+        format: { type: 'json', schema: SCHEMA_MOTS_CLES },
         maxSortie: 600,
         raisonnement: 'none',
       });
 
       const content = response.texte;
       if (!content) return [];
-      const motsCles = lireMotsCles(content);
+      const motsCles = lireReponseMotsCles(content);
       // Une réponse sans aucun mot-clé lisible : le modèle a posé une question
       // ou fait une phrase. Visible dans `python3 - errors`.
       if (!motsCles.length) this.logger.warn(`keywords : réponse sans mot-clé lisible (${content.length} caractères)`);
@@ -426,20 +618,29 @@ export class DomainService {
 
   /**
    * Extrait les contraintes de naming embarquées dans la description libre :
-   * longueur souhaitée, mots à éviter, marques de référence. Robuste aux échecs
-   * (retourne les valeurs par défaut). Un seul appel léger par recherche.
+   * longueur souhaitée, mots et terminaisons à éviter, mots à inclure, type de
+   * nom, marques de référence. Robuste aux échecs (retourne les valeurs par
+   * défaut). Un seul appel léger par recherche.
+   *
+   * Relevé du 31/10/2026 : sur 133 projets, 18 fixaient une longueur, 18 des
+   * mots ou terminaisons à éviter, 13 des marques de référence — les
+   * utilisateurs écrivent un cahier des charges du nom autant qu'une
+   * description d'activité.
    */
   async extractNamingConstraints(description: string): Promise<NamingConstraints> {
     const prompt = `You extract naming constraints from a product description written by a user of a brand-name generator. The user often embeds naming instructions (desired length, "short", "X letters", brands to imitate like Qonto/Stripe/Figma, words to avoid).
 
 Return ONLY JSON:
-{"minLength": <int 3-12 or null>, "maxLength": <int 4-30 or null>, "avoidWords": ["..."], "referenceBrands": ["..."]}
+{"minLength": <int 3-12 or null>, "maxLength": <int 4-30 or null>, "avoidWords": ["..."], "referenceBrands": ["..."], "avoidEndings": ["..."], "requiredWords": ["..."], "nameType": "invented" | "descriptive" | "any" | null}
 
 Rules:
-- If the user asks for a SHORT / "court" name, "X letters/lettres", or names "like/façon Qonto, Stripe, Figma, Notion", set minLength around 5 and maxLength to match the request (e.g. "5-8 letters" → min 5, max 8).
+- If the user asks for a SHORT / "court" name, "X letters/lettres", or names "like/façon Qonto, Stripe, Figma, Notion", set minLength around 5 and maxLength to match the request (e.g. "5-8 letters" → min 5, max 8; "exactly 6 letters" → min 6, max 6).
 - If no length instruction, return null for minLength and maxLength.
 - avoidWords: explicit words/roots the user says to avoid (e.g. "avoid: bet, sport, tech"). Lowercase. Empty array if none.
 - referenceBrands: brand names cited as style references. Empty array if none.
+- avoidEndings: word endings the user forbids (e.g. "no names ending in -ora or -ia" → ["ora", "ia"]). Lowercase, without the dash. Empty array if none.
+- requiredWords: words, roots or first names that EVERY name must contain, only when the user explicitly requires it (e.g. "a compound name with BLOOM" → ["bloom"]). Never invent one. Empty array if none.
+- nameType: "invented" if the user wants coined / invented / non-descriptive names; "descriptive" if the user wants a name that says what the business does; "any" if the user explicitly accepts both; null if the description says nothing about it.
 
 Description: "${description.replace(/"/g, "'").slice(0, 800)}"`;
 
@@ -473,6 +674,9 @@ Description: "${description.replace(/"/g, "'").slice(0, 800)}"`;
         maxLength: maxLength ?? DEFAULT_CONSTRAINTS.maxLength,
         avoidWords,
         referenceBrands,
+        ...nettoyerContraintesDuBrief(p, description),
+        briefMinLength: minLength,
+        briefMaxLength: maxLength,
       };
       // Si min abaissé mais max resté au défaut, élargir un peu la fenêtre.
       if (minLength && !maxLength) constraints.maxLength = Math.max(minLength + 5, DEFAULT_CONSTRAINTS.maxLength);
@@ -681,9 +885,13 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
     constraints: NamingConstraints = DEFAULT_CONSTRAINTS,
     competitorDomains: string[] = [],
     dislikedStyleDomains: string[] = [],
+    /** Rejets du filtre, par motif, cumulés sur toute la recherche. */
+    ecartes: Ecartes = aucunEcart(),
   ): Promise<{ name: string; style: string }[]> {
     const minLen = constraints.minLength;
-    const maxLen = Math.max(constraints.maxLength, minLen + 2);
+    // Le maximum n'est plus élargi ici : il vient de `bornesDeLongueur`, qui
+    // ne touche jamais une borne demandée par le brief.
+    const maxLen = Math.max(constraints.maxLength, minLen);
     const wantsShort = minLen < 7;
     // Assainir les keywords avant injection dans le prompt : supprimer les séquences
     // qui pourraient tromper le modèle (sauts de ligne, guillemets triples, etc.)
@@ -716,6 +924,12 @@ Project: "${description.replace(/"/g, "'").slice(0, 800)}"`;
     const constraintSection = [
       constraints.avoidWords.length > 0
         ? `\nHARD NEGATIVE CONSTRAINT — do NOT produce names that CONTAIN, start with, or clearly evoke any of these words/roots: ${constraints.avoidWords.join(', ')}.\n`
+        : '',
+      constraints.avoidEndings.length > 0
+        ? `\nHARD NEGATIVE CONSTRAINT — NO name may END with any of these endings: ${constraints.avoidEndings.map((t) => `-${t}`).join(', ')}.\n`
+        : '',
+      constraints.requiredWords.length > 0
+        ? `\nHARD POSITIVE CONSTRAINT — EVERY name MUST contain ${constraints.requiredWords.length > 1 ? 'all of these words' : 'this word'} as written: ${constraints.requiredWords.join(', ')} (e.g. as a prefix, a suffix, or fused with another root).\n`
         : '',
       constraints.referenceBrands.length > 0
         ? `\nThe user wants names with a similar FEEL to these reference brands: ${constraints.referenceBrands.join(', ')}. Match their length, sound and premium vibe (but never copy them).\n`
@@ -831,10 +1045,6 @@ Respond ONLY with a JSON object. Example:
       const items: { name: string; style?: string }[] = parsed.names || [];
 
       const CLEANED_NAME_REGEX = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
-      // #1 — borne basse = contrainte utilisateur (défaut 7). Les noms descriptifs/culturels
-      // peuvent être plus longs, donc on ne borne le bas que par minLen.
-      const lowerBound = Math.min(minLen, 7);
-      const avoid = constraints.avoidWords;
       return items
         .map(item => {
           const style = activeStyles.includes(item.style ?? '') ? (item.style ?? 'standard') : 'standard';
@@ -843,15 +1053,14 @@ Respond ONLY with a JSON object. Example:
             : item.name.trim().toLowerCase().replace(/[^a-z0-9-]/g, '').replace(/^-+|-+$/g, '').replace(/-{2,}/g, '-');
           return { name: cleaned, style };
         })
-        .filter(item =>
-          item.name.length >= lowerBound &&
-          // #1 — le style "standard" respecte la longueur max demandée (+1 de tolérance) ;
-          // descriptif/culturel restent bornés par la limite DNS.
-          item.name.length <= (item.style === 'standard' ? maxLen + 1 : 63) &&
-          CLEANED_NAME_REGEX.test(item.name) &&
-          // #2 — filet de sécurité : rejeter les noms contenant un mot à éviter
-          !avoid.some(w => w.length > 2 && item.name.includes(w)),
-        );
+        .filter(item => {
+          if (!CLEANED_NAME_REGEX.test(item.name)) return false;
+          // Les tirets des styles descriptif et culturel ne comptent pas
+          // pour les terminaisons ni les mots : « bloom-dog » contient « bloom ».
+          const motif = respecteLesContraintes(item.name.replace(/-/g, ''), item.style, constraints);
+          if (motif) ecartes[motif]++;
+          return motif === null;
+        });
     } catch (error) {
       this.logger.error('Erreur lors de la génération des noms:', error);
       return [];
@@ -1304,7 +1513,12 @@ ${langInstruction}`;
     description: string,
     keywords: string[],
     options: FindDomainsOptions = {},
-  ): Promise<{ results: any[], totalChecked: number, verifiedNames: string[], attempts: number, stopReason: StopReason, minLengthUsed: number, unresolved: Record<string, number>, sources: SourcesVerdict }> {
+  ): Promise<{
+    results: any[]; totalChecked: number; verifiedNames: string[]; attempts: number; stopReason: StopReason;
+    minLengthUsed: number; maxLengthUsed: number; origineDesBornes: OrigineDesBornes;
+    constraints: NamingConstraints; ecartes: Ecartes;
+    unresolved: Record<string, number>; sources: SourcesVerdict;
+  }> {
     const {
       targetCount = 10,
       extensions = ['.com'],
@@ -1317,6 +1531,8 @@ ${langInstruction}`;
       likedNames = [],
       dislikedNames = [],
       minLength,
+      maxLength,
+      contraintesRetirees = [],
       likedExamples = [],
       competitorDomains = [],
       dislikedStyleDomains = [],
@@ -1339,13 +1555,13 @@ ${langInstruction}`;
     let attempts = 0;
 
     // #1/#2 — extraire une seule fois les contraintes de naming du brief libre
-    const constraints = await this.extractNamingConstraints(description);
+    const constraints = retirerContraintes(await this.extractNamingConstraints(description), contraintesRetirees);
 
-    // #1 — le réglage explicite de l'UI prime sur la longueur devinée depuis le brief.
-    if (typeof minLength === 'number') {
-      constraints.minLength = Math.min(Math.max(Math.round(minLength), MIN_NAME_LENGTH_FLOOR), MAX_NAME_LENGTH_FLOOR);
-      constraints.maxLength = Math.max(constraints.maxLength, constraints.minLength + 3);
-    }
+    // #1 — réglage de l'écran, sinon brief, sinon défauts (voir `bornesDeLongueur`).
+    const bornes = bornesDeLongueur(constraints, { minLength, maxLength });
+    const ecartes = aucunEcart();
+    constraints.minLength = bornes.min;
+    constraints.maxLength = bornes.max;
     // #3 — les exemples de noms aimés rejoignent les références de style
     if (likedExamples.length > 0) {
       constraints.referenceBrands = [...new Set([...constraints.referenceBrands, ...likedExamples])].slice(0, 15);
@@ -1364,7 +1580,7 @@ ${langInstruction}`;
       if (Date.now() - startedAt >= budgetMs) { stopReason = 'time'; break; }
 
       onEvent?.({ type: 'generating' });
-      const items = await this.generateDomainIdeas(description, keywords, locale, [...checkedNames], descriptiveNames, culturalNames, likedNames, dislikedNames, constraints, competitorDomains, dislikedStyleDomains);
+      const items = await this.generateDomainIdeas(description, keywords, locale, [...checkedNames], descriptiveNames, culturalNames, likedNames, dislikedNames, constraints, competitorDomains, dislikedStyleDomains, ecartes);
 
       const newItems = items.filter(item => !checkedNames.has(item.name));
       newItems.forEach(item => checkedNames.add(item.name));
@@ -1438,6 +1654,10 @@ ${langInstruction}`;
       // Longueur mini réellement appliquée (réglage UI ou déduite du brief) —
       // le front s'en sert pour proposer de l'assouplir quand rien n'est trouvé.
       minLengthUsed: constraints.minLength,
+      maxLengthUsed: constraints.maxLength,
+      origineDesBornes: bornes.origine,
+      constraints,
+      ecartes,
       // Sans ce décompte, une panne de WHOIS se lit comme un marché saturé.
       unresolved: Object.fromEntries(unresolved),
       sources,

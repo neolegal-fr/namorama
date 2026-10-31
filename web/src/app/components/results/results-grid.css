@@ -720,3 +720,13 @@
     padding: 0 4px;
   }
 }
+
+/* Style du nom quand il n'est pas inventé : l'utilisateur l'a choisi, la carte le rappelle. */
+.rg-card__style {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--nm-app-border);
+  color: var(--nm-app-text-2);
+  white-space: nowrap;
+}

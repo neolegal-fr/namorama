@@ -15,6 +15,25 @@ import { AppLoggerService } from '../common/logging/app-logger.service';
 import { FunnelService, sessionIdDeLaRequete } from '../common/funnel/funnel.service';
 import { imputer } from '../common/model-usage/contexte-appel';
 
+/** Contraintes d'une recherche, sous une forme journalisable : bornes et décomptes. */
+function resumeDuCahierDesCharges(
+  min: number,
+  max: number,
+  origine: string,
+  c: { avoidEndings?: string[]; avoidWords?: string[]; requiredWords?: string[]; nameType?: string | null } | undefined,
+  dto: { descriptiveNames?: boolean; culturalNames?: boolean },
+) {
+  return {
+    maxLengthUsed: max,
+    origineDesBornes: origine,
+    terminaisonsInterdites: c?.avoidEndings?.length ?? 0,
+    motsAEviter: c?.avoidWords?.length ?? 0,
+    motsImposes: c?.requiredWords?.length ?? 0,
+    typeDuBrief: c?.nameType ?? null,
+    styles: ['standard', ...(dto.descriptiveNames ? ['descriptive'] : []), ...(dto.culturalNames ? ['cultural'] : [])].join(','),
+  };
+}
+
 @Controller('domain')
 export class DomainController {
   private readonly logger = new Logger(DomainController.name);
@@ -241,7 +260,10 @@ export class DomainController {
     res.on('close', () => { if (!res.writableEnded) annulation.abort(); });
 
     try {
-      const { totalChecked, verifiedNames, attempts, stopReason, minLengthUsed, unresolved, sources } = await this.domainService.findAvailableDomains(
+      const {
+        totalChecked, verifiedNames, attempts, stopReason, minLengthUsed, maxLengthUsed, origineDesBornes,
+        constraints, ecartes, unresolved, sources,
+      } = await this.domainService.findAvailableDomains(
         dto.description,
         dto.keywords,
         {
@@ -259,6 +281,8 @@ export class DomainController {
           likedNames: dto.likedNames ?? [],
           dislikedNames: dto.dislikedNames ?? [],
           minLength: dto.minLength,
+          maxLength: dto.maxLength,
+          contraintesRetirees: dto.contraintesRetirees ?? [],
           likedExamples: dto.likedExamples ?? [],
           competitorDomains: dto.competitorDomains ?? [],
           dislikedStyleDomains: dto.dislikedStyleDomains ?? [],
@@ -333,6 +357,11 @@ export class DomainController {
           // extension, c'est que le registre a changé de comportement.
           viaDns: sources.dns,
           viaRegistre: sources.registre,
+          // Le cahier des charges appliqué, en décomptes seulement — ni la
+          // description ni les mots eux-mêmes — et ce qu'il a écarté. C'est la
+          // mesure du chantier « respecter le cahier des charges ».
+          ...resumeDuCahierDesCharges(minLengthUsed, maxLengthUsed, origineDesBornes, constraints, dto),
+          ecartes,
         });
 
         emit({
@@ -341,6 +370,9 @@ export class DomainController {
           // Le front les exclura des prochains « 10 de plus » : un nom trouvé
           // pris n'a pas à être revérifié.
           checkedNames: verifiedNames,
+          // Noms écartés par le cahier des charges : sans eux, une recherche
+          // vide se lirait « tout est pris » alors que rien n'a été testé.
+          ecartes,
           minLengthUsed,
           requested: limit,
           found: results.length,
@@ -393,6 +425,8 @@ export class DomainController {
         likedNames: dto.likedNames ?? [],
         dislikedNames: dto.dislikedNames ?? [],
         minLength: dto.minLength,
+        maxLength: dto.maxLength,
+        contraintesRetirees: dto.contraintesRetirees ?? [],
         likedExamples: dto.likedExamples ?? [],
         competitorDomains: dto.competitorDomains ?? [],
         dislikedStyleDomains: dto.dislikedStyleDomains ?? [],
