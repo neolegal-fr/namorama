@@ -124,6 +124,8 @@ describe('Requêtes OpenAI, inchangées par le passage au port', () => {
       modele,
       config: { get: (_k: string, d?: string) => d },
       contexte: async () => ({ langue: 'fr', prenom: 'Ada' }),
+      // Le destinataire, pour signer ses liens « oui » / « non » (chantier demande-de-retour-automatique).
+      users: { findOne: async () => ({ id: 1, keycloakId: 'sub-ada' }) },
     });
     await svc.rediger(1, { prenom: 'Nicolas', nomComplet: 'Nicolas' });
     expect(chat).toEqual([{ model: C, messages: systemeEtUser(expect.any(String)), max_completion_tokens: 200, reasoning_effort: 'none', ...JSON_OBJECT }]);

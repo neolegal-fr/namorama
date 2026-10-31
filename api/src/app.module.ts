@@ -18,6 +18,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { PaymentsModule } from './payments/payments.module';
 import { AdminModule } from './admin/admin.module';
 import { FeedbackModule } from './feedback/feedback.module';
+import { RetoursModule } from './retours/retours.module';
 import { BrandReportModule } from './brand-report/brand-report.module';
 import { LoggingModule } from './common/logging/logging.module';
 import { FunnelModule } from './common/funnel/funnel.module';
@@ -77,6 +78,7 @@ import { HorlogeService } from './common/horloge.service';
     FeedbackModule,
     BrandReportModule,
     ReplayModule,
+    RetoursModule,
   ],
   controllers: [AppController, EventsController],
   providers: [

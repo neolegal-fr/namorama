@@ -122,6 +122,22 @@
     "PACK_PRO_NAME": "Pro",
     "PACK_MAX_NAME": "Max"
   },
+  "RETOUR": {
+    "LOADING": "Un instant…",
+    "THANKS_TITLE": "Merci pour votre réponse !",
+    "CREDITS_ADDED": "{{n}} crédits ont été ajoutés à votre compte.",
+    "ALREADY_TITLE": "Votre réponse était déjà notée, merci.",
+    "MORE_YES": "Vous avez deux minutes ? Dites-moi ce qui vous a plu ou ce qui pourrait être amélioré : je vous offrirai 500 crédits de plus.",
+    "MORE_NO": "Qu'est-ce qui vous a bloqué ou vous a manqué ? Dites-le-moi en deux minutes, je vous offrirai 500 crédits de plus.",
+    "MORE_CTA": "En dire plus",
+    "UNSUBSCRIBED_TITLE": "Vous êtes désinscrit",
+    "UNSUBSCRIBED_TEXT": "Vous ne recevrez plus de demande de retour de notre part. Votre compte et vos projets restent inchangés.",
+    "INVALID_TITLE": "Ce lien n'est pas valide",
+    "INVALID_TEXT": "Il a peut-être expiré ou été mal copié. Vous pouvez toujours nous écrire en répondant au courriel.",
+    "ERROR_TITLE": "Une erreur est survenue",
+    "ERROR_TEXT": "Votre réponse n'a pas pu être enregistrée. Réessayez dans quelques instants depuis le lien du courriel.",
+    "HOME": "Retour à Namorama"
+  },
   "PAYMENT": {
     "SUCCESS_TITLE": "Paiement confirmé !",
     "SUCCESS_MESSAGE": "Vos crédits ont été ajoutés à votre compte. Vous pouvez reprendre vos recherches.",

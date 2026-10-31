@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { LandingComponent } from './components/landing/landing';
 import { WizardComponent } from './components/wizard/wizard';
 import { PaymentResultComponent } from './components/payment-result/payment-result';
+import { RetourComponent } from './components/retour/retour';
 import { AdminComponent } from './components/admin/admin.component';
 import { AdminDashboardComponent } from './components/admin/admin-dashboard.component';
 import { AdminUsersComponent } from './components/admin/admin-users.component';
@@ -74,6 +75,10 @@ export const routes: Routes = [
   { path: 'projects/:id', component: WizardComponent },
   { path: 'payment/success', component: PaymentResultComponent },
   { path: 'payment/cancel', component: PaymentResultComponent },
+  // Liens de la demande de retour : rendus côté client, car c'est la page
+  // exécutée qui enregistre la réponse, pas le chargement du lien.
+  { path: 'retour', component: RetourComponent },
+  { path: 'desinscription', component: RetourComponent },
   {
     path: 'admin',
     component: AdminComponent,

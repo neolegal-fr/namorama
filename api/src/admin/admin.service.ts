@@ -68,6 +68,12 @@ export interface AdminUserRow {
   lastMailSubject: string | null;
   /** Ce courriel a reçu une réponse, saisie depuis l'admin. */
   lastMailReplied: boolean;
+  /** Demande de retour automatique réservée (et donc envoyée ou tentée), 24 h après l'inscription. */
+  demandeRetourAt: Date | null;
+  /** Réponse au « Namorama vous a-t-il été utile ? ». */
+  utilite: 'oui' | 'non' | null;
+  /** Désinscrit des demandes de retour : plus aucun envoi, même manuel. */
+  desinscritRetoursAt: Date | null;
 }
 
 /**
@@ -495,6 +501,9 @@ export class AdminService {
         lastMailAt: courriels.get(u.id)?.at ?? null,
         lastMailSubject: courriels.get(u.id)?.subject ?? null,
         lastMailReplied: courriels.get(u.id)?.replied ?? false,
+        demandeRetourAt: u.demandeRetourAt ?? null,
+        utilite: u.utilite ?? null,
+        desinscritRetoursAt: u.desinscritRetoursAt ?? null,
       };
     });
   }

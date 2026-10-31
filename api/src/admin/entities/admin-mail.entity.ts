@@ -25,9 +25,16 @@ export class AdminMail {
   @Column()
   keycloakId: string;
 
-  /** Le `sub` de l'administrateur qui a envoyé. */
-  @Column()
-  adminSub: string;
+  /** Le `sub` de l'administrateur qui a envoyé ; `null` pour un envoi automatique. */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  adminSub: string | null;
+
+  /**
+   * Envoyé seul, 24 h après l'inscription (chantier `demande-de-retour-automatique`),
+   * sans relecture : gabarit fixe, aucune phrase du modèle, lien de désinscription.
+   */
+  @Column({ default: false })
+  automatique: boolean;
 
   @Column({ length: 200 })
   subject: string;

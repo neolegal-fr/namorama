@@ -43,6 +43,12 @@ export interface AdminUser {
   lastMailAt: string | null;
   lastMailSubject: string | null;
   lastMailReplied: boolean;
+  /** Demande de retour automatique envoyée (ou tentée), 24 h après l'inscription. */
+  demandeRetourAt: string | null;
+  /** Réponse au « Namorama vous a-t-il été utile ? ». */
+  utilite: 'oui' | 'non' | null;
+  /** Désinscrit des demandes de retour : plus aucun envoi, même manuel. */
+  desinscritRetoursAt: string | null;
 }
 
 /** Consommation d'une opération sur un modèle. Voir `LigneConsommation` côté API. */
