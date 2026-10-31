@@ -142,7 +142,10 @@
       - Rejeu complet.
       - Visite purgée → message.
     - **Confidentialité** → 6.1.
-- [ ] 7.2 Appliquer la migration de 4.1 sur la base de prod, sauvegarde `mysqldump` datée dans `backups/` d'abord. Vérifier par `SHOW CREATE TABLE session_replay_chunk` que la collation de `sessionId` est celle de `visitor_session`.
+- [x] 7.2 Appliquer la migration de 4.1 sur la base de prod, sauvegarde `mysqldump` datée dans `backups/` d'abord. Vérifier par `SHOW CREATE TABLE session_replay_chunk` que la collation de `sessionId` est celle de `visitor_session`.
+  - Fait le 31/10/2026 à 11 h 00.
+  - Sauvegarde : `backups/namorama-2026-10-31-1059-avant-rejeu-des-sessions.sql.gz` (1,4 Mo, dump complet).
+  - `sessionId` est en `utf8mb4_general_ci`, comme `visitor_session.sessionId`. L'index unique (`sessionId`, `segment`, `seq`) et l'index `receivedAt` sont en place.
 - [ ] 7.3 Ouvrir la PR, attendre la CI verte, fusionner, puis attendre le build de `main` et déployer (`docker compose pull api web && docker compose up -d api web`). Vérifier dans les logs de démarrage l'absence d'erreur du module `replay` et le passage de la première purge.
 
 ## Workflow follow-up
