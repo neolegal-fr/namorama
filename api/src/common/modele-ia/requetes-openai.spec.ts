@@ -78,6 +78,21 @@ describe('Requêtes OpenAI, inchangées par le passage au port', () => {
     expect(chat).toEqual([{ model: C, messages: user, max_completion_tokens: 4000, reasoning_effort: 'none', ...JSON_OBJECT }]);
   });
 
+  // Opération ajoutée par le chantier « affiner par retour libre » : elle ne
+  // part QUE si la recherche porte des retours. Sans retour, aucune requête de
+  // plus, et la génération garde ses paramètres.
+  it('feedback : aucune requête sans retours', async () => {
+    const { svc, chat } = service('{}');
+    await svc.interpreterRetours([], { min: 6, max: 10 });
+    expect(chat).toEqual([]);
+  });
+
+  it('feedback : avec des retours, un appel simple en JSON', async () => {
+    const { svc, chat } = service('{"minLength": null, "maxLength": null, "avoidWords": [], "avoidEndings": [], "requiredWords": [], "formesRetirees": [], "langue": null, "preference": null}');
+    await svc.interpreterRetours(['plus court'], { min: 6, max: 10 });
+    expect(chat).toEqual([{ model: S, messages: user, max_completion_tokens: 300, reasoning_effort: 'none', ...JSON_OBJECT }]);
+  });
+
   it('analyze : budget proportionnel au lot', async () => {
     const { svc, chat } = service('{"analyses": []}');
     await svc.analyzeNames(['velora', 'zuvo'], 'fr');

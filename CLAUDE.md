@@ -251,7 +251,7 @@ défaut sont dans `api/.env.example`.
 
 | rôle | usage | OpenAI (défaut) | Claude |
 |---|---|---|---|
-| simple | reformulation, mots-clés, contraintes, nom de projet, découpage INPI | `OPENAI_MODEL` — luna, 0,20 $ / 1,20 $ | `ANTHROPIC_MODEL` |
+| simple | reformulation, mots-clés, contraintes, retours sur les noms, nom de projet, découpage INPI | `OPENAI_MODEL` — luna, 0,20 $ / 1,20 $ | `ANTHROPIC_MODEL` |
 | créatif | génération de noms, pick-best, repérage du marché, brouillon admin | `OPENAI_MODEL_CREATIVE` — terra, 2,00 $ / 12,00 $ | `ANTHROPIC_MODEL_CREATIVE` |
 | analyse | notation des noms. **Non définie ⇒ modèle simple** | `OPENAI_MODEL_ANALYSIS` — luna | `ANTHROPIC_MODEL_ANALYSIS` |
 
@@ -426,6 +426,8 @@ Les utilisateurs écrivent un cahier des charges autant qu'une description : rel
   déçoivent (`naming_style_widened`).
 - **Les contraintes comprises s'affichent en puces retirables** ; une puce retirée part
   dans `contraintesRetirees`, car le serveur réextrait le brief à chaque recherche.
+- **Les retours sur les noms sont une troisième source de contraintes**, entre le
+  réglage explicite et le brief (voir « Retours sur les noms »).
 - `search_completed` porte les bornes et leur origine, les décomptes de contraintes
   (jamais les mots) et `ecartes` par motif. L'événement `done` porte aussi `ecartes` :
   une recherche vide après 300 noms écartés ne doit pas dire « tout est pris ».
@@ -474,6 +476,27 @@ Sous la liste des résultats, l'utilisateur dit ce qu'il attend des noms suivant
   des virgules), par la recherche aboutie (`createOrUpdate`, après débit : un retour
   refusé faute de crédits n'est pas gardé) ; le retrait d'une puce passe par
   `PATCH /projects/:id`.
+- **Interprétés avant d'être appliqués** (`interpreterRetours`, opération `feedback`,
+  modèle simple, un appel par recherche qui en porte, en cache 24 h par retours et
+  bornes). Les recopier dans la consigne ne suffisait pas : « pas de noms composés »
+  y contredisait le quart de noms composés exigé. Trois parts :
+  - **vérifiable** (bornes, mots et terminaisons à éviter, mots imposés) : fusionné au
+    cahier des charges (`appliquerRetours`), donc garanti par le filtre. Un mot imposé
+    doit figurer **comme mot entier** dans un retour (« plus chaleureux » n'impose pas
+    « chaleur ») ;
+  - **réglages** : les formes refusées sortent de la répartition des sous-groupes
+    (`repartirSousGroupes`), la langue demandée remplace celle du navigateur ;
+  - **préférence** : le reste, résumé, assaini et borné à 200 caractères — le seul
+    texte libre de l'utilisateur à atteindre la consigne créative.
+- **Priorité** : réglage explicite > retour > brief (`origineDesBornes: retour`). Une
+  borne du brief que le retour contredit tombe : le plus récent l'emporte.
+- **Une forme ne se retire que sur un rejet explicite.** Mesuré le 31/10/2026 : sans
+  cette règle, luna retirait la forme « courte » sur « plus courts », et Haiku les noms
+  composés sur « plus sérieux ».
+- Un échec d'interprétation n'empêche pas la recherche : les retours bruts partent en
+  préférence (400 caractères), sans être mis en cache.
+- `search_completed` porte `retours` (nombre) et `retoursCompris` (`bornes`,
+  `contraintes`, `formesRetirees`, `langue`, `preference`) — jamais le texte.
 
 > Migration : `2026-11-01-retours-sur-les-noms.sql`, avant de déployer l'image.
 

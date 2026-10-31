@@ -109,6 +109,17 @@ export class SearchDomainsDto {
   @IsOptional()
   contraintesRetirees?: string[];
 
+  /**
+   * Retours sur les noms (« Affiner »), du plus ancien au plus récent. Ils
+   * s'additionnent ; au-delà de 10, l'utilisateur doit en retirer un.
+   */
+  @IsArray()
+  @ArrayMaxSize(10, { message: 'Au plus 10 retours : retirez-en un avant d\'en ajouter un autre' })
+  @IsString({ each: true })
+  @MaxLength(200, { each: true, message: 'Un retour ne peut pas dépasser 200 caractères' })
+  @IsOptional()
+  retours?: string[];
+
   /** Exemples de noms/domaines que l'utilisateur aime — servent de références de style. */
   @IsArray()
   @ArrayMaxSize(10)
