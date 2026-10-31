@@ -135,3 +135,21 @@ describe('SearchDomainsDto — liste d’exclusion', () => {
     expect(erreurs.find(e => e.property === 'excludeNames')).toBeDefined();
   });
 });
+
+describe('SearchDomainsDto — longueur : un maximum, un ancien minimum toléré', () => {
+  const base = { description: 'une description assez longue pour passer', keywords: ['mot'] };
+  const erreurSur = async (corps: object, champ: string) =>
+    (await validate(plainToInstance(SearchDomainsDto, { ...base, ...corps }))).find(e => e.property === champ);
+
+  it('accepte minLength 5, envoyé par un onglet ouvert avant le changement', async () => {
+    expect(await erreurSur({ minLength: 5 }, 'minLength')).toBeUndefined();
+  });
+
+  it('accepte maxLength 30, « sans limite »', async () => {
+    expect(await erreurSur({ maxLength: 30 }, 'maxLength')).toBeUndefined();
+  });
+
+  it('refuse maxLength 5, sous le plancher', async () => {
+    expect(await erreurSur({ maxLength: 5 }, 'maxLength')).toBeDefined();
+  });
+});
