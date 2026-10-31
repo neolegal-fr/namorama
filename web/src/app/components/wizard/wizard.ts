@@ -29,6 +29,7 @@ import { Toast } from 'primeng/toast';
 import { MenuItem, ConfirmationService, MessageService } from 'primeng/api';
 import { lireNomsSaisis } from './noms-saisis';
 import { bornesAffichees, MAXIMUM_PAR_DEFAUT, PLANCHER_DE_LONGUEUR, SANS_LIMITE } from './bornes-affichees';
+import { composerResume } from './resume-cadrage';
 import { UserService } from '../../services/user';
 import { ProjectService, ProjectShare, SharePermission } from '../../services/project';
 import { FeedbackService } from '../../services/feedback';
@@ -553,6 +554,81 @@ export class WizardComponent implements OnInit, OnDestroy {
   /** Longueur d'un mot-clé acceptée par l'API (`SearchDomainsDto`). */
   readonly MAX_KEYWORD_LENGTH = 100;
   keywordsFull = computed(() => this.keywords().length >= this.MAX_KEYWORDS);
+  /**
+   * Le compteur n'apparaît qu'à l'approche de la limite : « 6 / 50 » invitait
+   * à en ajouter, alors que six mots-clés suffisent à orienter le modèle.
+   */
+  readonly KEYWORDS_COUNTER_FROM = 40;
+
+  // ─── Étape 2 : résumé, bloc facultatif, barre d'action ──────
+  // Chantier `refondre-l-ecran-de-cadrage`.
+
+  /** Contraintes du brief encore appliquées (celles que l'utilisateur n'a pas retirées). */
+  private contraintesActives = computed(() => {
+    const r = new Set(this.contraintesRetirees());
+    return {
+      eviter: this.briefAvoidWords().filter((w) => !r.has(`eviter:${w}`)),
+      fins: this.briefAvoidEndings().filter((f) => !r.has(`fin:${f}`)),
+      avec: this.briefRequiredWords().filter((m) => !r.has(`avec:${m}`)),
+    };
+  });
+
+  /** La phrase d'en-tête : ce qui sera cherché, recalculée à chaque réglage. */
+  resumeCadrage = computed(() => composerResume(
+    {
+      style: this.typeDeNom(),
+      bornes: this.bornes(),
+      ...this.contraintesActives(),
+      extensions: this.selectedExtensions(),
+      toutes: this.matchMode() === 'all' && this.selectedExtensions().length > 1,
+    },
+    (k, p) => this.translate.instant(k, p) as string,
+  ));
+
+  /** « Affiner » est replié à l'arrivée ; ouvert, il le reste jusqu'au prochain projet. */
+  affinerOuvert = signal(false);
+
+  /** Projets pour lesquels `wizard_refine_opened` est déjà parti dans cette session. */
+  private static readonly CLE_AFFINER = 'nm_refine_opened';
+
+  toggleAffiner() {
+    const ouvrir = !this.affinerOuvert();
+    this.affinerOuvert.set(ouvrir);
+    if (!ouvrir) return;
+    // Une fois par projet et par session : ce qu'on veut savoir, c'est si le
+    // bloc replié est ouvert du tout, pas combien de fois on y revient.
+    const cle = this.projectId() ?? 'nouveau';
+    try {
+      const vus: string[] = JSON.parse(sessionStorage.getItem(WizardComponent.CLE_AFFINER) || '[]');
+      if (vus.includes(cle)) return;
+      sessionStorage.setItem(WizardComponent.CLE_AFFINER, JSON.stringify([...vus, cle].slice(-50)));
+    } catch { /* stockage indisponible : on mesure quand même */ }
+    this.analytics.track('wizard_refine_opened', { projet: !!this.projectId() });
+  }
+
+  /** Résumé du bloc replié : premiers mots-clés et le nombre restant. */
+  resumeMotsCles = computed(() => {
+    const k = this.keywords();
+    const premiers = k.slice(0, 3).join(', ');
+    return k.length > 3 ? `${premiers} ${this.translate.instant('WIZARD.STEP2.SUMMARY_MORE', { n: k.length - 3 })}` : premiers;
+  });
+
+  resumePublic = computed(() => {
+    if (!this.isLocal()) return this.translate.instant('WIZARD.STEP2.SUMMARY_INTL') as string;
+    const code = this.effectiveLocale();
+    const lang = code ? (this.LOCALE_LABELS[code] ?? code) : '';
+    return this.translate.instant('WIZARD.STEP2.SUMMARY_LOCAL', { lang }) as string;
+  });
+
+  resumeInspirations = computed(() => {
+    const t = (k: string, p?: Record<string, unknown>) => this.translate.instant(k, p) as string;
+    const parts: string[] = [];
+    const aimes = this.styleReferences();
+    const evites = this.manualDislikedExamples();
+    if (aimes.length) parts.push(t('WIZARD.STEP2.SUMMARY_LIKED', { noms: aimes.slice(0, 3).join(', ') }));
+    if (evites.length) parts.push(t('WIZARD.STEP2.SUMMARY_DISLIKED', { noms: evites.slice(0, 3).join(', ') }));
+    return parts.length ? parts.join(' · ') : t('WIZARD.STEP2.SUMMARY_NONE');
+  });
 
   newExtension = signal('');
   selectedExtensions = signal<string[]>(['.com']);
@@ -1963,6 +2039,7 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.localeOverride.set('');
     this.maxNameLength.set(MAXIMUM_PAR_DEFAUT);
     this.maxLengthTouched.set(false);
+    this.affinerOuvert.set(false);
     this.briefAvoidWords.set([]);
     this.briefReferenceBrands.set([]);
     this.briefAvoidEndings.set([]);

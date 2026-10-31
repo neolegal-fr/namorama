@@ -579,6 +579,14 @@ poser : ce dernier ne part qu'au clic sur « Analyser », donc uniquement quand 
 n'a PAS été pré-calculée. Un seul exemplaire en sept jours pour 409 analyses produites —
 l'absence de signal mesurait l'efficacité du pré-calcul, pas la lecture.
 
+`wizard_refine_opened` (chantier `refondre-l-ecran-de-cadrage`) marque l'ouverture du
+bloc « Affiner — facultatif » de l'étape de cadrage, replié à l'arrivée : mots-clés,
+public, inspirations, repérage du marché. Au plus une fois par projet et par session
+(`sessionStorage`), jamais pour une réouverture d'office au retour des résultats ;
+propriété `projet` (projet déjà enregistré ou non), aucun contenu. Il répond à une
+seule question : replier ces réglages les a-t-il fait disparaître des usages ? À lire
+avec `wizard_step_viewed` (étape 2) comme dénominateur.
+
 `naming_style_widened` (depuis le 31/10/2026) marque l'acceptation de la suggestion
 « inclure les noms descriptifs », avec `origine` : `note` (recherche incomplète) ou
 `bandeau` (5 rejets sans favori). Il dit si l'incitation sert, et donc si le défaut
