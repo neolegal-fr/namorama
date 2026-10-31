@@ -6,7 +6,9 @@ import { Resolver } from 'node:dns/promises';
 import { MatchMode } from './dto/search-domains.dto';
 import { RdapService } from './rdap.service';
 import { ModeleIA } from '../common/modele-ia/modele-ia.service';
-import { SCHEMA_ANALYSES, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_MOTS_CLES, SCHEMA_NOMS } from '../common/modele-ia/schemas';
+import {
+  FORMES_DE_NOM, SCHEMA_ANALYSES, SCHEMA_CHOIX, SCHEMA_CONCURRENTS, SCHEMA_CONTRAINTES, SCHEMA_MOTS_CLES, SCHEMA_NOMS, SCHEMA_RETOURS,
+} from '../common/modele-ia/schemas';
 
 const execFileAsync = promisify(execFile);
 
@@ -151,6 +153,79 @@ export function nettoyerContraintesDuBrief(
   const nameType = TYPES_DE_NOM.includes(brut.nameType as TypeDeNom) ? (brut.nameType as TypeDeNom) : null;
   return { avoidEndings, requiredWords, nameType };
 }
+
+/**
+ * Ce que le serveur comprend des retours sur les noms (chantier
+ * `affiner-par-retour-libre`). Trois parts : ce qui se VÉRIFIE (bornes, mots,
+ * terminaisons — appliqué par le filtre du cahier des charges), ce qui RÈGLE la
+ * consigne (formes retirées, langue), et le reste, transmis comme préférence.
+ */
+export type FormeDeNom = (typeof FORMES_DE_NOM)[number];
+export interface InterpretationRetours {
+  minLength: number | null;
+  maxLength: number | null;
+  avoidWords: string[];
+  avoidEndings: string[];
+  requiredWords: string[];
+  formesRetirees: FormeDeNom[];
+  langue: string | null;
+  preference: string | null;
+}
+
+export const AUCUNE_INTERPRETATION: InterpretationRetours = {
+  minLength: null, maxLength: null, avoidWords: [], avoidEndings: [], requiredWords: [],
+  formesRetirees: [], langue: null, preference: null,
+};
+
+/** Préférence transmise au modèle créatif : bornée, le seul texte libre qui l'atteint. */
+export const PREFERENCE_MAX_CARACTERES = 200;
+/** Repli quand l'interprétation échoue : les retours bruts, bornés. */
+export const REPLI_RETOURS_MAX_CARACTERES = 400;
+
+/** Sauts de ligne et triples guillemets retirés : un texte d'utilisateur ne doit pas structurer la consigne. */
+export function assainirPourConsigne(texte: string, max: number): string {
+  return String(texte ?? '').replace(/[\r\n]+/g, ' ').replace(/`{3,}/g, '').replace(/"/g, "'").replace(/\s{2,}/g, ' ').trim().slice(0, max);
+}
+
+/**
+ * Le modèle propose, le code décide — comme pour le brief. Un mot imposé qu'on
+ * ne retrouve dans aucun retour est une obligation inventée, et une forme hors
+ * énumération n'existe pas.
+ */
+export function nettoyerInterpretation(brut: any, retours: string[]): InterpretationRetours {
+  const p = brut && typeof brut === 'object' ? brut : {};
+  const borne = (v: unknown, lo: number, hi: number): number | null =>
+    typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? Math.round(v) : null;
+  let minLength = borne(p.minLength, 3, 12);
+  let maxLength = borne(p.maxLength, 4, 30);
+  if (minLength !== null && maxLength !== null && minLength > maxLength) [minLength, maxLength] = [maxLength, minLength];
+  const texte = retours.join(' ');
+  const { avoidEndings, requiredWords: imposes } = nettoyerContraintesDuBrief(p, texte);
+  // Plus strict que pour le brief : un mot imposé doit figurer comme MOT ENTIER
+  // dans un retour. « plus chaleureux » contient « chaleur », mais n'oblige à rien.
+  const motsDesRetours = new Set(texte.split(/[^\p{L}\p{N}]+/u).map(normaliserPourNom).filter(Boolean));
+  const requiredWords = imposes.filter((m) => motsDesRetours.has(m));
+  const avoidWords = Array.isArray(p.avoidWords)
+    ? [...new Set(p.avoidWords.map((w: unknown) => normaliserPourNom(String(w))).filter((w: string) => w.length > 2))].slice(0, 20) as string[]
+    : [];
+  const formesRetirees = Array.isArray(p.formesRetirees)
+    ? [...new Set(p.formesRetirees.filter((f: unknown) => (FORMES_DE_NOM as readonly unknown[]).includes(f)))] as FormeDeNom[]
+    : [];
+  const langue = typeof p.langue === 'string' && /^[\p{L} -]{2,30}$/u.test(p.langue.trim()) ? p.langue.trim() : null;
+  const preference = typeof p.preference === 'string' && p.preference.trim()
+    ? assainirPourConsigne(p.preference, PREFERENCE_MAX_CARACTERES)
+    : null;
+  return { minLength, maxLength, avoidWords, avoidEndings, requiredWords, formesRetirees, langue, preference };
+}
+
+/** Repli D6 : rien de structuré, mais la consigne garde au moins le signal brut. */
+export function interpretationDeRepli(retours: string[]): InterpretationRetours {
+  return { ...AUCUNE_INTERPRETATION, preference: assainirPourConsigne(retours.join(' ; '), REPLI_RETOURS_MAX_CARACTERES) || null };
+}
+
+/** Durée et taille du cache d'interprétation : une suite de « 10 de plus » ne repaie rien. */
+const RETOURS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const RETOURS_CACHE_MAX = 500;
 
 /** Longueur mini par défaut d'un nom généré — en dessous, presque tout est déposé. */
 /**
@@ -535,6 +610,8 @@ export class DomainService {
    * validité soit large.
    */
   private readonly competitorsCache = new Map<string, { at: number; value: CompetitorsResult }>();
+  /** Interprétation des retours, par (retours, bornes courantes). Voir `interpreterRetours`. */
+  private readonly retoursCache = new Map<string, { at: number; value: InterpretationRetours }>();
 
   /*
    * Les modèles par rôle (simple, créatif, analyse) et le fournisseur se
@@ -723,6 +800,70 @@ Description: "${description.replace(/"/g, "'").slice(0, 800)}"`;
       this.logger.error('Erreur extraction contraintes naming:', error);
       return { ...DEFAULT_CONSTRAINTS };
     }
+  }
+
+  /**
+   * Traduit les retours sur les noms en règles (chantier `affiner-par-retour-libre`).
+   *
+   * Recopier les retours dans la consigne de génération ne suffisait pas : « pas
+   * de noms composés » y contredirait le sous-groupe `compound`, qui en exige un
+   * quart, et rien ne garantirait « plus de -ia ». Un appel `simple` les
+   * structure ; le filtre et la consigne appliquent ce qui en sort.
+   *
+   * Mis en cache par (retours, bornes courantes) : une suite de « 10 de plus »
+   * sans nouveau retour ne repaie rien, et un appel servi par le cache n'écrit
+   * rien dans `model_usage`. Un échec rend les retours bruts en préférence.
+   */
+  async interpreterRetours(retours: string[], bornes: { min: number; max: number }): Promise<InterpretationRetours> {
+    if (!retours.length) return { ...AUCUNE_INTERPRETATION };
+    const cle = JSON.stringify([retours, bornes.min, bornes.max]);
+    const enCache = this.retoursCache.get(cle);
+    if (enCache && Date.now() - enCache.at < RETOURS_CACHE_TTL_MS) return enCache.value;
+
+    const liste = retours.map((r, i) => `${i + 1}. "${assainirPourConsigne(r, 200)}"`).join('\n');
+    const prompt = `You interpret feedback that a user of a brand-name generator wrote after seeing generated names. Items are listed OLDEST FIRST: when two items contradict, the MOST RECENT one wins.
+Current name length: minimum ${bornes.min}, maximum ${bornes.max} characters.
+
+Return ONLY JSON:
+{"minLength": <int or null>, "maxLength": <int or null>, "avoidWords": ["..."], "avoidEndings": ["..."], "requiredWords": ["..."], "formesRetirees": ["short"|"compound"|"metaphor"|"sound"], "langue": <string or null>, "preference": <string or null>}
+
+Rules:
+- minLength / maxLength: only when the feedback is about length. Turn relative requests into numbers using the current length ("shorter" → a maximum about 2 below the current maximum; "longer" → a minimum about 2 above the current minimum; "6 letters max" → maxLength 6). Otherwise null.
+- avoidWords: words or roots the user says to avoid. Lowercase. Empty array if none.
+- avoidEndings: endings the user forbids ("no more names ending in -ia" → ["ia"]). Lowercase, without the dash. Empty array if none.
+- requiredWords: only words the user explicitly says EVERY name must contain, written in the feedback. Never invent one. Empty array if none.
+- formesRetirees: ONLY the name forms the user EXPLICITLY rejects by naming them. Never infer a form from a tone request ("more serious" removes nothing) or from a length request ("shorter" never removes "short"). "compound" = two words or roots fused together (snapflow, taskbloom); "metaphor" = abstract evocative images (veloria, zephyra); "sound" = coined names chosen only for their sound (kalivo, navioq); "short" = very short coined words (orva, nyxo). Empty array if none.
+- langue: when the user wants names that sound like a given language or culture ("plus francophone" → "French", "more Italian-sounding" → "Italian"), that language's name in English. Otherwise null.
+- preference: a short English summary (at most 25 words) of the remaining taste feedback not covered above (tone, image, feeling, seriousness). Null if nothing remains.
+
+Feedback (oldest first):
+${liste}`;
+
+    let interpretation: InterpretationRetours;
+    try {
+      const response = await this.modele.completer('feedback', {
+        role: 'simple',
+        message: prompt,
+        format: { type: 'json', schema: SCHEMA_RETOURS },
+        maxSortie: 300,
+        raisonnement: 'none',
+      });
+      // Vide = tronquée ou refusée, déjà journalisée par `ModeleIA`.
+      if (!response.texte) return interpretationDeRepli(retours);
+      interpretation = nettoyerInterpretation(JSON.parse(response.texte), retours);
+    } catch (error) {
+      // Un repli n'est pas mis en cache : une panne passagère ne doit pas
+      // priver les recherches suivantes de la vraie interprétation.
+      this.logger.warn(`Interprétation des retours impossible, repli sur le texte brut : ${error instanceof Error ? error.message : error}`);
+      return interpretationDeRepli(retours);
+    }
+
+    if (this.retoursCache.size >= RETOURS_CACHE_MAX) {
+      const plusAncienne = this.retoursCache.keys().next().value;
+      if (plusAncienne !== undefined) this.retoursCache.delete(plusAncienne);
+    }
+    this.retoursCache.set(cle, { at: Date.now(), value: interpretation });
+    return interpretation;
   }
 
   /** Construit le prompt « qui existe déjà sur ce marché ? ». */

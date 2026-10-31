@@ -45,6 +45,15 @@ export class Project {
   @Column('simple-array', { default: '' })
   dislikedExamples: string[];
 
+  /**
+   * Retours sur les noms (« Affiner »), du plus ancien au plus récent : le plus
+   * récent l'emporte en cas de contradiction. JSON en `text` — un retour
+   * contient des virgules, qu'un `simple-array` prendrait pour des séparateurs.
+   * `null` = aucun retour. Migration : `2026-11-01-retours-sur-les-noms.sql`.
+   */
+  @Column('simple-json', { nullable: true, default: null })
+  retours: string[] | null;
+
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   user: User;
 

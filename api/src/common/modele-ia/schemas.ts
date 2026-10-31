@@ -31,6 +31,23 @@ export const SCHEMA_CONTRAINTES = objet({
   nameType: { anyOf: [{ type: 'string', enum: ['invented', 'descriptive', 'any'] }, { type: 'null' }] },
 });
 
+/**
+ * Interprétation des retours sur les noms (chantier `affiner-par-retour-libre`) :
+ * ce qui se vérifie (bornes, mots, terminaisons), ce qui règle le mélange de
+ * formes et la langue, et le reste comme préférence de goût.
+ */
+export const FORMES_DE_NOM = ['short', 'compound', 'metaphor', 'sound'] as const;
+export const SCHEMA_RETOURS = objet({
+  minLength: entierOuNul,
+  maxLength: entierOuNul,
+  avoidWords: listeDe(chaine),
+  avoidEndings: listeDe(chaine),
+  requiredWords: listeDe(chaine),
+  formesRetirees: listeDe({ type: 'string', enum: [...FORMES_DE_NOM] }),
+  langue: { anyOf: [chaine, { type: 'null' }] },
+  preference: { anyOf: [chaine, { type: 'null' }] },
+});
+
 export const SCHEMA_CONCURRENTS = objet({
   competitors: listeDe(objet({ name: chaine, domain: chaine, note: chaine })),
 });

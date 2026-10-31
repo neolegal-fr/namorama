@@ -14,6 +14,7 @@ export type OperationModele =
   | 'suggest_name'
   | 'keywords'
   | 'constraints'
+  | 'feedback'
   | 'competitors'
   | 'generate_names'
   | 'analyze'

@@ -5,6 +5,7 @@ import { Project } from './entities/project.entity';
 import { ProjectShare, SharePermission } from './entities/project-share.entity';
 import { DomainSuggestion } from './entities/domain-suggestion.entity';
 import { User } from '../users/entities/user.entity';
+import { lireRetours } from './retours';
 
 /** Ce qu'un compte a le droit de faire sur un projet donné. */
 export type ProjectRole = 'owner' | 'write' | 'read';
@@ -120,7 +121,7 @@ export class ProjectsService {
 
   async createOrUpdate(
     user: User,
-    data: { id?: string; name?: string; description: string; keywords: string[]; extensions: string[]; matchMode: string; maxLength?: number; likedExamples?: string[]; dislikedExamples?: string[] },
+    data: { id?: string; name?: string; description: string; keywords: string[]; extensions: string[]; matchMode: string; maxLength?: number; likedExamples?: string[]; dislikedExamples?: string[]; retours?: string[] },
     manager?: EntityManager,
   ): Promise<Project> {
     const repo = manager ? manager.getRepository(Project) : this.projectsRepository;
@@ -157,6 +158,9 @@ export class ProjectsService {
     if (data.maxLength !== undefined) project.maxLength = data.maxLength;
     if (data.likedExamples !== undefined) project.likedExamples = data.likedExamples;
     if (data.dislikedExamples !== undefined) project.dislikedExamples = data.dislikedExamples;
+    // Les retours portés par la recherche aboutie. Absents = on garde ceux
+    // enregistrés : une recherche lancée sans retour ne les efface pas.
+    if (data.retours !== undefined) project.retours = lireRetours(data.retours);
 
     return repo.save(project);
   }
@@ -274,6 +278,8 @@ export class ProjectsService {
     if (data.keywords !== undefined) project.keywords = data.keywords;
     if (data.extensions !== undefined) project.extensions = data.extensions;
     if (data.matchMode !== undefined) project.matchMode = data.matchMode;
+    // Retrait d'une puce : la liste entière, déjà amputée, sans lancer de recherche.
+    if (data.retours !== undefined) project.retours = lireRetours(data.retours);
     return this.projectsRepository.save(project);
   }
 

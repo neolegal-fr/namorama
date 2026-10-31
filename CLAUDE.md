@@ -461,6 +461,22 @@ Sur les 30 jours précédents, 39 recherches sur 209 (18,7 %) rendaient moins qu
 - Les noms vérifiés ne vivent que le temps de la session : rouvrir un projet repart
   des seules cartes enregistrées.
 
+### Retours sur les noms (« Affiner »)
+
+Sous la liste des résultats, l'utilisateur dit ce qu'il attend des noms suivants
+(« plus francophone », « pas de noms composés »). Chantier OpenSpec
+`affiner-par-retour-libre`.
+
+- **Les retours s'additionnent**, au plus 10 de 200 caractères (`lireRetours`, qui
+  refuse plutôt que de tronquer ou d'en supprimer un d'office). Ils ne valent que pour
+  les recherches **suivantes** et ne touchent **jamais** la description du projet.
+- **Enregistrés sur le projet** (`project.retours`, JSON en `text` : un retour contient
+  des virgules), par la recherche aboutie (`createOrUpdate`, après débit : un retour
+  refusé faute de crédits n'est pas gardé) ; le retrait d'une puce passe par
+  `PATCH /projects/:id`.
+
+> Migration : `2026-11-01-retours-sur-les-noms.sql`, avant de déployer l'image.
+
 ## Partage d'un projet
 
 Un projet se partage **par adresse e-mail**, en lecture (défaut) ou en écriture,

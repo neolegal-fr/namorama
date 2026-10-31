@@ -69,6 +69,51 @@ describe('ProjectsService — projets partagés', () => {
     await expect(service.requireWrite('p1', invite)).resolves.toMatchObject({ role: 'write' });
   });
 
+  describe('retours sur les noms (chantier affiner-par-retour-libre)', () => {
+    function avecSauvegarde(partage: any | null) {
+      const f = fabrique(partage);
+      f.service.projectsRepository.save = jest.fn().mockImplementation(async (p: any) => p);
+      f.service.projectsRepository.findOne = jest.fn().mockResolvedValue(f.projet);
+      return f;
+    }
+
+    it('un collaborateur en écriture enregistre un retour, par la recherche comme par la mise à jour', async () => {
+      const { service, projet } = avecSauvegarde({ permission: 'write', email: 'invite@example.com', acceptedAt: new Date() });
+      await service.createOrUpdate(invite, { id: 'p1', description: 'd', keywords: [], extensions: ['.com'], matchMode: 'any', retours: ['plus francophone'] });
+      expect(projet).toMatchObject({ retours: ['plus francophone'] });
+      await service.update('p1', invite, { retours: [] } as any);
+      expect(projet).toMatchObject({ retours: [] });
+    });
+
+    it('un invité en lecture ne peut pas en enregistrer', async () => {
+      const { service, projet } = avecSauvegarde({ permission: 'read', email: 'invite@example.com', acceptedAt: new Date() });
+      await expect(service.update('p1', invite, { retours: ['plus court'] } as any)).rejects.toThrow(/lecture seule/);
+      await expect(service.createOrUpdate(invite, { id: 'p1', description: 'd', keywords: [], extensions: [], matchMode: 'any', retours: ['plus court'] }))
+        .rejects.toThrow(/lecture seule/);
+      expect((projet as any).retours).toBeUndefined();
+    });
+
+    it('un retour contenant une virgule reste un seul retour', async () => {
+      const { service, projet } = avecSauvegarde(null);
+      await service.update('p1', proprietaire, { retours: ['plus court, plus doux'] } as any);
+      expect((projet as any).retours).toEqual(['plus court, plus doux']);
+    });
+
+    it('une recherche sans retours ne les efface pas', async () => {
+      const { service, projet } = avecSauvegarde(null);
+      (projet as any).retours = ['plus sérieux'];
+      await service.createOrUpdate(proprietaire, { id: 'p1', description: 'd', keywords: [], extensions: [], matchMode: 'any' });
+      expect((projet as any).retours).toEqual(['plus sérieux']);
+    });
+
+    it('refuse un onzième retour, et un retour de plus de 200 caractères, sans rien tronquer', async () => {
+      const { service } = avecSauvegarde(null);
+      const onze = Array.from({ length: 11 }, (_, i) => `retour ${i}`);
+      await expect(service.update('p1', proprietaire, { retours: onze } as any)).rejects.toThrow(/Au plus 10 retours/);
+      await expect(service.update('p1', proprietaire, { retours: ['x'.repeat(201)] } as any)).rejects.toThrow(/200 caractères/);
+    });
+  });
+
   it('note la première ouverture, sans faire échouer la lecture si l’écriture rate', async () => {
     const { service } = fabrique({ permission: 'read', email: 'invite@example.com', acceptedAt: null });
     service.sharesRepository.save = jest.fn().mockRejectedValue(new Error('base indisponible'));
