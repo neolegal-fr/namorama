@@ -237,7 +237,17 @@
               styleClass="select-btn-full">
               <ng-template #item let-option>{{ option.labelKey | translate }}</ng-template>
             </p-selectButton>
-            <span style="font-size: 0.8rem; color: var(--nm-app-text-2)">{{ ('WIZARD.STEP2.NAME_TYPE_HINT_' + typeDeNom().toUpperCase()) | translate }}</span>
+            <!-- Les trois styles décrits ENSEMBLE : on lit avant de choisir, au lieu
+                 de choisir pour lire (sessions du 31/10 au 07/11/2026, chantier
+                 `comparer-les-reglages-du-cadrage`). Le contrôle au-dessus reste le
+                 seul élément cliquable. -->
+            <ul class="styles-decrits">
+              <li *ngFor="let option of TYPE_DE_NOM_OPTIONS"
+                  [class.styles-decrits__courant]="option.value === typeDeNom()"
+                  [attr.aria-current]="option.value === typeDeNom() ? 'true' : null">
+                <strong>{{ option.labelKey | translate }}</strong> — {{ ('WIZARD.STEP2.NAME_TYPE_HINT_' + option.value.toUpperCase()) | translate }}
+              </li>
+            </ul>
           </div>
 
           <!-- Longueur : UN maximum. L'utilisateur raisonne en « pas trop long » ;
@@ -307,8 +317,10 @@
           </div>
           <div *ngIf="selectedExtensions().length > 1">
             <p-selectButton [options]="matchOptions()" [(ngModel)]="matchMode" styleClass="select-btn-full"></p-selectButton>
-            <div *ngIf="matchMode() === 'all'" style="margin-top: 0.375rem; font-size: var(--nm-text-ui-sm); color: var(--nm-app-text-2)">
-              {{ 'WIZARD.STEP2.MATCH_ALL_HINT' | translate }}
+            <!-- Chaque critère dit ce qu'il change : « au moins une » n'avait pas
+                 d'explication, et des visiteurs basculaient pour comprendre. -->
+            <div class="critere-aide">
+              {{ ('WIZARD.STEP2.MATCH_' + (matchMode() === 'all' ? 'ALL' : 'ANY') + '_HINT') | translate }}
             </div>
           </div>
           <!-- L'argument qui lève l'autocensure du « .com seul » -->

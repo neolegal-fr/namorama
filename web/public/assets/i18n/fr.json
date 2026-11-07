@@ -192,6 +192,7 @@
       "MATCH_MODE": "Critère de disponibilité",
       "MATCH_ANY": "Au moins une extension disponible",
       "MATCH_ALL": "Toutes les extensions disponibles",
+      "MATCH_ANY_HINT": "Un nom est proposé dès qu'une des extensions retenues est libre : la recherche va plus vite.",
       "MATCH_ALL_HINT": "La recherche peut être plus longue : chaque nom doit être libre sur toutes les extensions retenues.",
       "BACK_BTN": "Retour",
       "NEXT_BTN": "Continuer vers les extensions",
