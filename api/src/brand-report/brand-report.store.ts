@@ -58,6 +58,7 @@ export class BrandReportStore {
         socials: (rep?.socials ?? []).map((s) => ({ platform: s.platform, status: s.status })),
         score: rep?.score ?? null,
         costCredits: r.costCredits ?? null,
+        shareToken: r.shareToken ?? null,
       };
     });
   }

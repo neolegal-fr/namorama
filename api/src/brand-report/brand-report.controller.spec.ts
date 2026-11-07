@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { BrandReportController } from './brand-report.controller';
 import { BRAND_REPORT_COST } from './brand-report.service';
 
@@ -272,5 +272,59 @@ describe('BrandReportController — rafraîchissement gratuit', () => {
     expect(generate).not.toHaveBeenCalled();
     expect(res.cached).toBe(true);
     expect(event).toHaveBeenCalledWith('brand_report_refresh_throttled', expect.any(Object));
+  });
+});
+
+describe('BrandReportController — renvoi par e-mail', () => {
+  const invite = { sub: 'kc-invite', email: 'invite@example.com' };
+
+  /**
+   * `find` ne connaît qu'un rapport : celui de « norvane », rangé sous le
+   * propriétaire du projet `p-1`, qui l'a payé.
+   */
+  function make() {
+    const find = jest.fn().mockImplementation(async (sub: string, name: string) =>
+      sub === 'kc-proprio' && name === 'norvane' ? { name: 'norvane', shareToken: 'tok' } : null);
+    const sendReport = jest.fn().mockResolvedValue(true);
+    const generate = jest.fn();
+    const decrementCredits = jest.fn();
+    const event = jest.fn();
+    const accessFor = jest.fn().mockImplementation(async (projectId: string) =>
+      projectId === 'p-1' ? { role: 'read', owner: { keycloakId: 'kc-proprio' } } : null);
+    const ctrl = new BrandReportController(
+      { generate } as any,
+      { find, save: jest.fn() } as any,
+      { sendReport } as any,
+      { findOrCreate: jest.fn().mockResolvedValue({ keycloakId: 'kc-invite' }), decrementCredits } as any,
+      { transaction: (cb: any) => cb({}) } as any,
+      { event } as any,
+      { marquer: jest.fn(), lier: jest.fn(), visite: jest.fn() } as any,
+      { accessFor } as any,
+    );
+    return { ctrl, find, sendReport, generate, decrementCredits, event };
+  }
+
+  it("envoie le rapport payé par le propriétaire quand l'invité passe par le projet", async () => {
+    const { ctrl, sendReport, generate, decrementCredits, event } = make();
+    const res = await ctrl.send({ name: 'norvane', emails: ['associe@example.com'], projectId: 'p-1' }, invite);
+    expect(res).toEqual({ sent: true });
+    expect(sendReport).toHaveBeenCalledWith(['associe@example.com'], expect.objectContaining({ name: 'norvane' }));
+    expect(generate).not.toHaveBeenCalled();
+    expect(decrementCredits).not.toHaveBeenCalled();
+    expect(event).toHaveBeenCalledWith('brand_report_reshared', { sub: 'kc-invite', sent: true, viaProjet: true });
+  });
+
+  it('sans projet, cherche sous le seul appelant, comme avant', async () => {
+    const { ctrl, find } = make();
+    await expect(ctrl.send({ name: 'norvane', emails: ['a@example.com'] }, invite)).rejects.toBeInstanceOf(NotFoundException);
+    expect(find).toHaveBeenCalledWith('kc-invite', 'norvane');
+  });
+
+  it('refuse un nom sans rapport, sans rien produire ni débiter', async () => {
+    const { ctrl, sendReport, generate, decrementCredits } = make();
+    await expect(ctrl.send({ name: 'velvio', projectId: 'p-1' }, invite)).rejects.toBeInstanceOf(NotFoundException);
+    expect(sendReport).not.toHaveBeenCalled();
+    expect(generate).not.toHaveBeenCalled();
+    expect(decrementCredits).not.toHaveBeenCalled();
   });
 });

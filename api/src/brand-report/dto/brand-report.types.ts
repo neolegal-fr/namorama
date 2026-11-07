@@ -161,4 +161,12 @@ export interface BrandReportSummary {
    * qui était offert. `null` sur les enregistrements antérieurs à la colonne.
    */
   costCredits: number | null;
+  /**
+   * Jeton de l'adresse publique `/rapport/<jeton>`, pour que la carte copie le
+   * lien PENDANT le clic : l'écrire dans le presse-papiers après un appel
+   * réseau perd l'activation utilisateur sur Safari, et échoue sans bruit.
+   * Rien de nouveau n'est exposé : la route ne rend que des rapports que
+   * l'appelant peut déjà lire et partager depuis la page du rapport.
+   */
+  shareToken: string | null;
 }
