@@ -79,4 +79,29 @@ export class VisitorSession {
    */
   @Column({ type: 'varchar', length: 64, nullable: true })
   keycloakId: string | null;
+
+  /*
+   * Origine de la visite, écrite UNE fois par le premier `page_viewed` et jamais
+   * réécrite (voir `origine.ts`). `NULL` partout pour une visite antérieure à la
+   * mesure (07/11/2026) ou née d'une étape sans affichage reçu. Le canal n'est
+   * pas stocké : il se déduit à la lecture, pour qu'une règle corrigée vaille
+   * aussi pour le passé.
+   */
+
+  /** Chemin de la première page, sans paramètres, identifiants remplacés par `:id`. */
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  landingPath: string | null;
+
+  @Column({ type: 'varchar', length: 60, nullable: true })
+  utmSource: string | null;
+
+  @Column({ type: 'varchar', length: 60, nullable: true })
+  utmMedium: string | null;
+
+  @Column({ type: 'varchar', length: 60, nullable: true })
+  utmCampaign: string | null;
+
+  /** Domaine du site référent, seul : jamais de chemin ni de paramètre. */
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  referrerHost: string | null;
 }

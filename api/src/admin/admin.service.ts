@@ -12,6 +12,7 @@ import { FREE_MONTHLY_QUOTA, renouvellementDu } from '../users/users.service';
 import { ModelCostsService } from './model-costs.service';
 import { ActiviteCompte, Engagement, bornesDuMois, engagement, estUnMois, moisDe, moisPrecedent } from './indicateurs';
 import { MoisActif, RetentionService } from './retention.service';
+import { Acquisition, GroupeDeVisites, regrouperAcquisition } from './acquisition';
 
 export interface AdminUserRow {
   id: number;
@@ -232,6 +233,12 @@ export interface AdminStats {
   visitTrackingSince: string | null;
   /** Voir {@link TARIFS_MESURES_DEPUIS}. */
   pricingTrackingSince: string;
+  /**
+   * Canaux d'acquisition et pages d'arrivée de la période courante, ou `null`
+   * si leur calcul a échoué. Pas de période précédente : les tableaux ne
+   * portent pas d'écart (chantier `mesurer-les-canaux-d-acquisition`, D5).
+   */
+  acquisition: Acquisition | null;
 }
 
 /** Un point de la série mensuelle. `month` est un mois civil, `AAAA-MM`. */
@@ -669,6 +676,59 @@ export class AdminService {
     };
   }
 
+  // ─── Canaux d'acquisition ──────────────────────────────────────────────────
+
+  /**
+   * D'où viennent les visites de la période, et jusqu'où elles vont.
+   *
+   * Seules les visites postérieures au début de la mesure de l'origine sont
+   * lues : avant, aucune n'a d'origine, et les compter en « direct ou
+   * inconnu » ferait croire à un canal massif qui n'est qu'un trou de mesure.
+   * Après, une visite sans origine (balise bloquée) compte bien en « direct ou
+   * inconnu » : elle existe, on ne sait pas d'où elle vient.
+   *
+   * Échoue seule, comme l'entonnoir : une jointure de plus sur
+   * `visitor_session` ne doit pas pouvoir mettre la page à 500.
+   */
+  private async acquisition(debut: Date, fin: Date): Promise<Acquisition | null> {
+    try {
+      const [{ d: depuis = null } = {}] = await this.dataSource.query(
+        `SELECT DATE_FORMAT(MIN(firstSeenAt), '%Y-%m-%d') AS d
+           FROM visitor_session WHERE landingPath IS NOT NULL`,
+      );
+      if (!depuis) return regrouperAcquisition([], null);
+      const groupes = await this.dataSource.query(
+        `SELECT v.utmSource, v.referrerHost, v.landingPath,
+                COUNT(*)                                 AS visites,
+                COALESCE(SUM(v.loggedInAtStart = 0), 0)  AS sansCompte,
+                COALESCE(SUM(v.accountCreated), 0)       AS comptes,
+                COALESCE(SUM(v.searched), 0)             AS recherches
+           FROM visitor_session v
+           LEFT JOIN user u ON u.keycloakId = v.keycloakId
+          WHERE ${AdminService.VISITES_MESUREES}
+            AND v.firstSeenAt >= GREATEST(?, (SELECT MIN(firstSeenAt) FROM visitor_session WHERE landingPath IS NOT NULL))
+            AND v.firstSeenAt <= ?
+          GROUP BY v.utmSource, v.referrerHost, v.landingPath`,
+        [debut, fin],
+      );
+      return regrouperAcquisition(
+        groupes.map((r: Record<string, unknown>): GroupeDeVisites => ({
+          utmSource: (r.utmSource as string | null) ?? null,
+          referrerHost: (r.referrerHost as string | null) ?? null,
+          landingPath: (r.landingPath as string | null) ?? null,
+          visites: Number(r.visites ?? 0),
+          sansCompte: Number(r.sansCompte ?? 0),
+          comptes: Number(r.comptes ?? 0),
+          recherches: Number(r.recherches ?? 0),
+        })),
+        depuis,
+      );
+    } catch (e) {
+      this.logger.error(`Canaux d'acquisition non calculés : ${e}`, undefined, AdminService.name);
+      return null;
+    }
+  }
+
   // ─── Comptes actifs ────────────────────────────────────────────────────────
 
   /**
@@ -1005,9 +1065,10 @@ export class AdminService {
       this.debutDesVisites(),
     ]);
 
-    const [period, previous] = await Promise.all([
+    const [period, previous, acquisition] = await Promise.all([
       this.metriquesPeriode(periodStart, periodEnd, debutJournal),
       this.metriquesPeriode(previousStart, previousEnd, debutJournal),
+      this.acquisition(periodStart, periodEnd),
     ]);
 
     // Plus de moyennes par projet ni de stocks de crédits : aucun ne menait à
@@ -1026,6 +1087,7 @@ export class AdminService {
       activityTrackingSince: debutJournal,
       visitTrackingSince: debutVisites,
       pricingTrackingSince: TARIFS_MESURES_DEPUIS,
+      acquisition,
     };
   }
 

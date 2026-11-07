@@ -4,6 +4,43 @@ import { ConfigService } from './config';
 
 declare function gtag(...args: any[]): void;
 
+/** Origine d'une visite, telle que le navigateur la connaît à son arrivée. */
+export interface OrigineDuDemarrage {
+  arrivee: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  referent?: string;
+}
+
+/**
+ * Lit l'origine d'une visite à partir de l'adresse d'arrivée et du référent.
+ *
+ * Le référent est réduit ICI à son domaine : son chemin peut porter une donnée
+ * personnelle (`…/inbox?user=…`), qui ne doit transiter nulle part. Un référent
+ * du même site est une navigation interne, et n'est pas une origine. Le serveur
+ * refiltre tout de toute façon (`api/src/common/funnel/origine.ts`).
+ */
+export function origineDuDemarrage(adresse: string, referent: string): OrigineDuDemarrage {
+  const url = new URL(adresse);
+  const origine: OrigineDuDemarrage = { arrivee: url.pathname };
+  for (const [param, cle] of [['utm_source', 'utmSource'], ['utm_medium', 'utmMedium'], ['utm_campaign', 'utmCampaign']] as const) {
+    const valeur = url.searchParams.get(param);
+    if (valeur) origine[cle] = valeur.slice(0, 100);
+  }
+  if (referent) {
+    try {
+      const ref = new URL(referent);
+      if ((ref.protocol === 'http:' || ref.protocol === 'https:') && ref.hostname !== url.hostname) {
+        origine.referent = ref.hostname;
+      }
+    } catch {
+      /* référent illisible : ignoré */
+    }
+  }
+  return origine;
+}
+
 /**
  * Traçage du parcours utilisateur.
  *
@@ -25,6 +62,23 @@ export class AnalyticsService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly config = inject(ConfigService);
   private readonly isBrowser = isPlatformBrowser(this.platformId);
+
+  /**
+   * Origine de la visite, lue À LA CRÉATION du service, au démarrage du
+   * composant racine. Le premier `page_viewed` ne part qu'après la réponse de
+   * Keycloak : d'ici là, l'adresse a pu perdre ses paramètres (`?avis` retiré,
+   * fragments de Keycloak). Jointe au seul premier affichage, puis oubliée.
+   */
+  private origine: OrigineDuDemarrage | null = this.lireOrigine();
+
+  private lireOrigine(): OrigineDuDemarrage | null {
+    if (!this.isBrowser) return null;
+    try {
+      return origineDuDemarrage(window.location.href, document.referrer);
+    } catch {
+      return null;
+    }
+  }
 
   /**
    * Identifiant de la visite en cours, créé au besoin.
@@ -56,7 +110,12 @@ export class AnalyticsService {
    * taux d'inscription.
    */
   pageView(path: string, connecte: boolean): void {
-    this.track('page_viewed', { path, connecte });
+    // L'origine ne part qu'avec le premier affichage du document : le serveur
+    // ne l'écrit qu'à la création de la visite, et la répéter à chaque page
+    // n'ajouterait que du bruit dans les logs.
+    const origine = this.origine;
+    this.origine = null;
+    this.track('page_viewed', { path, connecte, ...(origine ?? {}) });
   }
 
   /** Enregistre une étape de parcours ou une action notable. */

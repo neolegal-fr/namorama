@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import type { Request } from 'express';
+import { ORIGINE_VIDE, OrigineVisite } from './origine';
 
 /**
  * Les étapes que peut franchir une visite, après son premier affichage.
@@ -89,14 +90,21 @@ export class FunnelService {
    * ne s'écrase pas ensuite : une session qui se connecte en cours de route
    * reste une visite arrivée sans compte, ce qui est justement l'information.
    */
-  async visite(sessionId: string | undefined, connecte = false): Promise<void> {
+  async visite(sessionId: string | undefined, connecte = false, origine: OrigineVisite = ORIGINE_VIDE): Promise<void> {
     if (!sessionId || !FORMAT_SESSION.test(sessionId)) return;
     if (this.dejaEcrit(sessionId, 'visite')) return;
+    // L'origine ne s'écrit qu'à l'insertion : `ON DUPLICATE KEY` ne la touche
+    // pas. Une page affichée plus tard dans la visite — le retour de la page
+    // de connexion, typiquement — ne doit pas remplacer celle d'arrivée.
     await this.ecrire(
-      `INSERT INTO visitor_session (sessionId, firstSeenAt, loggedInAtStart)
-       VALUES (?, NOW(), ?)
+      `INSERT INTO visitor_session
+         (sessionId, firstSeenAt, loggedInAtStart, landingPath, utmSource, utmMedium, utmCampaign, referrerHost)
+       VALUES (?, NOW(), ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE sessionId = sessionId`,
-      [sessionId, connecte ? 1 : 0],
+      [
+        sessionId, connecte ? 1 : 0,
+        origine.landingPath, origine.utmSource, origine.utmMedium, origine.utmCampaign, origine.referrerHost,
+      ],
     );
   }
 
