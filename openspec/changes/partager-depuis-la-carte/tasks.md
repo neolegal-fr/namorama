@@ -52,5 +52,7 @@
 ## Workflow follow-up
 
 - Déployer (PR → CI → merge → `docker compose pull api web && up -d`), aucune migration SQL.
+  - **Déployé le 07/11/2026 à 12 h 08** (heure de Paris), PR #187, commit `0a36134`. API démarrée sans erreur ni avertissement ; `namorama.com/assets/i18n/fr.json` sert « Vérifier marques déposées et réseaux sociaux » et « Voir le rapport de vérification », `GRID_FULL_REPORT` absent.
+  - Relevé 0.1 à faire en le bornant AVANT le 07/11/2026 12 h 08, pour qu'il serve de point de comparaison.
 - Après 30 jours : relire `report_share_menu_opened` par `origine` et `verifie`, et comparer `report_share_opened`, `report_printed`, `brand_report_reshared` au relevé 0.1 ; noter les chiffres ici.
 - Archiver le chantier (`/opsx:archive`), puis vérifier `openspec/specs/resultats/` et `openspec/specs/rapport-de-marque/`, et `openspec validate --all`.
