@@ -92,5 +92,34 @@
 </head>
 <body>
   <app-root></app-root>
+  <!--
+    Langue déclarée par la coquille cliente (/app, /projects/…), AVANT que
+    l'application ne démarre (chantier `declarer-la-langue-affichee`).
+
+    Sans lui, la page restait en `lang="fr"` jusqu'à la fin du démarrage, qui
+    attend Keycloak et le dictionnaire : un navigateur anglais proposait de
+    « traduire du français » une interface anglaise, et son traducteur
+    réécrivait les libellés (« E.g. » → « Eg »).
+
+    Placé APRÈS <app-root>, et non dans <head> : il doit savoir si la page est
+    prérendue (`ng-server-context`). Une page prérendue garde la langue posée
+    au rendu — la landing française reste `fr` pour un navigateur anglais.
+
+    Même règle que `langueInitiale()` (app.config.ts), en ES5 : URL, puis
+    navigateur si servi, puis anglais. `langue-initiale.spec.ts` exécute ce
+    script et le compare à la fonction — l'un ne change pas sans l'autre.
+  -->
+  <script id="nm-langue">
+    (function () {
+      var racine = document.querySelector('app-root');
+      if (!racine || racine.hasAttribute('ng-server-context')) return;
+      var servies = ['fr', 'en'];
+      var segment = location.pathname.split('/').filter(Boolean)[0];
+      var nav = (navigator.languages && navigator.languages[0]) || navigator.language || '';
+      nav = nav.split('-')[0].split('_')[0];
+      document.documentElement.lang =
+        servies.indexOf(segment) >= 0 ? segment : servies.indexOf(nav) >= 0 ? nav : 'en';
+    })();
+  </script>
 </body>
 </html>

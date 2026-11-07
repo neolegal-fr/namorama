@@ -2,11 +2,15 @@
 
 ## 1. Langue déclarée par la coquille cliente
 
-- [ ] 1.1 Exporter `langueInitiale(chemin, langueNavigateur)` depuis `app.config.ts` et l'utiliser dans l'initialiseur, sans changer son comportement. Vérification : `langue-initiale.spec.ts` couvre les scénarios « Même règle que l'application » et passe sous `npx ng test --watch=false --include src/app/langue-initiale.spec.ts`.
-- [ ] 1.2 Ajouter à `web/src/index.html`, juste après `<app-root>`, le script qui pose `lang` sur une page non prérendue, et faire comparer par `langue-initiale.spec.ts` le script exécuté et `langueInitiale` pour chaque cas. Vérification : le test passe, et il échoue si l'on retire `fr` des langues du script (essai noté sous la tâche).
-- [ ] 1.3 Compiler (`just build`), servir `web/dist` selon les règles de `web/nginx.conf`, et mesurer `lang` à la fin du chargement pour `/app`, `/`, `/en` et `/generateur-nom-de-marque`, avec des navigateurs en anglais, français et allemand. Vérification : `/app` déclare `en`, `fr` et `en` dès le chargement ; `/` et `/generateur-nom-de-marque` restent `fr` ; `/en` reste `en`. Mesures avant et après notées sous la tâche.
-- [ ] 1.4 Passer `just design-check`. Vérification : la commande se termine sans erreur.
-- [ ] 1.5 Documenter dans CLAUDE.md, « Pages prérendues » : la coquille cliente déclare sa langue avant le démarrage, et pourquoi le script vit après `<app-root>`. Vérification : relecture du paragraphe.
+- [x] 1.1 Exporter `langueInitiale(chemin, langueNavigateur)` depuis `app.config.ts` et l'utiliser dans l'initialiseur, sans changer son comportement. Vérification : `langue-initiale.spec.ts` couvre les scénarios « Même règle que l'application » et passe sous `npx ng test --watch=false --include src/app/langue-initiale.spec.ts`.
+- [x] 1.2 Ajouter à `web/src/index.html`, juste après `<app-root>`, le script qui pose `lang` sur une page non prérendue, et faire comparer par `langue-initiale.spec.ts` le script exécuté et `langueInitiale` pour chaque cas. Vérification : le test passe, et il échoue si l'on retire `fr` des langues du script (essai noté sous la tâche).
+  - 07/11/2026 : 10 cas passent. Avec `var servies = ['en']` dans le script, 3 cas échouent (`fr-FR`, `fr-CA`, `/fr/…`) ; fichier rétabli ensuite.
+- [x] 1.3 Compiler (`just build`), servir `web/dist` selon les règles de `web/nginx.conf`, et mesurer `lang` à la fin du chargement pour `/app`, `/`, `/en` et `/generateur-nom-de-marque`, avec des navigateurs en anglais, français et allemand. Vérification : `/app` déclare `en`, `fr` et `en` dès le chargement ; `/` et `/generateur-nom-de-marque` restent `fr` ; `/en` reste `en`. Mesures avant et après notées sous la tâche.
+  - 07/11/2026, Chromium sans interface, `web/dist` servi selon `web/nginx.conf`, langue relevée à l'événement `load`.
+    - Avant : `/app` déclare `fr` au chargement pour les navigateurs en anglais, français et allemand, puis `en` une fois l'application démarrée (anglais et allemand).
+    - Après : `/app` déclare `en`, `fr` et `en` dès le chargement. `/` et `/generateur-nom-de-marque` restent `fr`, `/en` reste `en`, pour les trois navigateurs.
+- [x] 1.4 Passer `just design-check`. Vérification : la commande se termine sans erreur.
+- [x] 1.5 Documenter dans CLAUDE.md, « Pages prérendues » : la coquille cliente déclare sa langue avant le démarrage, et pourquoi le script vit après `<app-root>`. Vérification : relecture du paragraphe.
 
 ## 2. Livraison
 

@@ -48,6 +48,30 @@ import { SessionIdInterceptor } from './services/session-id.interceptor';
 export const SITE_LANGS = ['fr', 'en'] as const;
 export type SiteLang = (typeof SITE_LANGS)[number];
 
+/**
+ * Langue dans laquelle l'application démarre sur un chemin donné.
+ *
+ * L'URL prime (« /en » est une page anglaise, quoi qu'en dise le navigateur) ;
+ * sinon la langue du navigateur si elle est servie ; sinon l'ANGLAIS. Le repli
+ * était le français : un navigateur allemand, italien ou japonais recevait donc
+ * un produit en français. L'anglais se lit plus largement, et un visiteur
+ * francophone n'est pas concerné — son navigateur annonce « fr », qui est servi.
+ *
+ * ⚠ Cette règle existe AUSSI, en ES5, dans le script qui suit `<app-root>` dans
+ * `index.html` : la coquille cliente doit déclarer sa langue avant que ce code
+ * ne s'exécute (chantier `declarer-la-langue-affichee`). `langue-initiale.spec.ts`
+ * exécute ce script et le compare à cette fonction : l'un ne change pas sans l'autre.
+ *
+ * @param langueNavigateur langue principale du navigateur, déjà réduite à son
+ *   code (`fr` pour `fr-CA`), comme la rend `TranslateService.getBrowserLang()`.
+ */
+export function langueInitiale(chemin: string, langueNavigateur: string | undefined | null): SiteLang {
+  const segment = chemin.split('?')[0].split('#')[0].split('/').filter(Boolean)[0];
+  if ((SITE_LANGS as readonly string[]).includes(segment)) return segment as SiteLang;
+  const navigateur = langueNavigateur ?? '';
+  return (SITE_LANGS as readonly string[]).includes(navigateur) ? (navigateur as SiteLang) : 'en';
+}
+
 /** Langue portée par l'URL (« /en », « /en/… »), `fr` par défaut — la racine est française. */
 export function langFromPath(path: string): SiteLang {
   const seg = path.split('?')[0].split('#')[0].split('/').filter(Boolean)[0];
@@ -223,21 +247,7 @@ function initializeApp(
      * C'est ce qui affichait « Find a brand name that is genuinely free » sur
      * l'accueil FRANÇAIS, dont le HTML prérendu portait pourtant le bon titre.
      */
-    const urlLang = window.location.pathname.split('/').filter(Boolean)[0];
-    if ((SITE_LANGS as readonly string[]).includes(urlLang)) {
-      await firstValueFrom(translate.use(urlLang));
-      return;
-    }
-    const browserLang = translate.getBrowserLang() ?? '';
-    /*
-     * Langue du navigateur si elle est servie, sinon l'ANGLAIS.
-     *
-     * Le repli était le français : un navigateur allemand, italien ou japonais
-     * recevait donc un produit en français. L'anglais se lit plus largement, et
-     * un visiteur francophone n'est pas concerné — son navigateur annonce
-     * « fr », qui est servi.
-     */
-    await firstValueFrom(translate.use(supportedLangs.includes(browserLang) ? browserLang : 'en'));
+    await firstValueFrom(translate.use(langueInitiale(window.location.pathname, translate.getBrowserLang())));
   };
 }
 

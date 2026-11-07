@@ -830,6 +830,26 @@ prérendu devait éviter.
 - Les `url(...)` des feuilles de style n'ont rien à corriger : une fois la CSS
   chargée depuis `/styles-XXXX.css`, ses chemins relatifs repartent de la racine.
 
+### La coquille cliente déclare sa langue avant de démarrer
+
+Les pages prérendues reçoivent leur `<html lang>` au rendu (`applySeo()`). Les routes
+purement clientes (`/app`, `/projects/…`, `/admin`) sont servies par `index.csr.html`,
+dont le gabarit porte `lang="fr"`. Jusqu'au 07/11/2026, la vraie langue n'était posée
+que dans `App.ngOnInit`, une fois Keycloak et le dictionnaire attendus. Un navigateur
+anglais chargeait donc `/app` déclarée en français. Son traducteur réécrivait alors
+l'interface anglaise, et les sessions enregistrées le montraient : libellés enveloppés
+de `<font>`, « E.g. » devenu « Eg ».
+
+- **Le script `nm-langue` de `index.html` pose la langue avant tout code applicatif.**
+  Il est placé **après** `<app-root>`, et non dans `<head>`, pour voir
+  `ng-server-context` : une page prérendue garde sa langue, et la landing française reste
+  `fr` pour un navigateur anglais.
+- **La règle existe en deux exemplaires**, ce script et `langueInitiale()`
+  (`app.config.ts`). `langue-initiale.spec.ts` exécute le vrai script et le compare à la
+  fonction : ne modifier l'un qu'avec l'autre.
+- **Pas de `translate="no"`** : un visiteur espagnol doit pouvoir traduire l'application
+  anglaise. C'est la déclaration juste qui le lui permet.
+
 ## Fonctionnalités
 
 - Wizard : Description → Reformulation IA confirmée → Mots-clés → Recherche domaines.
