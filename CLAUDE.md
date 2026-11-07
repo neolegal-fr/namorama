@@ -683,6 +683,35 @@ Deux canaux complémentaires :
 
 Côté front, passer par `AnalyticsService.track()`, qui alimente les deux et n'échoue jamais.
 
+#### D'où vient une visite
+
+Du 31/10 au 07/11/2026, 11 des 16 sessions enregistrées arrivaient par un lien
+`utm_source=chatgpt.com`. Rien ne le disait ailleurs : `page_viewed` envoie le chemin
+sans ses paramètres, et `visitor_session` ne gardait aucune origine. Depuis le chantier
+`mesurer-les-canaux-d-acquisition`, le **premier** `page_viewed` d'une visite porte son
+origine, et `visitor_session` la garde :
+
+- `landingPath` : la page d'arrivée, sans paramètres, identifiants remplacés par `:id` ;
+- `utmSource`, `utmMedium`, `utmCampaign` : en minuscules, jeu de caractères strict,
+  60 caractères ;
+- `referrerHost` : le **domaine** du référent, seul.
+
+Cinq règles :
+
+- **L'origine est lue au démarrage**, dans le constructeur de `AnalyticsService`. Le
+  premier affichage ne part qu'après Keycloak, qui a pu réécrire l'adresse entre-temps.
+- **Le référent est réduit à son domaine dans le navigateur.** Son chemin peut porter une
+  donnée personnelle : il ne doit transiter nulle part.
+- **Le serveur refiltre tout** (`origineDeLaVisite`, `common/funnel/origine.ts`) : la
+  route est publique. C'est la version filtrée qui est écrite **et** journalisée.
+- **La première page fait foi.** L'origine ne s'écrit qu'à l'insertion, et le retour de
+  la connexion ne la remplace pas. Une visite née d'une étape, sans affichage reçu, n'a
+  pas d'origine.
+- **Le canal se déduit à la lecture** (`canalDe`), jamais à l'écriture : une liste de
+  domaines corrigée dans `origine.ts` vaut aussi pour le passé. L'IA est testée avant
+  les moteurs (`gemini.google.com`), la source de campagne prime sur le référent, et une
+  messagerie (`mail.google.com`) compte dans « autres sites ».
+
 ### Rejeu des sessions
 
 Les logs disent **où** un visiteur s'arrête, jamais **ce qu'il a vu** : les 100 recherches
@@ -1022,6 +1051,29 @@ D'où **`visitor_session`** : une ligne par session de navigateur (`sessionStora
 > Le seul ordre de grandeur reconstituable pour août 2026, à partir des requêtes
 > `/assets/config.json` du journal nginx : **3 à 12 chargements d'application par
 > jour**, pour 9 inscriptions du 10 au 24.
+
+#### Canaux d'acquisition
+
+L'entonnoir dit combien de visites créent un compte, jamais **lesquelles**. La section
+« Canaux d'acquisition » (chantier `mesurer-les-canaux-d-acquisition`, 07/11/2026) le
+dit, sur la période, en deux tableaux : par canal, et par page d'arrivée (les 8
+premières, puis « Autres pages » et « Inconnue »). Pour chaque ligne, elle donne les
+visites, les comptes créés et les recherches. L'origine d'une visite est décrite plus
+haut (« D'où vient une visite »).
+
+- **Le taux de comptes créés se rapporte aux visites arrivées sans compte**, comme dans
+  l'entonnoir. Le taux de recherches, lui, se rapporte à toutes les visites. Sous
+  5 visites, la ligne n'affiche que des nombres.
+- **Pas d'écart à la période précédente** : à 3 ou 8 visites par ligne, il ne dirait
+  que du bruit.
+- **Avant la première visite mesurée, rien n'est compté.** Ces visites n'ont pas
+  d'origine, et les ranger en « Direct ou inconnu » inventerait un canal massif qui
+  n'est qu'un trou de mesure. La note dit alors « mesuré depuis le … ».
+- **« Direct ou inconnu » regroupe deux cas** : les visites sans lien balisé ni référent
+  (applications mobiles, politiques `strict-origin`), et celles dont la balise a été
+  bloquée. Si cette ligne dépasse la moitié des visites, c'est le classement des
+  référents qu'il faut revoir, dans `origine.ts`.
+- La section échoue seule (`acquisition: null`), comme l'entonnoir.
 
 ### Demander un retour à un utilisateur
 

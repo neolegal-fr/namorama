@@ -120,8 +120,10 @@ pèse.
 de 5.
 
 La fenêtre est `[max(début de période, début de la mesure), fin]`. Le début de la mesure
-est la première visite qui a une page d'arrivée. `depuis` vaut cette date quand la période
-commence avant elle, sinon `null`.
+est la première visite qui a une page d'arrivée, et `depuis` porte toujours cette date,
+ou `null` si aucune visite n'est encore mesurée. C'est l'interface, qui connaît le début
+de la période, qui décide d'afficher « mesuré depuis le … ». Ainsi « pas encore de
+mesure » ne se confond pas avec « aucune visite sur la période ».
 
 L'agrégat a son propre `try/catch` et renvoie `null`, comme l'entonnoir : une jointure de
 plus ne doit pas pouvoir mettre la page à 500.

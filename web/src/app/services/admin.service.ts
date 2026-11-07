@@ -320,6 +320,26 @@ export interface AdminStats {
   visitTrackingSince: string | null;
   /** `AAAA-MM-JJ` : avant ce jour, les ouvertures du dialogue des packs ne sont pas connues. */
   pricingTrackingSince: string;
+  /** Canaux et pages d'arrivée de la période ; `null` : calcul en échec. */
+  acquisition: Acquisition | null;
+}
+
+/** Une ligne des tableaux de canaux et de pages d'arrivée. Voir `api/src/admin/acquisition.ts`. */
+export interface LigneAcquisition {
+  /** Canal (`ia`, `moteurs`, `reseaux`, `autres`, `direct`), chemin d'arrivée, `autres` ou `inconnue`. */
+  cle: string;
+  visites: number;
+  /** Visites arrivées sans compte ouvert : dénominateur du taux de comptes créés. */
+  sansCompte: number;
+  comptes: number;
+  recherches: number;
+}
+
+export interface Acquisition {
+  /** `AAAA-MM-JJ` de la première visite dont l'origine est connue ; `null` : pas encore de mesure. */
+  depuis: string | null;
+  canaux: LigneAcquisition[];
+  pages: LigneAcquisition[];
 }
 
 /** Un point mensuel. `month` au format `AAAA-MM`. Voir `MonthlyPoint` côté API. */

@@ -4,6 +4,7 @@ import type { Request } from 'express';
 import { TrackEventDto } from './dto/track-event.dto';
 import { AppLoggerService } from '../common/logging/app-logger.service';
 import { FunnelService } from '../common/funnel/funnel.service';
+import { domainesDuProduit, origineDeLaVisite, OrigineVisite } from '../common/funnel/origine';
 
 /**
  * Collecte des étapes de parcours envoyées par le front.
@@ -35,6 +36,9 @@ export class EventsController {
    */
   private static readonly TARIFS = 'credits_dialog_opened';
 
+  /** Un référent venu de ces domaines est une navigation interne, pas une origine. */
+  private readonly domainesDuProduit = domainesDuProduit();
+
   constructor(
     private readonly logger: AppLoggerService,
     private readonly funnel: FunnelService,
@@ -44,11 +48,17 @@ export class EventsController {
   @Post()
   @HttpCode(204)
   async track(@Body() dto: TrackEventDto, @Req() req: Request & { user?: { sub?: string } }) {
+    let origine: Partial<Record<keyof OrigineVisite, string>> = {};
     if (dto.name === EventsController.VISITE) {
+      // Refiltrée ici, même si le front l'a déjà réduite : la route est
+      // publique. C'est la version nettoyée qu'on écrit ET qu'on journalise —
+      // une valeur rejetée par le filtre ne doit pas finir dans les logs.
+      const o = origineDeLaVisite(dto.meta, this.domainesDuProduit);
+      origine = Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null)) as typeof origine;
       // `await` bien que la balise `sendBeacon` n'attende pas la réponse :
       // sans lui, Nest clôt la requête pendant l'écriture, et une erreur de
       // base partirait dans le vide au lieu d'être journalisée.
-      await this.funnel.visite(dto.sessionId, dto.meta?.['connecte'] === true);
+      await this.funnel.visite(dto.sessionId, dto.meta?.['connecte'] === true, o);
     } else if (dto.name === EventsController.TARIFS) {
       // Sans `sub` : la balise part sans jeton, et le navigateur ne doit pas
       // pouvoir s'attribuer un compte. Le rattachement viendra des appels
@@ -56,11 +66,15 @@ export class EventsController {
       await this.funnel.marquer(dto.sessionId, 'tarifs');
     }
 
+    const { arrivee, utmSource, utmMedium, utmCampaign, referent, ...autres } = dto.meta ?? {};
     this.logger.event(dto.name, {
       sessionId: dto.sessionId,
       userId: req.user?.sub,
       path: (req.headers['referer'] as string) ?? undefined,
-      ...this.sanitize(dto.meta),
+      // Les clés d'origine brutes ne sont jamais journalisées : seule leur
+      // version filtrée l'est, sous les noms des colonnes de `visitor_session`.
+      ...this.sanitize(autres),
+      ...origine,
     });
   }
 

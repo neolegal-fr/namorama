@@ -222,6 +222,56 @@ const FENETRE_MAU_JOURS = 28;
             </ng-template>
             <div class="nm-kpi-detail" style="margin-top: 0.5rem">{{ noteEntonnoir() }}</div>
           </section>
+
+          <!-- ─── Canaux d'acquisition ──────────────────────────────────── -->
+          <section>
+            <div class="nm-entete">
+              <span class="nm-titre">Canaux d'acquisition</span>
+              <span class="nm-sous-titre">sur la période — d'où viennent les visites, et jusqu'où elles vont</span>
+            </div>
+            <ng-container *ngIf="s.acquisition as a; else acquisitionIndisponible">
+              <div *ngIf="!a.depuis" class="nm-kpi nm-muet">L'origine des visites n'est pas encore mesurée.</div>
+              <ng-container *ngIf="a.depuis">
+                <div *ngIf="!a.canaux.length" class="nm-kpi nm-muet">Aucune visite mesurée sur la période.</div>
+                <div *ngIf="a.canaux.length" class="nm-tableaux">
+                  <div class="nm-kpi nm-kpi-tableau">
+                    <table class="nm-table">
+                      <thead>
+                        <tr><th>Canal</th><th>Visites</th><th>Comptes créés</th><th>Recherches</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let l of a.canaux">
+                          <td>{{ libelleCanal(l.cle) }}</td>
+                          <td>{{ formate(l.visites) }}</td>
+                          <td>{{ cellule(l.comptes, l.sansCompte) }}</td>
+                          <td>{{ cellule(l.recherches, l.visites) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="nm-kpi nm-kpi-tableau">
+                    <table class="nm-table">
+                      <thead>
+                        <tr><th>Page d'arrivée</th><th>Visites</th><th>Comptes créés</th><th>Recherches</th></tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let l of a.pages">
+                          <td [class.nm-chemin]="estUnChemin(l.cle)">{{ libellePage(l.cle) }}</td>
+                          <td>{{ formate(l.visites) }}</td>
+                          <td>{{ cellule(l.comptes, l.sansCompte) }}</td>
+                          <td>{{ cellule(l.recherches, l.visites) }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="nm-kpi-detail nm-note-tableaux">{{ noteAcquisition() }}</div>
+              </ng-container>
+            </ng-container>
+            <ng-template #acquisitionIndisponible>
+              <div class="nm-kpi nm-muet">Canaux indisponibles : le calcul a échoué, le détail est dans les logs de l'API.</div>
+            </ng-template>
+          </section>
         </div>
 
         <!-- ─── Rétention : indépendante de la période ──────────────────── -->
@@ -277,6 +327,24 @@ const FENETRE_MAU_JOURS = 28;
     </div>
   `,
   styles: [`
+    /* Tableaux des canaux : mêmes règles que les onglets Fidélité et Coûts IA. */
+    .nm-tableaux { display: flex; flex-direction: column; gap: 0.75rem; }
+    .nm-kpi-tableau { padding: 0; overflow-x: auto; }
+    /* Couleur posée : la carte reste claire dans les deux thèmes, le texte hérité ne l'est pas. */
+    .nm-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; font-variant-numeric: tabular-nums; color: var(--nm-text-light); }
+    .nm-table th { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--nm-text-light-2); text-align: right; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--nm-border-light); white-space: nowrap; }
+    .nm-table td { text-align: right; padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--nm-divider-light-1); white-space: nowrap; }
+    .nm-note-tableaux { margin-top: 0.5rem; }
+    .nm-table tr:last-child td { border-bottom: none; }
+    .nm-table th:first-child, .nm-table td:first-child { text-align: left; white-space: normal; min-width: 11rem; width: 50%; }
+    .nm-table td.nm-chemin { font-family: monospace; font-size: 0.72rem; overflow-wrap: anywhere; }
+    /* Téléphone : les quatre colonnes tiennent sans défilement latéral. */
+    @media (max-width: 30rem) {
+      .nm-table th { white-space: normal; }
+      .nm-table th, .nm-table td { padding-left: 0.4rem; padding-right: 0.4rem; }
+      .nm-table th:first-child, .nm-table td:first-child { min-width: 7rem; width: auto; }
+    }
+
     .nm-entete { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
     .nm-titre {
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
@@ -659,6 +727,51 @@ export class AdminDashboardComponent implements OnInit {
         indispo: 'aucune recherche sur la période',
       },
     ];
+  });
+
+  // ─── Canaux d'acquisition ─────────────────────────────────────────────────
+
+  private static readonly CANAUX: Record<string, string> = {
+    ia: 'ChatGPT et assistants IA',
+    moteurs: 'Moteurs de recherche',
+    reseaux: 'Réseaux sociaux',
+    autres: 'Autres sites',
+    direct: 'Direct ou inconnu',
+  };
+
+  libelleCanal(cle: string): string {
+    return AdminDashboardComponent.CANAUX[cle] ?? cle;
+  }
+
+  /** Un chemin s'affiche tel quel ; les deux lignes de regroupement ont un libellé. */
+  estUnChemin(cle: string): boolean {
+    return cle.startsWith('/');
+  }
+
+  libellePage(cle: string): string {
+    if (cle === 'autres') return 'Autres pages';
+    if (cle === 'inconnue') return 'Inconnue';
+    return cle;
+  }
+
+  /**
+   * « 10 (25 %) », ou « 1 » seul sous le socle : à 1 visite sur 3, un
+   * pourcentage dirait « 33 % » d'un canal qu'on ne connaît pas encore.
+   */
+  cellule(n: number, d: number): string {
+    if (d < SOCLE_POURCENTAGE) return this.formate(n);
+    return `${this.formate(n)} (${this.formate(this.part(n, d))} %)`;
+  }
+
+  noteAcquisition = computed(() => {
+    const s = this.stats();
+    const depuis = s?.acquisition?.depuis;
+    if (!s || !depuis) return '';
+    const base = 'Comptes créés rapportés aux visites arrivées sans compte, recherches à toutes les visites ;'
+      + ' pas de pourcentage sous 5 visites. « Direct ou inconnu » : ni lien balisé, ni site référent transmis.';
+    return new Date(s.period.from) < new Date(`${depuis}T00:00:00`)
+      ? `${base} Mesuré depuis le ${this.dateCourte(depuis)} seulement : les visites antérieures n'ont pas d'origine et ne figurent dans aucune ligne.`
+      : base;
   });
 
   // ─── Entonnoir ────────────────────────────────────────────────────────────
