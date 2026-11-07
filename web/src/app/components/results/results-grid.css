@@ -291,10 +291,14 @@
 /* Pleine largeur, hauteur fixe. « Vérifier marques déposées et réseaux
    sociaux » passe sur deux lignes dans cette hauteur plutôt que d'être
    tronqué : un libellé coupé redeviendrait la devinette qu'il remplace. */
-.rg-btn--full {
-  /* `.rg-btn` porte `flex: 1` ; dans le pied en colonne, sa base de 0 primerait
-     sur la hauteur fixée. */
+/* Préfixé par `.rg-actions` : `.rg-btn`, déclaré plus bas, porte `flex: 1` et
+   un remplissage vertical qui l'emporteraient à spécificité égale — le bouton
+   à libellé sur deux lignes montait alors à 55 px, contre 46 à l'autre, et les
+   pieds de cartes voisines ne finissaient plus à la même hauteur (constaté au
+   navigateur le 07/11/2026). */
+.rg-actions .rg-btn--full {
   flex: none;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;

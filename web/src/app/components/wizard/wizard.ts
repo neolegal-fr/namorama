@@ -2111,6 +2111,12 @@ export class WizardComponent implements OnInit, OnDestroy {
       next: (project) => {
         this.projectId.set(project.id);
         this.testedNames.set([]);
+        // Les rapports se relisent PAR LE PROJET. Le premier chargement
+        // (ngOnInit) part avant que le projet soit connu, donc sans lui : pour
+        // un invité, les rapports payés par le propriétaire n'apparaissaient
+        // jamais — aucune carte vérifiée, rien à partager (constaté le
+        // 07/11/2026 en préparant le partage depuis la carte).
+        if (this.isLoggedIn()) this.loadReportedNames();
         // Le rôle vient du serveur : c'est lui qui décide, l'interface ne fait
         // que s'y conformer. Un projet à soi n'a pas de rôle transmis dans les
         // anciennes réponses — d'où le défaut « owner ».

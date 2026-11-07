@@ -518,6 +518,9 @@ avec un mot d'accompagnement facultatif.
   **Le renvoi par e-mail aussi** (`POST /brand-report/send`) : jusqu'au 07/11/2026,
   il cherchait sous le seul appelant, et l'invité recevait un 404 sur un rapport
   qu'il pouvait pourtant lire. `brand_report_reshared` porte `viaProjet`.
+  Côté wizard, les synthèses des cartes se rechargent **une fois le projet connu**
+  (`loadProject`) : le premier chargement part sans `projectId`, et un invité ne
+  voyait aucun de ses noms vérifiés.
 - L'interface masque en lecture seule ce que le serveur refuse déjà (notation,
   réactualisation, achat) : proposer un bouton qui échouera est une façon de mentir.
 
