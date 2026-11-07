@@ -515,6 +515,9 @@ avec un mot d'accompagnement facultatif.
   propriétaire — il l'a payé — et reste lisible par les invités *via le projet*.
 - Un rapport n'est jamais retrouvé par son nom seul : le rapprochement passe par
   le `projectId`, sans quoi deviner un nom suffirait à lire le rapport d'un tiers.
+  **Le renvoi par e-mail aussi** (`POST /brand-report/send`) : jusqu'au 07/11/2026,
+  il cherchait sous le seul appelant, et l'invité recevait un 404 sur un rapport
+  qu'il pouvait pourtant lire. `brand_report_reshared` porte `viaProjet`.
 - L'interface masque en lecture seule ce que le serveur refuse déjà (notation,
   réactualisation, achat) : proposer un bouton qui échouera est une façon de mentir.
 
@@ -654,6 +657,20 @@ avec `wizard_step_viewed` (étape 2) comme dénominateur.
 « inclure les noms descriptifs », avec `origine` : `note` (recherche incomplète) ou
 `bandeau` (5 rejets sans favori). Il dit si l'incitation sert, et donc si le défaut
 « noms inventés » doit être revu.
+
+Le **partage d'un nom** part de la carte depuis le 07/11/2026 : icône à droite des
+pouces, qui ouvre le même menu que la page du rapport (chantier OpenSpec
+`partager-depuis-la-carte`). Il n'était jusque-là que dans l'en-tête du rapport — il
+fallait savoir l'ouvrir pour le trouver. Pour juger le déplacement :
+
+- `report_share_menu_opened` (`origine` : `carte` | `rapport`, `verifie`) compte les
+  ouvertures du menu, même sans choix ;
+- `report_share_opened` (e-mail) et `report_printed` (PDF) portent la même `origine` ;
+- `brand_report_cta_clicked` porte `origine` : `carte` (« Vérifier marques déposées et
+  réseaux sociaux »), `partage` (« Vérifier puis partager ») ou `choisir` (« Aide-moi à
+  choisir ») — c'est ce qui dit si le partage fait acheter ;
+- `name_copied` (`source: carte_partage`) : « Copier le nom », le seul geste du menu
+  d'un nom non vérifié qui ne coûte rien.
 
 La demande de retour automatique (voir « Demander un retour à un utilisateur ») émet
 `feedback_request_sent` (`delivered`, `langue`) à chaque envoi,

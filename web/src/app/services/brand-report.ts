@@ -124,6 +124,8 @@ export interface BrandReportSummary {
   score: number | null;
   /** Crédits réellement débités au moment de l'achat. */
   costCredits: number | null;
+  /** Jeton du lien public `/rapport/<jeton>` : la carte copie le lien sans ouvrir le rapport. */
+  shareToken?: string | null;
 }
 
 /** Coût affiché du rapport de marque (aligné sur BRAND_REPORT_COST côté API). */
@@ -146,8 +148,9 @@ export class BrandReportService {
   /** Rapport déjà généré pour ce nom (authentifié) — pour éviter un re-débit. */
   /** Synthèses des noms vérifiés — verdicts déjà payés, pour la grille. */
   /** Renvoie par email un rapport déjà acquis. Aucun débit côté serveur. */
-  sendByMail(name: string, emails: string[]): Observable<{ sent: boolean }> {
-    return this.http.post<{ sent: boolean }>(`${this.apiUrl}/send`, { name, emails });
+  /** `projectId` : un rapport payé par le propriétaire d'un projet partagé est rangé sous lui. */
+  sendByMail(name: string, emails: string[], projectId?: string | null): Observable<{ sent: boolean }> {
+    return this.http.post<{ sent: boolean }>(`${this.apiUrl}/send`, projectId ? { name, emails, projectId } : { name, emails });
   }
 
   /*

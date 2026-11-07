@@ -1075,6 +1075,19 @@
     font-weight: 600;
 }
 
+/* Nom non vérifié : une phrase avant les actions, qui dit ce que partager
+   enverra. Pas une entrée — ni grisée, ni cliquable. */
+.partage-menu__intro {
+    max-width: 17rem;
+    margin: 0;
+    padding: 0.6rem 0.9rem 0.4rem;
+    font-size: var(--nm-text-ui-sm);
+    line-height: 1.4;
+    color: var(--nm-app-text-2);
+    white-space: normal;
+    cursor: default;
+}
+
 .partage-menu__note {
     max-width: 17rem;
     font-size: var(--nm-text-overline-sm);

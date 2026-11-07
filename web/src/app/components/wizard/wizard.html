@@ -622,6 +622,7 @@
               (analyse)="analyseOne($event)"
               (carteVue)="carteVue($event)"
               (openReport)="openFullReport($event)"
+              (partager)="ouvrirPartageDuNom($event.nom, $event.verifie, 'carte', $event.event)"
               (toggleAnalysis)="toggleAnalysis($event)">
             </app-results-grid>
           </div>
@@ -1032,7 +1033,7 @@
 
         <!-- Rapport de disponibilité complet (ouvre le dialogue dédié) -->
         <div style="margin-top: 0.85rem; width: 100%; text-align: center">
-          <button type="button" (click)="askBrandReport(result.recommended)" class="report-cta">
+          <button type="button" (click)="askBrandReport(result.recommended, 'choisir')" class="report-cta">
             <i class="pi pi-verified" style="font-size: 0.8rem"></i>
             {{ 'WIZARD.STEP3.REPORT_CTA' | translate }} · {{ brandReportCost }} {{ 'WIZARD.STEP3.REPORT_CREDITS' | translate }}
           </button>
@@ -1158,6 +1159,50 @@
        où l'on reste — il porte d'ailleurs sa propre URL depuis hier. Il prend
        donc simplement la place du wizard, sous la barre, et le fil d'étapes
        s'efface le temps de la lecture. -->
+  <!-- Menu de partage : UN seul, pour la carte comme pour la page du rapport.
+       Il vit hors de la page du rapport parce que la carte l'ouvre sans la
+       quitter. Ses entrées (`partageMenu`) sont posées à l'ouverture. -->
+  <p-menu #menuPartage [model]="partageMenu()" [popup]="true" appendTo="body" styleClass="partage-menu">
+    <ng-template pTemplate="item" let-item>
+      @if (item.intro) {
+        <!-- Une explication, pas une action : elle dit ce que partager
+             enverra avant de proposer de le produire. -->
+        <p class="partage-menu__intro">{{ item.label }}</p>
+      } @else {
+        <a class="partage-menu__item" [attr.aria-disabled]="item.disabled">
+          <i [class]="'pi ' + item.icon" aria-hidden="true"></i>
+          <span>
+            <span class="partage-menu__label">{{ item.label }}</span>
+            <!-- L'avertissement est SUR l'entrée, pas après le clic :
+                 un lien public se réfléchit avant d'être copié. -->
+            <small *ngIf="item.note" class="partage-menu__note">{{ item.note }}</small>
+          </span>
+        </a>
+      }
+    </ng-template>
+  </p-menu>
+
+  <!-- Envoi par email : destinataires, et rien d'autre. Le lien vers le
+       rapport en ligne part avec, le PDF se télécharge à côté. Hors de la page
+       du rapport : depuis une carte, on l'envoie sans quitter les résultats. -->
+  <p-dialog [visible]="showShareMail()" (visibleChange)="showShareMail.set($event)"
+            [modal]="true" [draggable]="false" [style]="{ width: 'min(92vw, 30rem)' }"
+            [header]="'WIZARD.STEP3.REPORT_SHARE_MAIL' | translate">
+    <p style="margin: 0 0 0.75rem; color: var(--nm-app-text-2); font-size: var(--nm-text-ui-sm)">
+      {{ 'WIZARD.STEP3.REPORT_SHARE_HINT' | translate }}
+    </p>
+    <input type="text" class="w-full" [ngModel]="shareEmails()" (ngModelChange)="shareEmails.set($event)"
+           [placeholder]="'WIZARD.STEP3.REPORT_EMAILS_PLACEHOLDER' | translate"
+           style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--nm-app-border); border-radius: var(--nm-radius-sm); background: var(--nm-app-surface); color: var(--nm-app-text)">
+    <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem">
+      <button type="button" class="nm-btn-tertiary" (click)="showShareMail.set(false)">{{ 'COMMON.CANCEL' | translate }}</button>
+      <button type="button" class="nm-btn-primary" [disabled]="shareSending()" (click)="sendShareMail()">
+        <i class="pi" [class.pi-send]="!shareSending()" [class.pi-spin]="shareSending()" [class.pi-spinner]="shareSending()"></i>
+        {{ 'WIZARD.STEP3.REPORT_SHARE_SEND' | translate }}
+      </button>
+    </div>
+  </p-dialog>
+
   <div *ngIf="showReportDialog()" class="report-page">
     <!-- En-tête : retour à la liste + nom + badge « déjà généré » -->
       <div style="display: flex; align-items: center; gap: 0.85rem; width: 100%">
@@ -1169,26 +1214,6 @@
           <i class="pi pi-clock" style="font-size: var(--nm-text-ui-sm)"></i> {{ 'WIZARD.STEP3.REPORT_CACHED' | translate }}
         </span>
       </div>
-
-      <!-- Envoi par email : destinataires, et rien d'autre. Le lien vers le
-           rapport en ligne part avec, le PDF se télécharge à côté. -->
-      <p-dialog [visible]="showShareMail()" (visibleChange)="showShareMail.set($event)"
-                [modal]="true" [draggable]="false" [style]="{ width: 'min(92vw, 30rem)' }"
-                [header]="'WIZARD.STEP3.REPORT_SHARE_MAIL' | translate">
-        <p style="margin: 0 0 0.75rem; color: var(--nm-app-text-2); font-size: var(--nm-text-ui-sm)">
-          {{ 'WIZARD.STEP3.REPORT_SHARE_HINT' | translate }}
-        </p>
-        <input type="text" class="w-full" [ngModel]="shareEmails()" (ngModelChange)="shareEmails.set($event)"
-               [placeholder]="'WIZARD.STEP3.REPORT_EMAILS_PLACEHOLDER' | translate"
-               style="width: 100%; padding: 0.6rem 0.75rem; border: 1px solid var(--nm-app-border); border-radius: var(--nm-radius-sm); background: var(--nm-app-surface); color: var(--nm-app-text)">
-        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem">
-          <button type="button" class="nm-btn-tertiary" (click)="showShareMail.set(false)">{{ 'COMMON.CANCEL' | translate }}</button>
-          <button type="button" class="nm-btn-primary" [disabled]="shareSending()" (click)="sendShareMail()">
-            <i class="pi" [class.pi-send]="!shareSending()" [class.pi-spin]="shareSending()" [class.pi-spinner]="shareSending()"></i>
-            {{ 'WIZARD.STEP3.REPORT_SHARE_SEND' | translate }}
-          </button>
-        </div>
-      </p-dialog>
 
     <div style="max-width: 860px; margin: 0 auto; padding: 1.5rem 1.25rem">
 
@@ -1303,25 +1328,13 @@
                avec « Partager le rapport », deux libellés proches pour deux
                choses différentes. -->
           <span actions *ngIf="!isSampleReport()" class="rv-actions">
-            <button type="button" class="nm-btn-secondary" (click)="menuPartage.toggle($event)"
+            <button type="button" class="nm-btn-secondary" (click)="ouvrirPartageDuNom(report.name, true, 'rapport', $event, report.shareToken)"
+                    aria-haspopup="menu"
                     [attr.aria-label]="'WIZARD.STEP3.REPORT_SHARE_MENU' | translate">
               <i class="pi pi-share-alt" aria-hidden="true"></i>
               {{ 'WIZARD.STEP3.REPORT_SHARE_MENU' | translate }}
               <i class="pi pi-angle-down" style="font-size: 0.7rem; opacity: 0.7" aria-hidden="true"></i>
             </button>
-            <p-menu #menuPartage [model]="partageItems(report)" [popup]="true" appendTo="body" styleClass="partage-menu">
-              <ng-template pTemplate="item" let-item>
-                <a class="partage-menu__item" [attr.aria-disabled]="item.disabled">
-                  <i [class]="'pi ' + item.icon" aria-hidden="true"></i>
-                  <span>
-                    <span class="partage-menu__label">{{ item.label }}</span>
-                    <!-- L'avertissement est SUR l'entrée, pas après le clic :
-                         un lien public se réfléchit avant d'être copié. -->
-                    <small *ngIf="item.note" class="partage-menu__note">{{ item.note }}</small>
-                  </span>
-                </a>
-              </ng-template>
-            </p-menu>
           </span>
         </app-brand-report-view>
 

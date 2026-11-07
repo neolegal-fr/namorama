@@ -278,7 +278,7 @@
 
 /* ─── Actions ────────────────────────────────────────────────────────────── */
 
-/* Pied de carte : une ligne de date, puis deux boutons de même taille. La
+/* Pied de carte : une ligne de date, UN bouton, une ligne de prix. La
    composition ne change JAMAIS d'un état à l'autre — c'est ce qui garantit que
    deux cartes voisines se terminent à la même hauteur. */
 .rg-actions {
@@ -288,24 +288,48 @@
   margin-top: auto;
 }
 
-/* Les deux boutons tiennent CÔTE À CÔTE, jamais l'un sous l'autre : c'est ce
-   qui garde la même hauteur de pied que la carte déjà vérifiée, où le bouton
-   d'achat a disparu. Hauteur fixée, libellé sur une ligne, et chacun libre de
-   se rétrécir (`min-width: 0`) plutôt que de forcer le retour à la ligne. */
-.rg-actions__row {
+/* Pleine largeur, hauteur fixe. « Vérifier marques déposées et réseaux
+   sociaux » passe sur deux lignes dans cette hauteur plutôt que d'être
+   tronqué : un libellé coupé redeviendrait la devinette qu'il remplace. */
+.rg-btn--full {
+  /* `.rg-btn` porte `flex: 1` ; dans le pied en colonne, sa base de 0 primerait
+     sur la hauteur fixée. */
+  flex: none;
   display: flex;
-  align-items: stretch;
-  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
+  width: 100%;
+  height: var(--nm-touch-card-btn);
+  padding: 0 12px;
 }
 
-.rg-actions__row .rg-btn {
-  flex: 1 1 0;
-  min-width: 0;
+.rg-btn__label {
+  line-height: 1.25;
+  text-align: center;
+}
+
+/* La ligne sous le bouton : le prix AVANT le clic (§6), ou ce que le rapport
+   contient une fois acheté. Présente dans les deux états, même vide. */
+.rg-price {
+  min-height: calc(1.4 * var(--nm-text-ui-sm));
+  margin: 0;
+  font-size: var(--nm-text-ui-sm);
+  line-height: 1.4;
+  color: var(--nm-app-text-2);
+  text-align: center;
+}
+
+/* Lecture seule sur un nom non vérifié : une mention à la place du bouton,
+   de la même hauteur. */
+.rg-btn--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: var(--nm-touch-card-btn);
-  padding: 0 10px;
-  white-space: nowrap;
-  overflow: hidden;
+  margin: 0;
+  font-size: var(--nm-text-ui-sm);
+  color: var(--nm-app-text-2);
 }
 
 .rg-checked {
@@ -346,7 +370,11 @@
   color: var(--nm-app-accent-hover);
 }
 
-.rg-rate {
+/* Pouces puis partage : une colonne fixe à droite du nom. Le nom garde sa
+   colonne et passe à la ligne dedans — choix du 07/11/2026, la ligne de
+   lecture « nom, j'aime, je partage » primant sur la place gagnée en faisant
+   passer le nom sous les icônes. */
+.rg-tools {
   display: flex;
   gap: 0;
   flex: none;
@@ -561,8 +589,8 @@
    les secondaires en dessous. */
 
 
-/* Les pouces vivent dans l'en-tête : ils ne s'étirent pas. */
-.rg-card__head .rg-rate { flex: none; }
+/* Les icônes vivent dans l'en-tête : elles ne s'étirent pas. */
+.rg-card__head .rg-tools { flex: none; }
 
 /* L'analyse est une ligne : les étoiles s'alignent à droite comme un verdict. */
 .rg-stars {
