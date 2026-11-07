@@ -107,8 +107,14 @@ interface ExtVerdict {
               Les pouces vivent DANS l'en-tête, à droite du nom : ils portent
               sur le nom, pas sur le rapport. Près du bouton d'achat, leur objet
               devenait ambigu.
+
+              Le partage les suit, dans la même colonne : on lit le nom, on
+              l'aime, on le montre — trois gestes sur une ligne. Il reste en
+              lecture seule, où la notation disparaît : partager ne fait que
+              lire, et c'est ce qu'un invité est venu faire.
             -->
-            <div class="rg-rate" *ngIf="!readOnly()">
+            <div class="rg-tools">
+              <ng-container *ngIf="!readOnly()">
               <button type="button" class="rg-icon"
                       [class.rg-icon--on]="isLiked(d)"
                       [attr.aria-label]="'WIZARD.STEP3.RATE_LIKED' | translate"
@@ -122,6 +128,17 @@ interface ExtVerdict {
                       [attr.aria-pressed]="d.rating === 'disliked'"
                       (click)="rate.emit({ result: d, rating: d.rating === 'disliked' ? 'neutral' : 'disliked' })">
                 <i class="pi" [class.pi-thumbs-down-fill]="d.rating === 'disliked'" [class.pi-thumbs-down]="d.rating !== 'disliked'"></i>
+              </button>
+              </ng-container>
+              <!-- Pas de nm-bloque malgré le nom dans l'aria-label : les cartes
+                   restent lisibles au rejeu, sans quoi il ne dit rien
+                   (masquage.spec.ts). -->
+              <button type="button" class="rg-icon"
+                      aria-haspopup="menu"
+                      [attr.aria-label]="('WIZARD.STEP3.GRID_SHARE' | translate) + ' ' + d.name"
+                      [attr.title]="'WIZARD.STEP3.GRID_SHARE' | translate"
+                      (click)="partager.emit({ nom: d.name, verifie: !!summaryOf(d), event: $event })">
+                <i class="pi pi-share-alt" aria-hidden="true"></i>
               </button>
             </div>
           </header>
@@ -299,22 +316,35 @@ interface ExtVerdict {
               </span>
             </p>
 
-            <!-- UNE rangée, toujours de la même hauteur : deux boutons tant que
-                 marque et réseaux restent à acheter, un seul ensuite. Ce qui
-                 disparaît, c'est l'ACTION D'ACHAT — elle n'a plus d'objet — et
-                 non la ligne, dont la hauteur garde les cartes comparables. -->
-            <div class="rg-actions__row">
-              @if (!summaryOf(d) && !readOnly()) {
-                <button type="button" class="rg-btn rg-btn--buy" (click)="verify.emit(d.name)">
-                  <i class="pi pi-search" aria-hidden="true"></i>
-                  {{ 'WIZARD.STEP3.GRID_VERIFY_SHORT' | translate }}
-                </button>
-              }
-              <button type="button" class="rg-btn rg-btn--ghost" (click)="openReport.emit(d.name)">
-                <i class="pi pi-file-pdf" aria-hidden="true"></i>
-                {{ 'WIZARD.STEP3.GRID_FULL_REPORT' | translate }}
+            <!-- UN bouton, au même endroit dans les deux états, et une ligne
+                 dessous, présente dans les deux aussi : les pieds de cartes
+                 voisines finissent à la même hauteur.
+
+                 Il y en avait deux, « Marque et réseaux » et « Rapport
+                 complet », qui menaient au même achat avant vérification — le
+                 second par la page verrouillée, sans prix. Deux portes vers la
+                 même pièce posent une question (« quelle différence ? ») qui
+                 n'a pas de réponse. Le bouton dit maintenant ce qu'il vérifie,
+                 et la ligne dessous ce qu'il coûte, AVANT le clic (§6). -->
+            @if (summaryOf(d)) {
+              <button type="button" class="rg-btn rg-btn--ghost rg-btn--full" (click)="openReport.emit(d.name)">
+                <i class="pi pi-file" aria-hidden="true"></i>
+                <span class="rg-btn__label">{{ 'WIZARD.STEP3.GRID_VIEW_REPORT' | translate }}</span>
               </button>
-            </div>
+              <p class="rg-price">{{ 'WIZARD.STEP3.GRID_RESERVE_LINE' | translate }}</p>
+            } @else if (readOnly()) {
+              <!-- Lecture seule, nom non vérifié : rien à acheter (§6), et
+                   aucun rapport à voir — « Voir le rapport » mentirait. Une
+                   mention de la hauteur du bouton garde les pieds alignés. -->
+              <p class="rg-btn--placeholder">{{ 'WIZARD.STEP3.GRID_NOT_VERIFIED' | translate }}</p>
+              <p class="rg-price" aria-hidden="true"></p>
+            } @else {
+              <button type="button" class="rg-btn rg-btn--buy rg-btn--full" (click)="verify.emit(d.name)">
+                <i class="pi pi-shield" aria-hidden="true"></i>
+                <span class="rg-btn__label">{{ 'WIZARD.STEP3.GRID_VERIFY' | translate }}</span>
+              </button>
+              <p class="rg-price">{{ 'WIZARD.STEP3.GRID_PRICE_LINE' | translate:{ n: reportCost() } }}</p>
+            }
           </div>
         </article>
       }
@@ -382,6 +412,13 @@ export class ResultsGridComponent {
    * déclenchement coûtait.
    */
   readonly carteVue = output<string>();
+
+  /**
+   * Ouvrir le menu de partage de ce nom. Le menu vit dans le wizard — le même
+   * que celui de la page du rapport — car lui seul connaît crédits, e-mail et
+   * jeton : la grille ne fait que dire « ce nom, à cet endroit ».
+   */
+  readonly partager = output<{ nom: string; verifie: boolean; event: Event }>();
 
   readonly filter = signal<'all' | 'free' | 'report' | 'fav' | 'rejected'>('all');
 

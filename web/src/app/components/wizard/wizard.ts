@@ -1,4 +1,4 @@
-import { Component, signal, computed, OnInit, OnDestroy, HostListener, ChangeDetectorRef, ApplicationRef } from '@angular/core';
+import { Component, signal, computed, OnInit, OnDestroy, HostListener, ChangeDetectorRef, ApplicationRef, ViewChild } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { Subscription, firstValueFrom, of, timeout } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -1154,8 +1154,9 @@ export class WizardComponent implements OnInit, OnDestroy {
         }
         this.showReportDialog.set(true);
         this.scrollToTop();
+        if (res?.exists && res.report) this.imprimerSiDemande(res.report);
       },
-      error: () => { this.showReportDialog.set(true); this.scrollToTop(); },
+      error: () => { this.imprimerALOuverture = null; this.showReportDialog.set(true); this.scrollToTop(); },
     });
   }
 
@@ -1172,8 +1173,8 @@ export class WizardComponent implements OnInit, OnDestroy {
   readonly shareEmails = signal('');
   readonly shareSending = signal(false);
 
-  openShareMail(): void {
-    this.analytics.track('report_share_opened');
+  openShareMail(origine: 'carte' | 'rapport' = 'rapport'): void {
+    this.analytics.track('report_share_opened', { origine });
     this.shareEmails.set(this.userEmail() || '');
     this.showShareMail.set(true);
   }
@@ -1185,7 +1186,9 @@ export class WizardComponent implements OnInit, OnDestroy {
   sendShareMail(): void {
     const emails = this.parseEmails(this.shareEmails());
     this.shareSending.set(true);
-    this.brandReportService.sendByMail(this.brandReportName(), emails).subscribe({
+    // Le projet part avec : un rapport payé par le propriétaire est rangé sous
+    // lui, et l'invité qui l'envoie recevait un 404 sans cela.
+    this.brandReportService.sendByMail(this.brandReportName(), emails, this.projectId()).subscribe({
       next: (res) => {
         this.shareSending.set(false);
         this.showShareMail.set(false);
@@ -1205,9 +1208,34 @@ export class WizardComponent implements OnInit, OnDestroy {
   }
 
   /** Ouvre la boîte d'impression, dont la destination par défaut est le PDF. */
-  printReport(): void {
-    this.analytics.track('report_printed');
+  printReport(origine: 'carte' | 'rapport' = 'rapport'): void {
+    this.analytics.track('report_printed', { origine });
     if (typeof window !== 'undefined') window.print();
+  }
+
+  /**
+   * Nom (normalisé) dont le PDF a été demandé depuis sa carte.
+   *
+   * La feuille d'impression n'existe que sur la page du rapport : imprimer la
+   * grille produirait un document sans rapport. On ouvre donc le rapport, et
+   * l'impression part une fois CE rapport affiché — pas un autre, chargé entre
+   * temps par la navigation.
+   */
+  private imprimerALOuverture: string | null = null;
+
+  private imprimerDepuisCarte(nom: string): void {
+    this.imprimerALOuverture = this.normName(nom);
+    this.openFullReport(nom);
+  }
+
+  /** Appelé quand un rapport acheté vient de s'afficher. */
+  private imprimerSiDemande(report: BrandReport): void {
+    if (!this.imprimerALOuverture || this.normName(report.name) !== this.imprimerALOuverture) return;
+    this.imprimerALOuverture = null;
+    // Le rendu d'abord : la boîte d'impression photographie la page telle
+    // qu'elle est à l'instant de l'appel.
+    this.cdr.detectChanges();
+    setTimeout(() => this.printReport('carte'), 50);
   }
 
   private scrollToTop(): void {
@@ -1231,7 +1259,15 @@ export class WizardComponent implements OnInit, OnDestroy {
     });
   }
 
-  askBrandReport(name: string): void {
+  /**
+   * D'où vient la demande d'achat en cours : la carte (« Vérifier »), le menu
+   * de partage (« Vérifier puis partager ») ou « Aide-moi à choisir ». Porté
+   * par `brand_report_cta_clicked`, pour savoir si le partage fait acheter.
+   */
+  private origineAchat: 'carte' | 'partage' | 'choisir' = 'carte';
+
+  askBrandReport(name: string, origine: 'carte' | 'partage' | 'choisir' = 'carte'): void {
+    this.origineAchat = origine;
     this.brandReportName.set(name);
     this.brandReportError.set(null);
     this.brandReport.set(null);
@@ -1384,7 +1420,7 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.brandReportLoading.set(true);
     this.brandReportError.set(null);
     this.brandReport.set(null);
-    this.analytics.track('brand_report_cta_clicked');
+    this.analytics.track('brand_report_cta_clicked', { origine: this.origineAchat });
     // Timeout client : un traitement qui n'aboutit pas devient une erreur
     // (réessayable) plutôt qu'un chargement infini.
     // Le contexte part AVEC la génération : c'est le seul moment où le wizard
@@ -1436,14 +1472,18 @@ export class WizardComponent implements OnInit, OnDestroy {
    * Recalculé à chaque ouverture plutôt que mémorisé : les libellés dépendent
    * de la langue et l'entrée « lien public » du jeton, qui n'existe qu'une fois
    * le rapport enregistré.
+   *
+   * Le MÊME menu sert la carte et la page du rapport : deux menus, c'étaient
+   * deux jeux de libellés à tenir alignés — la dérive qu'a connue « Réserver »,
+   * en trois exemplaires dont un ne proposait qu'OVH.
    */
-  partageItems(report: BrandReport): MenuItem[] {
+  partageItems(c: { nom: string; shareToken: string | null; origine: 'carte' | 'rapport' }): MenuItem[] {
     const t = (k: string) => this.translate.instant(k) as string;
     return [
       {
         label: t('WIZARD.STEP3.REPORT_DOWNLOAD'),
         icon: 'pi-file-pdf',
-        command: () => this.printReport(),
+        command: () => (c.origine === 'rapport' ? this.printReport('rapport') : this.imprimerDepuisCarte(c.nom)),
       },
       {
         // Libellés PROPRES au menu : « Partager » et « Partager le rapport »
@@ -1451,23 +1491,83 @@ export class WizardComponent implements OnInit, OnDestroy {
         // un bouton « Partager », chaque entrée doit dire par quel MOYEN.
         label: t('WIZARD.STEP3.REPORT_SHARE_BY_MAIL'),
         icon: 'pi-send',
-        command: () => this.openShareMail(),
+        note: t('WIZARD.STEP3.SHARE_MENU_MAIL_NOTE'),
+        command: () => {
+          // Depuis la carte, le dialogue s'ouvre sur les résultats : il n'a
+          // besoin que du nom, pas du rapport à l'écran.
+          this.brandReportName.set(c.nom);
+          this.openShareMail(c.origine);
+        },
       },
       {
         label: t('WIZARD.STEP3.REPORT_SHARE_COPY_LINK'),
         icon: 'pi-link',
         // L'avertissement porte sur ce que le lien rend possible, pas sur le
         // geste : « toute personne qui l'a » est l'information décisive.
-        note: t('WIZARD.STEP3.REPORT_SHARE_PUBLIC_WARN'),
-        disabled: !report.shareToken,
-        command: () => this.copyShareLink(report),
+        note: t(c.shareToken ? 'WIZARD.STEP3.REPORT_SHARE_PUBLIC_WARN' : 'WIZARD.STEP3.SHARE_MENU_NO_TOKEN'),
+        disabled: !c.shareToken,
+        command: () => this.copyShareLink(c.shareToken),
       },
     ] as MenuItem[];
   }
 
-  copyShareLink(report: BrandReport): void {
-    if (!report.shareToken || typeof window === 'undefined') return;
-    const url = `${window.location.origin}/rapport/${report.shareToken}`;
+  /**
+   * Menu d'un nom NON vérifié : le partage envoie le rapport, qui n'existe pas
+   * encore. On le dit, on propose de le produire — au prix annoncé, par le
+   * parcours d'achat habituel, confirmation comprise — et on laisse le geste
+   * qui ne coûte rien : copier le nom.
+   */
+  private partageItemsNonVerifie(nom: string): MenuItem[] {
+    const t = (k: string, p?: Record<string, unknown>) => this.translate.instant(k, p) as string;
+    const items: MenuItem[] = [
+      { label: t('WIZARD.STEP3.SHARE_MENU_UNVERIFIED_NOTE'), intro: true, disabled: true } as MenuItem,
+    ];
+    // En lecture seule, l'achat est refusé par le serveur : on ne le propose pas (§6).
+    if (!this.lectureSeule()) {
+      items.push({
+        label: t('WIZARD.STEP3.SHARE_MENU_VERIFY'),
+        icon: 'pi-shield',
+        note: t('WIZARD.STEP3.SHARE_MENU_VERIFY_COST', { n: this.brandReportCost }),
+        command: () => this.askBrandReport(nom, 'partage'),
+      } as MenuItem);
+    }
+    items.push({ label: t('WIZARD.STEP3.PICK_COPY'), icon: 'pi-copy', command: () => this.copierNom(nom) });
+    return items;
+  }
+
+  /** Entrées du menu de partage ouvert, quelle que soit son origine. */
+  readonly partageMenu = signal<MenuItem[]>([]);
+  @ViewChild('menuPartage') private menuPartage?: Menu;
+
+  /**
+   * Ouvre le menu de partage d'un nom.
+   *
+   * Le jeton vient de la synthèse pour une carte — il est là AVANT le clic, ce
+   * qui permet d'écrire dans le presse-papiers pendant le geste (Safari refuse
+   * après une attente réseau) — et du rapport affiché pour la page du rapport.
+   */
+  ouvrirPartageDuNom(nom: string, verifie: boolean, origine: 'carte' | 'rapport', event: Event, shareToken?: string | null): void {
+    const jeton = shareToken
+      ?? this.reportSummaries().find((s) => s.nameKey === this.normName(nom))?.shareToken
+      ?? null;
+    this.partageMenu.set(verifie ? this.partageItems({ nom, shareToken: jeton, origine }) : this.partageItemsNonVerifie(nom));
+    this.analytics.track('report_share_menu_opened', { origine, verifie });
+    this.menuPartage?.toggle(event);
+  }
+
+  /** Copie le nom seul : le geste de qui l'emporte ailleurs, sans rien dépenser. */
+  copierNom(nom: string): void {
+    if (typeof navigator === 'undefined') return;
+    navigator.clipboard?.writeText(nom).then(() => {
+      this.analytics.track('name_copied', { source: 'carte_partage' });
+      this.messageService.add({ severity: 'info', life: 2500, summary: this.translate.instant('WIZARD.STEP3.NAME_COPIED') });
+      this.cdr.detectChanges();
+    }).catch(() => { /* presse-papiers indisponible */ });
+  }
+
+  copyShareLink(shareToken: string | null): void {
+    if (!shareToken || typeof window === 'undefined') return;
+    const url = `${window.location.origin}/rapport/${shareToken}`;
     navigator.clipboard?.writeText(url).then(() => {
       this.shareCopied.set(true);
       setTimeout(() => this.shareCopied.set(false), 2500);
@@ -2011,6 +2111,12 @@ export class WizardComponent implements OnInit, OnDestroy {
       next: (project) => {
         this.projectId.set(project.id);
         this.testedNames.set([]);
+        // Les rapports se relisent PAR LE PROJET. Le premier chargement
+        // (ngOnInit) part avant que le projet soit connu, donc sans lui : pour
+        // un invité, les rapports payés par le propriétaire n'apparaissaient
+        // jamais — aucune carte vérifiée, rien à partager (constaté le
+        // 07/11/2026 en préparant le partage depuis la carte).
+        if (this.isLoggedIn()) this.loadReportedNames();
         // Le rôle vient du serveur : c'est lui qui décide, l'interface ne fait
         // que s'y conformer. Un projet à soi n'a pas de rôle transmis dans les
         // anciennes réponses — d'où le défaut « owner ».

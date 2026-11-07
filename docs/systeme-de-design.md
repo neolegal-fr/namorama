@@ -79,8 +79,11 @@ alternance sombre → clair → sombre est une composition, fixe. L'application 
   textes jugés trop longs et « sentant l'IA ».)
 - **Un bouton dit ce qu'il fait** : « Débloquer le rapport », « Actualiser — gratuit »,
   « 10 de plus », « Réserver ». Jamais « OK » ni « Valider » seul.
-- **Vocabulaire figé** : « crédits », « rapport approfondi », « noms vérifiés », « noms
-  libres », « Mes projets ». Casse française : majuscule au premier mot seulement.
+- **Vocabulaire figé** : « crédits », « rapport de vérification », « noms vérifiés »,
+  « noms libres », « Mes projets ». Casse française : majuscule au premier mot seulement.
+  « Rapport de vérification » remplace « rapport approfondi » depuis le 07/11/2026 :
+  « approfondi » ne disait pas ce qui est vérifié — le défaut même du bouton « Rapport
+  complet » qu'il a fallu retirer. Les pages éditoriales gardent l'ancien terme (§10).
 - **On dit le doute.** Un domaine non vérifiable s'écrit « non vérifiable », jamais
   « libre » par défaut ni « ? » seul. Une recherche vide dit pourquoi (« tout a été écarté
   par votre cahier des charges », pas « tout est pris »).
@@ -201,9 +204,14 @@ achat) et « en cours ». Classes : `.nm-verdict--free|taken|unknown|watch|locke
 
 - `app-reserver` (`components/shared/reserver-bouton.ts`) : le seul bouton « Réserver »
   vers les registrars, variante `cta`.
-- `app-results-grid` : la carte de résultat (nom en `--nm-text-name-card`, pouces à droite
-  du nom, un seul bouton d'achat par carte, verdicts de domaines seulement — jamais INPI ni
-  réseaux sur la carte).
+- `app-results-grid` : la carte de résultat. Nom en `--nm-text-name-card` ; à sa droite,
+  sur la même ligne et en colonne fixe, trois icônes : 👍, 👎, partager (`pi-share-alt`,
+  qui ouvre le menu de partage du rapport — le même que sur la page du rapport). En
+  lecture seule, seule l'icône de partage reste. Lignes INPI, EUIPO et réseaux
+  verrouillées tant que le rapport n'est pas acheté, sans verdict simulé. En pied, **un
+  seul bouton**, au même endroit dans les deux états — « Vérifier marques déposées et
+  réseaux sociaux », puis « Voir le rapport de vérification » — et, dessous, une ligne :
+  le prix avant le clic, ou ce que le rapport contient.
 - `app-brand-report-view` / `app-brand-report-locked` : le rapport, acheté ou verrouillé.
   Son pied porte toujours l'avertissement juridique et le périmètre INPI/EUIPO.
 - `nmVisibleOnce` : ce qui coûte un appel au modèle se déclenche à la visibilité (CLAUDE.md).
@@ -278,3 +286,4 @@ qui touche un de ces fichiers en résorbe ce qu'il peut.
 | Second `p-toast` | `wizard.html` | 1 |
 | `pi-bolt` pour les crédits, au lieu de `pi-wallet` | feuille de compte (`app.ts`), `styles.css` | — |
 | Code mort `reportStatusColor` | `wizard.ts` | 1 |
+| « Rapport approfondi » au lieu de « rapport de vérification » (§3) | `i18n` : `MENTION_2`, `DEMO_REPORT_TAG`, `FAQ_A2`, `FINAL_TEXT` (accueil, FAQ) | 4 clés × 2 langues |

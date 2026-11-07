@@ -129,15 +129,20 @@ export class BrandReportController {
    */
   @Post('send')
   async send(
-    @Body() dto: { name?: string; emails?: string[] },
+    @Body() dto: { name?: string; emails?: string[]; projectId?: string },
     @AuthenticatedUser() keycloakUser: { sub: string; email?: string; given_name?: string; family_name?: string },
   ) {
-    const report = dto.name ? await this.store.find(keycloakUser.sub, dto.name) : null;
+    // Le rapport se cherche là où il est RANGÉ : sous le propriétaire du projet,
+    // qui l'a payé. Chercher sous le seul appelant rendait 404 à l'invité d'un
+    // projet partagé, qui lit pourtant ce rapport — et l'envoi n'écrit ni ne
+    // débite rien.
+    const proprietaire = await this.subDesRapports(dto.projectId, keycloakUser.sub);
+    const report = dto.name ? await this.store.find(proprietaire, dto.name) : null;
     if (!report) throw new NotFoundException('Aucun rapport pour ce nom');
 
     const recipients = dto.emails?.length ? dto.emails : keycloakUser.email;
     const sent = await this.reportMail.sendReport(recipients, report);
-    this.events.event('brand_report_reshared', { sub: keycloakUser.sub, sent });
+    this.events.event('brand_report_reshared', { sub: keycloakUser.sub, sent, viaProjet: proprietaire !== keycloakUser.sub });
     return { sent };
   }
 
