@@ -13,8 +13,10 @@
 
 ## 2. Livraison
 
-- [ ] 2.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
-- [ ] 2.2 Fusionner, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web` sur `namorama-prod`. Vérification : l'étape de cadrage de `https://namorama.com/app` montre les trois styles décrits (contrôle au navigateur, sans lancer de recherche).
+- [x] 2.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
+  - PR #185, 07/11/2026 : quatre contrôles verts (tests API, système de design, images API et web).
+- [x] 2.2 Fusionner, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web` sur `namorama-prod`. Vérification : l'étape de cadrage de `https://namorama.com/app` montre les trois styles décrits (contrôle au navigateur, sans lancer de recherche).
+  - 07/11/2026 : fusion `10e3537`, images tirées, conteneurs recréés, démarrage sans erreur. Sur `https://namorama.com/app` (navigateur français, `/events` et `/replay` bloqués), les trois styles sont décrits, la mise en avant suit le choix, et la phrase suit le critère d'extensions.
 
 ## Workflow follow-up
 
