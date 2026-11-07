@@ -14,8 +14,10 @@
 
 ## 2. Livraison
 
-- [ ] 2.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
-- [ ] 2.2 Fusionner, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web` sur `namorama-prod`. Vérification : `curl https://namorama.com/app` contient le script, et la mesure de 1.3 rejouée sur `https://namorama.com` (requêtes vers `/events` bloquées, pour ne pas créer de visite) donne les mêmes résultats.
+- [x] 2.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
+  - PR #184, 07/11/2026 : quatre contrôles verts (tests API, système de design, images API et web).
+- [x] 2.2 Fusionner, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web` sur `namorama-prod`. Vérification : `curl https://namorama.com/app` contient le script, et la mesure de 1.3 rejouée sur `https://namorama.com` (requêtes vers `/events` bloquées, pour ne pas créer de visite) donne les mêmes résultats.
+  - 07/11/2026 : fusion `3b67692`, images tirées, conteneurs recréés, démarrage sans erreur. `https://namorama.com/app` contient `id="nm-langue"`. Mesure sur la production, `/events` et `/replay` bloqués : `/app` déclare `en` (navigateur anglais), `fr` (français) et `en` (allemand) dès le chargement ; `/` et `/generateur-nom-de-marque` restent `fr`, `/en` reste `en`.
 
 ## Workflow follow-up
 
