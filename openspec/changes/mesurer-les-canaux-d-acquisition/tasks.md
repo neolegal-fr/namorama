@@ -23,9 +23,12 @@
 
 ## 4. Livraison
 
-- [ ] 4.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
-- [ ] 4.2 Appliquer `2026-11-07-canaux-d-acquisition.sql` en production, sauvegarde datée de la table faite d'abord dans `backups/`, **avant** de déployer l'image. Vérification : `SHOW COLUMNS FROM visitor_session LIKE 'landingPath'` rend une ligne en production.
-- [ ] 4.3 Fusionner, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web` sur `namorama-prod`. Vérification : `docker compose ps` montre les deux conteneurs recréés, les logs de démarrage sont sans erreur, et une visite de test sur `https://namorama.com/?utm_source=test-deploiement` crée une ligne portant cette source.
+- [x] 4.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
+  - PR #183, 07/11/2026 : cinq contrôles verts (tests API, système de design, images API et web).
+- [x] 4.2 Appliquer `2026-11-07-canaux-d-acquisition.sql` en production, sauvegarde datée de la table faite d'abord dans `backups/`, **avant** de déployer l'image. Vérification : `SHOW COLUMNS FROM visitor_session LIKE 'landingPath'` rend une ligne en production.
+  - 07/11/2026 10:29 : sauvegarde `backups/visitor_session-2026-11-07-avant-canaux-d-acquisition.sql`, migration appliquée, colonne présente, 752 visites intactes.
+- [x] 4.3 Fusionner, attendre la fin du build GitHub Actions, puis `docker compose pull api web && docker compose up -d api web` sur `namorama-prod`. Vérification : `docker compose ps` montre les deux conteneurs recréés, les logs de démarrage sont sans erreur, et une visite de test sur `https://namorama.com/?utm_source=test-deploiement` crée une ligne portant cette source.
+  - 07/11/2026 10:34 : fusion `2c4d5fb`, images tirées, conteneurs recréés, « Nest application successfully started » sans erreur. Visite de test (Chromium, référent google.fr) : `landingPath=/`, `utmSource=test-deploiement`, `referrerHost=google.fr`.
 
 ## Workflow follow-up
 
