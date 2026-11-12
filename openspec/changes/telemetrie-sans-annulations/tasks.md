@@ -24,7 +24,8 @@
 
 - [x] 3.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
   - PR #190, 12/11/2026 : quatre contrôles verts (tests API, système de design, images API et web).
-- [ ] 3.2 Fusionner, attendre l'image, puis `docker compose pull web && docker compose up -d web` sur `namorama-prod`. Vérification : un `*.js` servi par `https://namorama.com` ne contient pas `sourceMappingURL`, sa map ne répond pas, et `/opt/sourcemaps` du conteneur contient les maps des scripts servis.
+- [x] 3.2 Fusionner, attendre l'image, puis `docker compose pull web && docker compose up -d web` sur `namorama-prod`. Vérification : un `*.js` servi par `https://namorama.com` ne contient pas `sourceMappingURL`, sa map ne répond pas, et `/opt/sourcemaps` du conteneur contient les maps des scripts servis.
+  - 12/11/2026 : PR #190 fusionnée (`d75a006`), puis #191 ; image de `76b7dfa` tirée, `namorama-web-1` recréé à 20 h 37 (Paris), 0 redémarrage, aucune erreur nginx. Sur `https://namorama.com`, `main-JO4EMVTR.js` ne se termine pas par `sourceMappingURL` et n'a pas d'en-tête `SourceMap` ; sa `.map` rend la coquille HTML. Dans le conteneur : 0 map sous `/usr/share/nginx/html`, 7 sous `/opt/sourcemaps`. La commande d'extraction de CLAUDE.md, jouée contre la prod, rapporte les 7 maps, et une position de `main-JO4EMVTR.js` se retraduit vers `src/app/components/wizard/wizard.ts:2195`.
 
 ## Workflow follow-up
 
