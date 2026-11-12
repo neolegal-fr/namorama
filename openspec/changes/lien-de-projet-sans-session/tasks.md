@@ -16,8 +16,10 @@
 
 ## 2. Livraison
 
-- [ ] 2.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
-- [ ] 2.2 Fusionner, attendre l'image, puis `docker compose pull web && docker compose up -d web` sur `namorama-prod`. Vérification : `https://namorama.com/projects/<uuid>` dans un navigateur sans session ouvre la connexion de `auth.namorama.com`, et aucun `GET /projects/<uuid>` n'apparaît dans les logs de l'API.
+- [x] 2.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
+  - PR #191, 12/11/2026 : quatre contrôles verts, avant et après la fusion de `main`.
+- [x] 2.2 Fusionner, attendre l'image, puis `docker compose pull web && docker compose up -d web` sur `namorama-prod`. Vérification : `https://namorama.com/projects/<uuid>` dans un navigateur sans session ouvre la connexion de `auth.namorama.com`, et aucun `GET /projects/<uuid>` n'apparaît dans les logs de l'API.
+  - 12/11/2026 : fusion `76b7dfa`, image web tirée et conteneur recréé. Navigateur sans session sur `https://namorama.com/projects/00000000-0000-4000-8000-000000000000` (`/events` et `/replay` bloqués) : arrivée sur `auth.namorama.com`, `redirect_uri` sur le projet ; seules requêtes à l'API, deux `POST /events` bloqués. Aucune ligne dans les logs de l'API sur les 10 minutes suivantes, donc aucun 401.
 
 ## Workflow follow-up
 
