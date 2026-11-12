@@ -71,6 +71,8 @@
     "TITLE": "Mes projets",
     "SUBTITLE": "Reprenez vos recherches là où vous vous étiez arrêté.",
     "EMPTY": "Aucun projet pour le moment.",
+    "OPEN_NOT_FOUND": "Ce projet est introuvable, ou il ne vous a pas été partagé.",
+    "OPEN_FAILED": "Impossible d'ouvrir ce projet pour le moment. Réessayez dans un instant.",
     "OPEN": "Ouvrir",
     "DATE": "Dernière mise à jour",
     "DELETE": "Supprimer",

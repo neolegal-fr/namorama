@@ -71,6 +71,8 @@
     "TITLE": "My Projects",
     "SUBTITLE": "Resume your searches where you left off.",
     "EMPTY": "No projects yet.",
+    "OPEN_NOT_FOUND": "This project cannot be found, or it has not been shared with you.",
+    "OPEN_FAILED": "This project cannot be opened right now. Please try again in a moment.",
     "OPEN": "Open",
     "DATE": "Last updated",
     "DELETE": "Delete",
