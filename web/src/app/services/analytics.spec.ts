@@ -66,3 +66,59 @@ describe('AnalyticsService.pageView', () => {
     expect(second.meta).not.toHaveProperty('arrivee');
   });
 });
+
+/**
+ * Rejets non gérés remontés par le navigateur.
+ * Chantier `telemetrie-sans-annulations`, tâches 1.1 et 1.2.
+ */
+describe('AnalyticsService — rejets non gérés', () => {
+  let beacon: ReturnType<typeof vi.fn>;
+  let rejet: (e: { reason: unknown }) => void;
+  const envois = () =>
+    Promise.all(beacon.mock.calls.map(([, blob]) => (blob as Blob).text().then(JSON.parse)));
+
+  beforeEach(() => {
+    beacon = vi.fn(() => true);
+    Object.defineProperty(navigator, 'sendBeacon', { value: beacon, configurable: true });
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: PLATFORM_ID, useValue: 'browser' },
+        { provide: ConfigService, useValue: { apiUrl: 'http://api' } },
+      ],
+    });
+    // Le gestionnaire est capturé plutôt que déclenché sur `window` : ceux des
+    // tests précédents y resteraient branchés et compteraient deux fois.
+    const ajout = vi.spyOn(window, 'addEventListener').mockImplementation(() => {});
+    TestBed.inject(AnalyticsService).installErrorReporting();
+    rejet = ajout.mock.calls.find(([type]) => type === 'unhandledrejection')![1] as any;
+  });
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it('ne remonte pas une requête annulée par un désabonnement', async () => {
+    rejet({ reason: new DOMException('signal is aborted without reason', 'AbortError') });
+    expect(await envois()).toEqual([]);
+  });
+
+  it('remonte tout autre rejet, avec son message', async () => {
+    rejet({ reason: new TypeError("undefined is not an object (evaluating 'n.length')") });
+    const [envoi] = await envois();
+    expect(envoi.name).toBe('client_unhandled_rejection');
+    expect(envoi.meta.message).toBe("undefined is not an object (evaluating 'n.length')");
+  });
+
+  it('joint la pile d’une erreur, tronquée à 300 caractères', async () => {
+    const erreur = new TypeError('n.length');
+    erreur.stack = `TypeError: n.length\n    at n (https://namorama.com/main-ABC123.js:1:2345)${' '.repeat(400)}`;
+    rejet({ reason: erreur });
+    const [envoi] = await envois();
+    expect(envoi.meta.stack).toContain('main-ABC123.js');
+    expect(envoi.meta.stack.length).toBe(300);
+  });
+
+  it('remonte une valeur qui n’est pas une erreur, avec une pile vide', async () => {
+    rejet({ reason: 'keycloak init timeout' });
+    const [envoi] = await envois();
+    expect(envoi.meta).toMatchObject({ message: 'keycloak init timeout', stack: '' });
+  });
+});

@@ -812,6 +812,37 @@ Les fichiers appartiennent à root (écrits par le conteneur) mais sont lisibles
 
 > Le `docker-compose.yml` de prod n'est pas versionné dans ce dépôt. Toute modification (volume de logs, rotation) est à reporter à la main sur le serveur, et une sauvegarde datée est créée avant chaque changement.
 
+### Erreurs du navigateur
+
+`AnalyticsService.installErrorReporting()` remonte deux événements, chacun avec sa
+pile tronquée à 300 caractères (la limite que `EventsController` applique à toute
+valeur) : `client_error` pour une erreur levée, `client_unhandled_rejection` pour une
+promesse rejetée sans `catch`.
+
+- **Une `AbortError` n'est pas remontée.** C'est une requête que notre code a annulée
+  (désabonnement d'`HttpClient` sous `withFetch()`, changement d'écran) : personne ne
+  la subit. Du 07 au 12/11/2026, elles faisaient 49 rejets sur 51, dont 48 pour une
+  seule visite, et noyaient la seule vraie erreur de la semaine.
+- **La compilation de production produit des source maps cachées** (`angular.json`,
+  `sourceMap.hidden`) : aucun script ne les référence, et le `Dockerfile` les sort du
+  dossier servi vers `/opt/sourcemaps`. Elles ne peuvent donc pas être publiées, et ce
+  sont toujours celles du code déployé. Une `.map` demandée à nginx rend la coquille
+  HTML, pas la map.
+
+**Retraduire une pile** remontée par la production :
+
+```bash
+mkdir -p /tmp/maps-prod
+ssh namorama-prod 'docker exec namorama-web-1 tar -C /opt/sourcemaps -cf - .' | tar -C /tmp/maps-prod -xf -
+# coller la pile de l'événement (champ `stack`) dans pile.txt, puis :
+node web/scripts/symboliser-pile.mjs /tmp/maps-prod < pile.txt
+#   at n (https://namorama.com/main-XVIJYJ27.js:4937:57547)   ⟵ src/app/services/analytics.ts:193:18
+```
+
+Le script lit les formes Chrome (`at f (…js:l:c)`) et Safari (`f@…js:l:c`). Les maps
+ne valent que pour l'image qui les porte : après un redéploiement, une pile antérieure
+ne se retraduit plus.
+
 ### Journal d'accès nginx de l'hôte
 
 Le serveur sert vingt-trois vhosts dans **un seul** `/var/log/nginx/access.log`, au
