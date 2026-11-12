@@ -22,7 +22,8 @@
 
 ## 3. Livraison
 
-- [ ] 3.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
+- [x] 3.1 Ouvrir la pull request, attendre la CI verte. Vérification : `gh pr checks` tout vert.
+  - PR #190, 12/11/2026 : quatre contrôles verts (tests API, système de design, images API et web).
 - [ ] 3.2 Fusionner, attendre l'image, puis `docker compose pull web && docker compose up -d web` sur `namorama-prod`. Vérification : un `*.js` servi par `https://namorama.com` ne contient pas `sourceMappingURL`, sa map ne répond pas, et `/opt/sourcemaps` du conteneur contient les maps des scripts servis.
 
 ## Workflow follow-up
