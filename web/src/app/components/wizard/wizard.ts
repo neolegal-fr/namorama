@@ -40,6 +40,7 @@ import type { BrandReportSummary } from '../../services/brand-report';
 import { BrandReportLockedComponent } from '../brand-report/brand-report-locked';
 import { BrandReportViewComponent } from '../brand-report/brand-report-view';
 import { ReserverBoutonComponent } from '../shared/reserver-bouton';
+import { issueDuLienDeProjet } from './lien-de-projet';
 
 @Component({
   selector: 'app-wizard',
@@ -1821,6 +1822,12 @@ export class WizardComponent implements OnInit, OnDestroy {
     this.route.params.subscribe(params => {
       const id = params['id'];
       if (id && id !== this.projectId()) {
+        // Sans session, le projet ne peut que répondre 401 : on envoie se
+        // connecter d'abord, et on revient sur la même adresse.
+        if (issueDuLienDeProjet({ connecte: this.isLoggedIn() }) === 'connexion') {
+          this.keycloak.login({ redirectUri: window.location.href });
+          return;
+        }
         this.loadProject(id);
       }
     });
@@ -2174,8 +2181,27 @@ export class WizardComponent implements OnInit, OnDestroy {
         
         this.cdr.detectChanges();
       },
-      error: () => {
+      error: (err: { status?: number }) => {
         this.loading.set(false);
+        // Un échec silencieux laissait un wizard vide à l'étape 1 : on dit
+        // pourquoi le projet ne s'ouvre pas (voir `lien-de-projet.ts`).
+        switch (issueDuLienDeProjet({ connecte: this.isLoggedIn(), statut: err?.status ?? 0 })) {
+          case 'connexion':
+            this.keycloak.login({ redirectUri: window.location.href });
+            return;
+          case 'introuvable':
+            this.messageService.add({
+              severity: 'warn', life: 6000,
+              summary: this.translate.instant('PROJECTS.OPEN_NOT_FOUND'),
+            });
+            this.router.navigate(['/app'], { replaceUrl: true });
+            break;
+          default:
+            this.messageService.add({
+              severity: 'error', life: 6000,
+              summary: this.translate.instant('PROJECTS.OPEN_FAILED'),
+            });
+        }
         this.cdr.detectChanges();
       }
     });

@@ -523,6 +523,14 @@ avec un mot d'accompagnement facultatif.
   voyait aucun de ses noms vérifiés.
 - L'interface masque en lecture seule ce que le serveur refuse déjà (notation,
   réactualisation, achat) : proposer un bouton qui échouera est une façon de mentir.
+- **Un lien de projet mène toujours quelque part** (`components/wizard/lien-de-projet.ts`).
+  Sans session, `/projects/:id` envoie à la connexion **avant** de demander le projet,
+  et revient sur la même adresse. Connecté, un 404 (projet inexistant ou non partagé :
+  l'API ne dit pas lequel, le message non plus) avertit puis ramène sur `/app` ; tout
+  autre échec avertit et laisse sur place. Jusqu'au 12/11/2026, l'échec était
+  silencieux : le 10/11, un visiteur déconnecté arrivé par une adresse copiée a pris
+  un 401, vu un wizard vide, et il est reparti. Le lien d'invitation (`?invite=`) suit
+  son propre chemin, plus haut dans `ngOnInit`.
 
 ### L'invité choisit son mot de passe — on ne provisionne rien
 
