@@ -181,8 +181,20 @@ export class AnalyticsService {
     });
 
     window.addEventListener('unhandledrejection', (e) => {
+      const raison = e.reason as { name?: unknown; message?: unknown; stack?: unknown } | undefined;
+      /*
+       * Une `AbortError` est une requête que NOTRE code a annulée — un
+       * désabonnement d'`HttpClient` sous `withFetch()`, un changement d'écran.
+       * Personne ne la subit. Du 07 au 12/11/2026, ces annulations faisaient
+       * 49 rejets remontés sur 51, dont 48 pour une seule visite : elles
+       * noyaient la seule vraie erreur de la semaine.
+       */
+      if (raison?.name === 'AbortError') return;
       this.track('client_unhandled_rejection', {
-        message: String((e.reason as any)?.message ?? e.reason).slice(0, 300),
+        message: String(raison?.message ?? e.reason).slice(0, 300),
+        // Même forme que `client_error` : sans pile, un nom minifié ne
+        // désigne rien (voir « Retraduire une pile » dans CLAUDE.md).
+        stack: String(raison?.stack ?? '').slice(0, 300),
         path: location.pathname,
       });
     });
