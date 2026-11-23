@@ -16,9 +16,11 @@
   Vérification : test du script ; `articles.spec.ts` existant reste vert.
   Test « plan du site » du script vert ; marqueurs posés après `/blog`, la page
   interactive garde sa ligne écrite à la main.
-- [ ] 1.3 Brancher `prebuild`, `prestart`, `pretest` dans `web/package.json`.
+- [x] 1.3 Brancher `prebuild`, `prestart`, `pretest` dans `web/package.json`.
   Vérification : `npm run build` depuis un dépôt propre (fichier généré absent) ;
   build de l'image en CI sur la PR.
+  23/11/2026 : `npm run build` avec `articles.generes.ts` supprimé → régénéré, 27 routes
+  prérendues ; « Build Web image » vert sur la PR #198.
 
 ## 2. Composant générique et routes dérivées
 
