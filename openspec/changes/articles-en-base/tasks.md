@@ -170,11 +170,12 @@
 
 ## 7. Images, nginx et CI
 
-- [ ] 7.1 `web/Dockerfile` : cible `ssr` (Node, `dist/` + `server.mjs`, `TZ=Europe/Paris`,
+- [x] 7.1 `web/Dockerfile` : cible `ssr` (Node, `dist/` + `server.mjs`, `TZ=Europe/Paris`,
   port 4000) à côté de l'image nginx ; `docker-publish.yml` construit et pousse
   `namorama-blog` ; le job « Système de design » bloque les deux images.
   Vérification : `docker build --target ssr web` et `docker build web` passent en local ;
   CI verte sur la PR avec les trois images.
+  23/11/2026 : `docker build --target ssr` et `docker build` passent en local ; PR #206 : CI verte sur les six jobs — Test API, Test Web, Système de design, images API, Web et Blog.
 - [x] 7.2 `web/nginx.conf` : `location` du blog, des 18 adresses historiques et de
   `/sitemap.xml` relayées à `blog:4000` par variable + `resolver 127.0.0.11` ; règle du
   slash final reprise sous `/blog/` ; aucune autre `location` modifiée.
