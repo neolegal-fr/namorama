@@ -58,7 +58,7 @@ Les quatre obstacles ont une cause commune : **on crée d'abord, on vérifie ens
 - **Le conseil reçoit une liste courte** et peut consacrer ses honoraires à la similarité, la vraie difficulté, plutôt qu'à éliminer l'évident.
 - **L'agence peut montrer son travail**, avec les vérifications et leur date. Cette trace répond à la fois au client qui doute de la valeur de la mission et au risque de responsabilité.
 
-C'est ce que fait Namorama. Le cahier des charges du client (longueur maximale, mots à éviter, marques de référence) est respecté par un filtre, pas seulement suggéré au modèle. Chaque nom proposé a déjà son domaine vérifié auprès du registre, dans les extensions choisies. Un rapport ajoute pour un nom les marques INPI et EUIPO, avec les autres orthographes du nom, et les pseudos sur six réseaux. Le projet se partage avec le client par e-mail, en lecture ou en écriture, et les crédits restent débités à l'agence.
+C'est ce que fait Namorama. Le cahier des charges du client (longueur maximale, mots à éviter, marques de référence) est respecté par un filtre, pas seulement suggéré au modèle. Chaque nom proposé a déjà son domaine vérifié auprès du registre, dans les extensions choisies. Un rapport ajoute pour un nom les marques INPI et EUIPO, avec les autres orthographes du nom, et les pseudos sur six réseaux ([voir un exemple de rapport](/report?exemple=1)). Le projet se partage avec le client par e-mail, en lecture ou en écriture, et les crédits restent débités à l'agence.
 
 ::: cta heading="Préparez votre prochaine shortlist client" label="Lancer une recherche"
 Des noms générés à partir du brief, domaines vérifiés en direct, projet partageable avec votre client.

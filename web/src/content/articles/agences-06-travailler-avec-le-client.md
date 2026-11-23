@@ -52,7 +52,7 @@ Dans les deux cas, **les crédits restent débités sur votre compte**, y compri
 
 **Les favoris.** Un pouce levé sur un nom l'enregistre comme favori dans le projet, et le fait remonter en tête de liste : c'est la shortlist de travail, la même pour tous ceux qui ont accès au projet. Un client invité en lecture la voit ; pour qu'il note lui-même, donnez-lui l'accès en recherche.
 
-**Le rapport partagé.** Pour les finalistes, le rapport de marque (domaines, INPI et EUIPO, réseaux sociaux) s'envoie par e-mail à plusieurs adresses, en pièce jointe, sans nouveau débit. Le client le transmet à son associé ou à son conseil sans repasser par vous.
+**Le rapport partagé.** Pour les finalistes, le rapport de marque (domaines, INPI et EUIPO, réseaux sociaux : [voir un exemple](/report?exemple=1)) s'envoie par e-mail à plusieurs adresses, en pièce jointe, sans nouveau débit. Le client le transmet à son associé ou à son conseil sans repasser par vous.
 
 **Ce qui n'existe pas encore** : un rôle de relecteur qui ne pourrait que commenter, des commentaires nom par nom, la marque blanche. Le partage montre le projet tel qu'il est, sous le nom de Namorama.
 

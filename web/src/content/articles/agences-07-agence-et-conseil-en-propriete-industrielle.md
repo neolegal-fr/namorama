@@ -60,7 +60,7 @@ Ce dossier ne remplace pas le travail du conseil. Il lui évite de refaire ce qu
 
 ## Ce que fournit Namorama, et ce qu'il ne fournit pas {#namorama}
 
-Le rapport de marque de Namorama couvre la colonne « agence » du tableau :
+Le rapport de marque de Namorama couvre la colonne « agence » du tableau ([voir un exemple](/report?exemple=1)) :
 
 - **Marques INPI et EUIPO**, cherchées sous le nom et ses autres orthographes : forme collée et forme espacée quand le nom porte un séparateur, et un découpage proposé par le modèle puis vérifié quand c'est un mot collé. Pour chaque dépôt trouvé : degré de proximité (exact, normalisé), classes, statut, numéro et lien vers la notice.
 - **Domaines** dans les extensions choisies, et **six réseaux sociaux**.

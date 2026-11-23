@@ -85,7 +85,7 @@ Lancez une recherche : vous verrez la génération IA et la vérification de dis
 Autant le dire clairement, y compris pour nous : un domaine libre ne signifie pas qu'un nom est utilisable. Trois vérifications restent à votre charge, au moins en partie.
 
 - **La marque déposée.** Un nom peut être libre en `.com` et déjà déposé à l'INPI dans votre classe d'activité. C'est le risque juridique le plus sérieux.
-  - Pour les marques identiques, le rapport de marque de Namorama (50 crédits) interroge l'INPI et l'EUIPO. Il cherche le nom et ses autres orthographes : une marque déposée « Neo Legal » n'est pas trouvée par une recherche sur « neolegal ».
+  - Pour les marques identiques, le rapport de marque de Namorama (50 crédits, [voir un exemple](/report?exemple=1)) interroge l'INPI et l'EUIPO. Il cherche le nom et ses autres orthographes : une marque déposée « Neo Legal » n'est pas trouvée par une recherche sur « neolegal ».
   - Une marque qui ne fait que **ressembler** (« Kalm » face à « Calm ») peut aussi fonder une opposition. Aucun générateur grand public ne la cherche : c'est le rôle d'une recherche de similarité, auprès de l'INPI ou d'un conseil en propriété industrielle, avant le dépôt (voir [la recherche d'antériorité](/recherche-anteriorite-marque-inpi)).
 - **Le sens dans les autres langues.** Un nom inventé peut vouloir dire quelque chose de malheureux ailleurs. Si vous visez plusieurs marchés, faites-le lire à des locuteurs natifs.
 - **Le test de la radio.** Dictez le nom au téléphone à quelqu'un qui ne l'a jamais vu. S'il faut l'épeler, il vous coûtera cher pendant des années — en support, en bouche-à-oreille, en publicité.

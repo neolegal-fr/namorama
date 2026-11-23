@@ -91,7 +91,7 @@ Pour une activité de confiance personnelle (coaching, artisanat d'art, photogra
 
 ### Est-ce que Namorama vérifie le registre des entreprises ?
 
-Non : Namorama vérifie les noms de domaine, les marques (INPI, EUIPO) et, dans le rapport, les pseudos des réseaux sociaux. La recherche d'homonymes parmi les entreprises immatriculées reste à faire dans l'annuaire des entreprises.
+Non : Namorama vérifie les noms de domaine, les marques (INPI, EUIPO) et, dans le rapport ([voir un exemple](/report?exemple=1)), les pseudos des réseaux sociaux. La recherche d'homonymes parmi les entreprises immatriculées reste à faire dans l'annuaire des entreprises.
 
 ## À lire aussi {#suite}
 

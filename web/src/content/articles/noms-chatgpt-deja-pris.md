@@ -56,7 +56,7 @@ Inutile de taper chaque nom chez un registrar : c'est lent, et les registrars on
 
 1. Pour **un seul nom**, le [test d'un nom](/verifier-disponibilite-nom-de-marque) vérifie gratuitement ses domaines, sans inscription.
 2. Pour **une liste**, lancez une recherche puis collez vos noms dans le champ de vérification des résultats, séparés par des virgules : « velora, nuvira, avelis ». Chaque domaine est interrogé auprès du registre de son extension, et ce qui n'a pas pu être vérifié est affiché comme tel, jamais comme libre.
-3. Pour le nom retenu, le **rapport de marque** ajoute les marques INPI et EUIPO avec les orthographes voisines, et les pseudos des réseaux sociaux.
+3. Pour le nom retenu, le **rapport de marque** ajoute les marques INPI et EUIPO avec les orthographes voisines, et les pseudos des réseaux sociaux ([voir un exemple](/report?exemple=1)).
 
 ## Obtenir de l'IA des noms qui ont une chance d'être libres {#mieux}
 

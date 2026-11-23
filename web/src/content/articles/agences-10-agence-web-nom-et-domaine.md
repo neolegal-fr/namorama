@@ -53,7 +53,7 @@ Les générateurs de noms des registrars et hébergeurs sont gratuits, et biais�
 
 - **Des noms dont le domaine est déjà vérifié** au registre, dans les extensions que vous choisissez (`.fr`, `.com`, l'extension du pays du client), avant même que vous les lisiez. Le client n'a pas le temps d'aimer un nom pris.
 - **Aucun domaine à vous vendre** : Namorama n'est pas un registrar et ne touche aucune commission. Le domaine s'achète où vous voulez.
-- **Le rapport de marque** pour le nom retenu : marques INPI et EUIPO sous toutes ses orthographes, et six réseaux sociaux. À joindre au dossier du client avant de lancer le site.
+- **Le rapport de marque** pour le nom retenu : marques INPI et EUIPO sous toutes ses orthographes, et six réseaux sociaux. À joindre au dossier du client avant de lancer le site ([voir un exemple](/report?exemple=1)).
 - **Le projet partagé avec le client**, qui voit les noms et leurs vérifications sans que vous ayez à exporter une liste.
 
 Le tout sans abonnement : 100 crédits offerts chaque mois, puis des packs à partir de 9 €.
