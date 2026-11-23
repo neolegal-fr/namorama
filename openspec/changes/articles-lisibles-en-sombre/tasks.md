@@ -25,9 +25,12 @@
 
 ## 2. Livraison
 
-- [ ] 2.1 PR, CI verte, fusion, déploiement de l'image `web`.
-- [ ] 2.2 Production : script de contraste sur `https://namorama.com/namorama-vs-namelix`
+- [x] 2.1 PR, CI verte, fusion, déploiement de l'image `web`.
+  23/11/2026 : PR #203, CI verte, fusionnée, build `main` vert, image `web` déployée.
+- [x] 2.2 Production : script de contraste sur `https://namorama.com/namorama-vs-namelix`
   en sombre et en clair, tous les éléments ≥ 4,5:1.
+  23/11/2026 : 14 éléments mesurés ; minimum 6,92:1 en sombre (phrase de l'encart),
+  4,95:1 en clair (cellule « oui »).
 
 ## Workflow follow-up
 
