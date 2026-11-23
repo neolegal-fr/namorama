@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Guide : trouver un nom d'entreprise (société). Page prérendue (SSG) ciblant
@@ -11,14 +12,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-guide-nom-entreprise',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Nom d'entreprise
-      </nav>
-
-      <h1>Comment trouver un nom d'entreprise (et sécuriser le domaine) ?</h1>
+      <app-article-entete>
+        <h1>Comment trouver un nom d'entreprise (et sécuriser le domaine) ?</h1>
+      </app-article-entete>
       <p class="lead">
         Le nom de votre entreprise vous suivra des années : sur vos factures, votre site,
         vos cartes de visite, au registre du commerce. Il doit être disponible

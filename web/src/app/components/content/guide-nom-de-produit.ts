@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Guide : trouver un nom de produit. Page prérendue (SSG) ciblant
@@ -11,14 +12,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-guide-nom-de-produit',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Nom de produit
-      </nav>
-
-      <h1>Comment trouver un nom de produit qui marque les esprits ?</h1>
+      <app-article-entete>
+        <h1>Comment trouver un nom de produit qui marque les esprits ?</h1>
+      </app-article-entete>
       <p class="lead">
         Un bon nom de produit se retient, se cherche sur Google et se prononce sans hésiter. Contrairement
         au nom d'entreprise, il peut être plus descriptif, plus joueur, plus ciblé sur un bénéfice. Mais il

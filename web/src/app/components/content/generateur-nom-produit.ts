@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Landing transactionnelle : générateur de nom de produit.
@@ -16,14 +17,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-generateur-nom-produit',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Nom de produit
-      </nav>
-
-      <h1>Générateur de nom de produit</h1>
+      <app-article-entete>
+        <h1>Générateur de nom de produit</h1>
+      </app-article-entete>
       <p class="lead">
         Vous lancez un produit et il vous faut un nom&nbsp;: mémorable, prononçable, et surtout
         <strong>dont le domaine est encore libre</strong>. Décrivez votre produit en une phrase&nbsp;:

@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Page de comparaison (intention commerciale forte) : Namorama vs Namelix.
@@ -12,14 +13,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-comparatif-namelix',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Namorama vs Namelix
-      </nav>
-
-      <h1>Namorama vs Namelix : quel générateur de noms de marque choisir ?</h1>
+      <app-article-entete>
+        <h1>Namorama vs Namelix : quel générateur de noms de marque choisir ?</h1>
+      </app-article-entete>
       <p class="lead">
         Namelix est l'un des générateurs de noms les plus connus, réputé pour ses noms courts et
         « brandables ». Namorama joue sur un autre terrain&nbsp;: la <strong>disponibilité de domaine

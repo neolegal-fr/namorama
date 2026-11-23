@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * « Générateur de nom d'entreprise » — et surtout de SOCIÉTÉ.
@@ -20,14 +21,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-generateur-nom-entreprise',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Générateur de nom d'entreprise
-      </nav>
-
-      <h1>Générateur de nom d'entreprise et de société</h1>
+      <app-article-entete>
+        <h1>Générateur de nom d'entreprise et de société</h1>
+      </app-article-entete>
       <p class="lead">
         Vous créez une société, une micro-entreprise ou une activité artisanale&nbsp;? Décrivez ce que vous
         faites, et l'IA propose des <strong>noms d'entreprise</strong> disponibles, avec le

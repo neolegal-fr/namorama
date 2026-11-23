@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Page de comparaison (intention commerciale) : Namorama vs Looka.
@@ -12,14 +13,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-comparatif-looka',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Namorama vs Looka
-      </nav>
-
-      <h1>Namorama vs Looka : nom de marque ou logo, que privilégier ?</h1>
+      <app-article-entete>
+        <h1>Namorama vs Looka : nom de marque ou logo, que privilégier ?</h1>
+      </app-article-entete>
       <p class="lead">
         Looka est avant tout un <strong>créateur de logo et de brand kit</strong> qui propose aussi des noms.
         Namorama part du problème inverse&nbsp;: trouver d'abord un <strong>nom dont le domaine est réellement

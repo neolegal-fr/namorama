@@ -432,6 +432,18 @@ body {
     text-decoration: underline;
     text-underline-offset: 2px;
 }
+/* Signature d'un article du blog (auteur · dates · lecture), sous le H1. Les
+   segments passent à la ligne d'un bloc entier, jamais au milieu d'une date. */
+.article .article-signature {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 0.5rem;
+    row-gap: 0.15rem;
+    margin: -0.5rem 0 1.5rem;
+    font-size: 0.9rem;
+    color: var(--p-surface-500);
+}
+.article .article-signature strong { color: var(--p-surface-700); font-weight: 600; }
 .article .meta {
     font-size: 0.85rem;
     color: var(--p-surface-500);

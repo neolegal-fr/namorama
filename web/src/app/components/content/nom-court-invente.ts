@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Page intention « meta-naming » : nom court, inventé, premium façon Qonto/Stripe.
@@ -13,14 +14,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-nom-court-invente',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Nom court &amp; inventé
-      </nav>
-
-      <h1>Trouver un nom de marque court et inventé (façon Qonto, Stripe, Notion)</h1>
+      <app-article-entete>
+        <h1>Trouver un nom de marque court et inventé (façon Qonto, Stripe, Notion)</h1>
+      </app-article-entete>
       <p class="lead">
         Vous cherchez un nom <strong>court, inventé et premium</strong> — 5 à 8 lettres, prononçable partout,
         qui sonne comme <em>Qonto, Stripe, Figma, Notion ou Brevo</em> — <strong>avec le domaine libre</strong>

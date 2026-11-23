@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Meta, Title } from '@angular/platform-browser';
+import { AUTEUR, articleDe, type Article } from './articles';
 
 const ORIGIN = 'https://namorama.com';
 
@@ -105,14 +106,64 @@ export function applyContentSeo(seo: ContentSeo): void {
     if (seo.alternates['fr']) add('x-default', seo.alternates['fr']);
   }
 
+  // Article du blog : dates en Open Graph, et un `BlogPosting` à côté du
+  // balisage propre à la page. Les dates viennent du registre, jamais de la page.
+  const article = articleDe(seo.path);
+  if (article) {
+    meta.updateTag({ property: 'article:published_time', content: article.publie });
+    meta.updateTag({ property: 'article:modified_time', content: article.misAJour });
+    meta.updateTag({ property: 'article:author', content: AUTEUR.nom });
+  } else {
+    meta.removeTag('property="article:published_time"');
+    meta.removeTag('property="article:modified_time"');
+    meta.removeTag('property="article:author"');
+  }
+  const jsonLd = donneesStructurees(seo, article, url);
+
   // Données structurées de la page. Comme les hreflang, on retire d'abord
   // celles de la route précédente : le <head> survit à la navigation.
   doc.querySelectorAll('script[data-page-schema]').forEach((s) => s.remove());
-  if (seo.jsonLd) {
+  if (jsonLd) {
     const script = doc.createElement('script');
     script.setAttribute('type', 'application/ld+json');
     script.setAttribute('data-page-schema', '');
-    script.textContent = JSON.stringify(seo.jsonLd);
+    script.textContent = JSON.stringify(jsonLd);
     doc.head.appendChild(script);
   }
+}
+
+/**
+ * JSON-LD d'une page : celui qu'elle déclare, plus un `BlogPosting` si elle est
+ * au registre du blog. Les deux partent dans un `@graph` : un `FAQPage` existant
+ * n'est jamais remplacé.
+ */
+export function donneesStructurees(
+  seo: Pick<ContentSeo, 'title' | 'description' | 'jsonLd'>,
+  article: Article | undefined,
+  url: string,
+): unknown {
+  if (!article) return seo.jsonLd;
+  const billet = {
+    '@type': 'BlogPosting',
+    headline: seo.title,
+    description: seo.description,
+    datePublished: article.publie,
+    dateModified: article.misAJour,
+    inLanguage: 'fr',
+    url,
+    mainEntityOfPage: url,
+    articleSection: article.categorie,
+    author: { '@type': 'Person', name: AUTEUR.nom, jobTitle: 'Créateur de Namorama' },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Namorama',
+      url: ORIGIN,
+      logo: { '@type': 'ImageObject', url: `${ORIGIN}/apple-touch-icon.png` },
+    },
+    image: `${ORIGIN}/assets/og-image.png`,
+  };
+  if (!seo.jsonLd) return { '@context': 'https://schema.org', ...billet };
+  const propre = { ...(seo.jsonLd as Record<string, unknown>) };
+  delete propre['@context'];
+  return { '@context': 'https://schema.org', '@graph': [billet, propre] };
 }

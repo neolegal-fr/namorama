@@ -867,6 +867,27 @@ passe, il ne passe pas en SSH non interactif).
 > Rotation à 14 jours : ce journal reste une source d'appoint. Le compte durable des
 > visites vit en base (`visitor_session`), pas ici.
 
+### Blog : un registre, des adresses qui ne bougent pas
+
+Les pages de contenu sont présentées en blog depuis le 23/11/2026 : index `/blog`
+(`/guides` y redirige en 301, nginx du conteneur web), en-tête daté et signé
+« Nicolas Riousset, créateur de Namorama », `BlogPosting` dans le JSON-LD.
+
+- **`articles.ts` est la source unique** des métadonnées (chemin, titre, extrait,
+  catégorie, dates, temps de lecture). L'index, `<app-article-entete>` (trouvé par
+  l'URL du routeur) et `applyContentSeo` (par `path`) le lisent ; aucun article ne
+  recopie sa date.
+- **Les adresses existantes ne changent pas** (`/guides/…`, `/generateur-…`) : elles
+  sont indexées. Les nouveaux articles vivent sous `/blog/…`.
+- Dates tirées de git (premier commit, dernier commit qui touche au texte) ; lecture =
+  mots du gabarit / 220, arrondi au supérieur.
+- **Ajouter un article** : le composant (H1 enveloppé dans `<app-article-entete>`),
+  l'entrée du registre, la route dans `app.routes.ts` **et** `app.routes.server.ts`
+  (prérendu), la ligne de `sitemap.xml` avec `lastmod`. `articles.spec.ts` échoue si
+  l'une manque.
+- Un article ne cite jamais une description d'utilisateur telle quelle ; un chiffre
+  mesuré (registre, base) porte sa date.
+
 ### Pages prérendues : les URL d'actifs sont ABSOLUES
 
 Angular émet `<script src="main-XXXX.js">` en relatif et compte sur

@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Article pilier : guide pratique pour trouver un nom de marque disponible.
@@ -12,14 +13,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-guide-nom-de-marque',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; Guides &rsaquo; Trouver un nom de marque
-      </nav>
-
-      <h1>Comment trouver un nom de marque disponible (avec son domaine) ?</h1>
+      <app-article-entete>
+        <h1>Comment trouver un nom de marque disponible (avec son domaine) ?</h1>
+      </app-article-entete>
       <p class="lead">
         Trouver un nom de marque, c'est facile. En trouver un qui soit à la fois mémorable,
         pertinent <strong>et dont le nom de domaine est encore libre</strong>, beaucoup moins.

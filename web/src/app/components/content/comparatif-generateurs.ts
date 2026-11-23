@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Article comparatif (intention commerciale) : Namorama face aux autres
@@ -13,14 +14,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-comparatif-generateurs',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; Comparatif &rsaquo; Générateurs de noms
-      </nav>
-
-      <h1>Générateurs de noms de marque : comment choisir (et pourquoi la disponibilité change tout)</h1>
+      <app-article-entete>
+        <h1>Générateurs de noms de marque : comment choisir (et pourquoi la disponibilité change tout)</h1>
+      </app-article-entete>
       <p class="lead">
         Tous les générateurs de noms ne se valent pas. La vraie ligne de partage n'est pas
         la créativité — c'est <strong>la fiabilité de la disponibilité de domaine</strong>.

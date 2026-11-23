@@ -599,7 +599,7 @@ export class LandingComponent implements OnInit, AfterViewInit, OnDestroy {
     { path: '/guides/trouver-nom-de-startup',          label: 'Trouver un nom de startup' },
     { path: '/verifier-disponibilite-nom-de-marque',   label: 'Vérifier une marque avant de déposer' },
     { path: '/comparatif-generateurs-de-noms',         label: 'Comparatif des générateurs' },
-    { path: '/guides',                                 label: 'Tous les guides' },
+    { path: '/blog',                                   label: 'Tous les articles du blog' },
   ];
 }
 

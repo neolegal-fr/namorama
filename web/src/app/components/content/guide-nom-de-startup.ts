@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Guide : trouver un nom de startup. Page prérendue (SSG) ciblant
@@ -11,14 +12,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-guide-nom-de-startup',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Nom de startup
-      </nav>
-
-      <h1>Comment trouver un nom de startup (court, mémorable, dispo) ?</h1>
+      <app-article-entete>
+        <h1>Comment trouver un nom de startup (court, mémorable, dispo) ?</h1>
+      </app-article-entete>
       <p class="lead">
         Une startup nomme vite, communique vite, et lève parfois vite&nbsp;: le nom doit tenir sur un slide,
         une URL et un logo dès le premier jour. La contrainte numéro un&nbsp;: <strong>un nom de domaine

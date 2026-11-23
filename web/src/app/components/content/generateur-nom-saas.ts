@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Landing sectorielle : générateur de nom pour SaaS / logiciel B2B.
@@ -11,14 +12,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-generateur-nom-saas',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Nom de SaaS
-      </nav>
-
-      <h1>Générateur de nom pour SaaS / logiciel B2B</h1>
+      <app-article-entete>
+        <h1>Générateur de nom pour SaaS / logiciel B2B</h1>
+      </app-article-entete>
       <p class="lead">
         Vous créez un <strong>SaaS</strong> ou un logiciel métier&nbsp;? Trouvez un nom de produit crédible,
         facile à retenir, avec le <strong>domaine disponible vérifié en temps réel</strong>

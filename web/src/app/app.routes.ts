@@ -16,7 +16,10 @@ import { GuideNomDeMarqueComponent } from './components/content/guide-nom-de-mar
 import { ComparatifGenerateursComponent } from './components/content/comparatif-generateurs';
 import { ComparatifNamelixComponent } from './components/content/comparatif-namelix';
 import { ComparatifLookaComponent } from './components/content/comparatif-looka';
-import { GuidesIndexComponent } from './components/content/guides-index';
+import { BlogIndexComponent } from './components/content/blog-index';
+import { NomEntrepriseArtisanComponent } from './components/content/nom-entreprise-artisan';
+import { NomsChatgptDejaPrisComponent } from './components/content/noms-chatgpt-deja-pris';
+import { DeposerMarqueInpiComponent } from './components/content/deposer-marque-inpi';
 import { GuideNomEntrepriseComponent } from './components/content/guide-nom-entreprise';
 import { GuideNomDeProduitComponent } from './components/content/guide-nom-de-produit';
 import { GuideNomDeStartupComponent } from './components/content/guide-nom-de-startup';
@@ -42,7 +45,13 @@ export const routes: Routes = [
   // avoir une version anglaise réelle — les guides restent en français et
   // n'ont donc pas de `/en/` (ce serait du contenu dupliqué).
   { path: 'en', component: LandingComponent },
-  { path: 'guides', component: GuidesIndexComponent },
+  // L'index s'appelle « blog » depuis le 23/11/2026. nginx répond déjà 301 sur
+  // /guides ; cette redirection ne sert qu'à la navigation interne au client.
+  { path: 'guides', redirectTo: 'blog', pathMatch: 'full' },
+  { path: 'blog', component: BlogIndexComponent },
+  { path: 'blog/nom-entreprise-artisan', component: NomEntrepriseArtisanComponent },
+  { path: 'blog/noms-chatgpt-deja-pris', component: NomsChatgptDejaPrisComponent },
+  { path: 'blog/deposer-marque-inpi-prix-delais', component: DeposerMarqueInpiComponent },
   { path: 'guides/trouver-nom-de-marque', component: GuideNomDeMarqueComponent },
   { path: 'guides/trouver-nom-entreprise', component: GuideNomEntrepriseComponent },
   { path: 'guides/trouver-nom-de-produit', component: GuideNomDeProduitComponent },

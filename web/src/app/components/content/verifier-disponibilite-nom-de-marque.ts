@@ -7,6 +7,7 @@ import { timeout } from 'rxjs';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 import { BrandReportViewComponent } from '../brand-report/brand-report-view';
 import { BrandReportService, BrandReport, Availability, BRAND_REPORT_COST } from '../../services/brand-report';
 
@@ -22,14 +23,12 @@ import { BrandReportService, BrandReport, Availability, BRAND_REPORT_COST } from
 @Component({
   selector: 'app-verifier-disponibilite-nom-de-marque',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, FormsModule, ArticleCtaComponent, BrandReportViewComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, FormsModule, ArticleCtaComponent, BrandReportViewComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Vérifier une marque
-      </nav>
-
-      <h1>Vérifier la disponibilité d'un nom de marque</h1>
+      <app-article-entete>
+        <h1>Vérifier la disponibilité d'un nom de marque</h1>
+      </app-article-entete>
       <p class="lead">
         Avant de vous engager sur un nom, une question décide de tout&nbsp;: est-il <strong>réellement libre</strong>&nbsp;?
         Pas seulement le domaine — aussi les <strong>réseaux sociaux</strong> et surtout la <strong>marque déposée</strong>
