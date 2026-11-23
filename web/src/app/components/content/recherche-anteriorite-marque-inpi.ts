@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * « Recherche d'antériorité » / « nom de marque disponible INPI ».
@@ -21,14 +22,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-recherche-anteriorite-marque-inpi',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Recherche d'antériorité
-      </nav>
-
-      <h1>Recherche d'antériorité&nbsp;: vérifier si un nom est disponible à l'INPI</h1>
+      <app-article-entete>
+        <h1>Recherche d'antériorité&nbsp;: vérifier si un nom est disponible à l'INPI</h1>
+      </app-article-entete>
       <p class="lead">
         Avant de déposer une marque — et avant même d'imprimer quoi que ce soit — une question tranche tout&nbsp;:
         <strong>quelqu'un a-t-il déjà déposé ce nom pour votre activité&nbsp;?</strong> Voici comment le

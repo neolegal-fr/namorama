@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Tête de rubrique : « générateur de nom de marque ».
@@ -17,14 +18,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-generateur-nom-de-marque',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Générateur de nom de marque
-      </nav>
-
-      <h1>Générateur de nom de marque gratuit, avec le domaine vérifié</h1>
+      <app-article-entete>
+        <h1>Générateur de nom de marque gratuit, avec le domaine vérifié</h1>
+      </app-article-entete>
       <p class="lead">
         Décrivez votre projet en une phrase&nbsp;: l'IA propose des <strong>noms de marque</strong> adaptés, et
         Namorama <strong>vérifie en direct</strong> si le nom de domaine est réellement libre

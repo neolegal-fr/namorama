@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Landing sectorielle : générateur de nom pour boutique en ligne / e-commerce.
@@ -12,14 +13,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-generateur-nom-ecommerce',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Nom de boutique en ligne
-      </nav>
-
-      <h1>Générateur de nom pour boutique en ligne (e-commerce)</h1>
+      <app-article-entete>
+        <h1>Générateur de nom pour boutique en ligne (e-commerce)</h1>
+      </app-article-entete>
       <p class="lead">
         Vous lancez une <strong>boutique en ligne</strong> ou une marque e-commerce&nbsp;? Trouvez un nom
         mémorable et <strong>vérifiez la disponibilité du domaine en direct</strong> (<code>.com</code>,

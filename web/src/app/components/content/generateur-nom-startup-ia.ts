@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Landing sectorielle : générateur de nom pour startup IA. Cible « nom de
@@ -12,14 +13,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-generateur-nom-startup-ia',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Nom de startup IA
-      </nav>
-
-      <h1>Générateur de nom pour startup IA</h1>
+      <app-article-entete>
+        <h1>Générateur de nom pour startup IA</h1>
+      </app-article-entete>
       <p class="lead">
         Trouvez un <strong>nom de marque pour votre startup d'intelligence artificielle</strong> — court,
         premium et facile à prononcer — avec le <strong>domaine disponible vérifié en temps réel</strong>

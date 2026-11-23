@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Landing sectorielle : générateur de nom pour marque cosmétique / beauté / bijoux.
@@ -12,14 +13,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-generateur-nom-marque-cosmetique',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Nom de marque cosmétique
-      </nav>
-
-      <h1>Générateur de nom pour marque cosmétique &amp; beauté</h1>
+      <app-article-entete>
+        <h1>Générateur de nom pour marque cosmétique &amp; beauté</h1>
+      </app-article-entete>
       <p class="lead">
         Cosmétiques, soins, bien-être ou bijoux&nbsp;: trouvez un <strong>nom de marque élégant et premium</strong>,
         avec le <strong>domaine disponible vérifié en temps réel</strong> (<code>.com</code>, <code>.fr</code>).

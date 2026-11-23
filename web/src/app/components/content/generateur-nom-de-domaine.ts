@@ -3,6 +3,7 @@ import { RouterModule } from '@angular/router';
 import { TroisRisquesComponent } from './trois-risques';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
+import { ArticleEnteteComponent } from './article-entete';
 
 /**
  * Tête de rubrique : « générateur de nom de domaine ».
@@ -16,14 +17,12 @@ import { applyContentSeo } from './content-seo';
 @Component({
   selector: 'app-generateur-nom-de-domaine',
   standalone: true,
-  imports: [TroisRisquesComponent, RouterModule, ArticleCtaComponent],
+  imports: [ArticleEnteteComponent, TroisRisquesComponent, RouterModule, ArticleCtaComponent],
   template: `
     <article class="article">
-      <nav class="meta">
-        <a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/guides">Guides</a> &rsaquo; Générateur de nom de domaine
-      </nav>
-
-      <h1>Générateur de nom de domaine disponible</h1>
+      <app-article-entete>
+        <h1>Générateur de nom de domaine disponible</h1>
+      </app-article-entete>
       <p class="lead">
         Décrivez votre projet&nbsp;: l'IA propose des noms, et chaque nom de domaine est
         <strong>testé pour de vrai</strong> auprès du registre avant de vous être montré — pas estimé, pas

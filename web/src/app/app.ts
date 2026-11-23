@@ -445,6 +445,9 @@ const THEME_ICONS: Record<'system' | 'light' | 'dark', string> = {
             <a href="https://neolegal.fr" target="_blank" rel="noopener">NeoLegal</a>
           </span>
           <button type="button" (click)="openFeedback()">{{ 'APP.FEEDBACK' | translate }}</button>
+          <!-- « Blog » se dit pareil dans toutes les langues du site. Lien présent
+               sur toutes les pages : c'est l'entrée du maillage des articles. -->
+          <a routerLink="/blog">Blog</a>
           <a routerLink="/legal">{{ 'APP.LEGAL' | translate }}</a>
           <a routerLink="/privacy">{{ 'APP.PRIVACY' | translate }}</a>
           <!-- Le seul chemin pour retirer un consentement : sans lui, le choix
