@@ -54,10 +54,6 @@
     "src/app/components/brand-report/brand-report-view.ts": {
       "stylesEnLigne": 2
     },
-    "src/app/components/content/article-cta.ts": {
-      "couleurs": 2,
-      "stylesEnLigne": 5
-    },
     "src/app/components/content/rapport-public.css": {
       "taillesPx": 1
     },
@@ -90,7 +86,7 @@
       "stylesEnLigne": 15
     },
     "src/styles.css": {
-      "couleurs": 12,
+      "couleurs": 11,
       "taillesPx": 1,
       "important": 12
     },
