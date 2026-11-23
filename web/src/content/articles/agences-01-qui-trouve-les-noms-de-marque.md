@@ -74,7 +74,7 @@ Mieux vaut le dire avant qu'un client ou un conseil ne le découvre :
 
 ## La suite de la série {#suite}
 
-Chaque lundi, un article reprend l'un de ces obstacles pour un métier précis : la responsabilité de l'agence, le brief de naming, la shortlist vérifiée, les outils du métier, le travail avec le client, la relation avec le conseil en propriété industrielle, le freelance face à l'IA, le nommage pour plusieurs pays et l'agence web. Retrouvez-les sur [le blog](/blog).
+Chaque semaine, un article reprend l'un de ces obstacles pour un métier précis : la responsabilité de l'agence, le brief de naming, la shortlist vérifiée, les outils du métier, le travail avec le client, la relation avec le conseil en propriété industrielle, le freelance face à l'IA, le nommage pour plusieurs pays et l'agence web. Retrouvez-les sur [le blog](/blog).
 
 Pour la méthode générale, en attendant :
 

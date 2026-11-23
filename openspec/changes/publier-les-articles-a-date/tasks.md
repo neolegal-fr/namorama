@@ -33,25 +33,18 @@
 - [x] 1.5 `just design-check`.
   23/11/2026 : `node web/scripts/verifier-design.mjs` — aucune valeur en dur ajoutée.
 
-## 2. Parution hebdomadaire
+## 2. Parution au déploiement suivant
 
-- [ ] 2.1 `.github/workflows/publier-les-articles.yml` : lundi 05:00 UTC, garde « un
-  article paraît aujourd'hui à Paris », build et push de l'image `web` sous `latest` et
-  le SHA ; déclenchement manuel avec `forcer`.
-  Vérification : déclenchement manuel un jour sans article → « rien à construire » ;
-  avec `forcer` → image poussée (tag SHA visible au registry).
-- [ ] 2.2 `infra/prod/publier-les-articles.sh` installé sur le serveur, crontab de
-  `nicolas` (`CRON_TZ=Europe/Paris`, `30 7 * * 1`), sauvegarde datée de la crontab
-  avant modification. **Accord de l'utilisateur requis** (changement en production).
-  Vérification : exécution manuelle une fois → ligne « image inchangée » ou
-  « déployée » dans `logs/publication-articles.log`, `docker compose ps` sain.
+- [x] 2.1 Retrait de la tâche planifiée (workflow du lundi, script et crontab du serveur),
+  décidé le 23/11/2026 : un article paraît au premier déploiement qui suit sa date.
+  Vérification : `.github/workflows/` ne contient que `docker-publish.yml` ; `infra/prod/`
+  supprimé ; aucun changement en production.
 
 ## 3. Documentation
 
-- [ ] 3.1 `docs/ecrire-un-article.md` : programmer un article (date un lundi), règle des
-  liens vers les seuls articles parus, prévisualisation `ARTICLES_JUSQU_AU`, vérifier
-  une parution. Section « Blog » de `CLAUDE.md` : le blog paraît le lundi, workflow et
-  crontab, journal à lire.
+- [x] 3.1 `docs/ecrire-un-article.md` : programmer un article (parution au déploiement
+  suivant sa date), règle des liens vers les seuls articles parus, prévisualisation
+  `ARTICLES_JUSQU_AU`, vérifier une parution. Section « Blog » de `CLAUDE.md` à jour.
   Vérification : relecture ; un article d'essai programmé au lendemain n'apparaît pas
   au build du jour.
 
@@ -64,8 +57,8 @@
 
 ## Workflow follow-up
 
-- [ ] Lundi 30/11/2026 : le workflow a construit, le journal du serveur dit « déployée »,
-  `/blog/agences-qui-trouve-les-noms-de-marque` répond 200 avec son `BlogPosting`.
-- [ ] Lundi 07/12/2026 : deuxième parution sans intervention.
-- [ ] Un lundi sans article : workflow « rien à construire », journal « image inchangée ».
+- [ ] Premier déploiement après le 30/11/2026 : `/blog/agences-qui-trouve-les-noms-de-marque`
+  répond 200 avec son `BlogPosting` daté du 30/11/2026.
+- [ ] Un mois plus tard : chaque article de la série a paru, au plus quelques jours après
+  sa date. Sinon, reconsidérer une reconstruction planifiée (décision 3 du design).
 - [ ] Archiver après `articles-en-markdown`.

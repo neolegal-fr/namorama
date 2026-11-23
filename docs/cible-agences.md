@@ -1,7 +1,7 @@
 # Cible : ceux qui cherchent un nom pour quelqu'un d'autre
 
 Recherche du 23/11/2026, à l'origine de la série d'articles `web/src/content/articles/agences-*.md`
-(un par lundi, du 30/11/2026 au 01/02/2027). Aucun article antérieur ne visait ces lecteurs :
+(datés un par lundi, du 30/11/2026 au 01/02/2027 ; chacun paraît au premier déploiement qui suit sa date). Aucun article antérieur ne visait ces lecteurs :
 le conseil en propriété industrielle n'y apparaissait que comme l'étape « faites valider par… »,
 et le partage de projet n'était mentionné nulle part.
 

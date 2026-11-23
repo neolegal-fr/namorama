@@ -23,18 +23,18 @@ Un article dont la date `publie` n'est pas encore venue (à l'heure de Paris) **
 compilé** : ni page, ni carte dans l'index, ni ligne dans le plan du site. On peut donc
 fusionner une série entière d'avance ; chaque article paraît à sa date.
 
-- **Dater un lundi.** Chaque lundi à 05:00 UTC, le workflow
-  `.github/workflows/publier-les-articles.yml` reconstruit l'image web si un article
-  porte la date du jour, et le serveur la tire à 07:30 (`infra/prod/publier-les-articles.sh`).
-  Un article daté un autre jour paraît au lundi suivant, ou au premier déploiement.
+- **L'article paraît au premier déploiement de l'image web qui suit sa date.** Le site est
+  du HTML prérendu : la date est évaluée au build, pas à la visite. Aucune tâche planifiée
+  ne reconstruit le site ; si rien n'est déployé pendant une semaine, l'article attend.
+  Pour le publier le jour dit, déployer l'image web ce jour-là (commande ci-dessus).
 - **Ne renvoyer qu'aux articles déjà parus**, ou parus le même jour. Un lien vers un
   article programmé plus tard fait échouer la compilation (voir « Erreurs »). Pour
   qu'un ancien article renvoie à un nouveau, le modifier après la parution.
 - **Relire la série avant de fusionner** : `ARTICLES_JUSQU_AU=2027-02-01 npm start`
   compile tout ce qui est programmé jusqu'à cette date. Ne pas committer le
   `sitemap.xml` produit ainsi : relancer `node scripts/articles.mjs` sans la variable.
-- **Vérifier une parution** : `ssh namorama-prod tail /var/snap/docker/common/namorama/logs/publication-articles.log`,
-  puis l'adresse de l'article.
+- **Vérifier une parution** : après le déploiement, l'adresse de l'article répond 200 et
+  il figure sur `/blog`.
 
 ## L'en-tête
 

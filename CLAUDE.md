@@ -886,13 +886,10 @@ d'écriture : [`docs/ecrire-un-article.md`](docs/ecrire-un-article.md).
   adresse que le site ne sert pas : une erreur d'article arrête la CI de la PR.
 - **Un article paraît à sa date `publie`, à l'heure de Paris** (chantier
   `publier-les-articles-a-date`) : avant, il n'est pas compilé du tout, et un lien vers
-  lui fait échouer la compilation. Le lundi à 05:00 UTC, `publier-les-articles.yml`
-  reconstruit l'image web si un article paraît ce jour-là ; à 07:30 (Paris), la crontab
-  de `nicolas` sur le serveur lance `publier-les-articles.sh` (versionné dans
-  `infra/prod/`), qui tire l'image `web` et la redéploie si elle a changé — l'API n'est
-  jamais concernée. Journal : `logs/publication-articles.log`. Conséquence : **le lundi,
-  la production reçoit tout le front de `main`** ; un front fusionné qui attendrait une
-  API non déployée partirait avec. Prévisualiser une série :
+  lui fait échouer la compilation. La date est évaluée **au build** (HTML prérendu) : un
+  article paraît au **premier déploiement de l'image web qui suit sa date**. Pas de tâche
+  planifiée, choix du 23/11/2026 : un déploiement automatique aurait emporté tout le front
+  de `main`, et le rythme de livraison suffit. Prévisualiser une série :
   `ARTICLES_JUSQU_AU=AAAA-MM-JJ npm start`. Série `agences-*.md` (agences, freelances,
   conseils) programmée du 30/11/2026 au 01/02/2027, recherche dans `docs/cible-agences.md`.
 - **L'en-tête du fichier est la source unique** : routes (`app.routes.ts`), prérendu

@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Permettre de fusionner des articles à l'avance et de les voir paraître chacun à sa date,
-sans intervention.
+Permettre de fusionner des articles à l'avance : chacun paraît au premier déploiement qui
+suit sa date, sans autre modification.
 
 ## ADDED Requirements
 
@@ -16,7 +16,7 @@ SHALL être absent des routes, du prérendu, de l'index `/blog` et du plan du si
 - **THEN** son adresse n'est pas prérendue, il n'apparaît ni sur `/blog` ni dans `sitemap.xml`
 
 #### Scenario: Article du jour
-- **WHEN** l'image est construite le 30/11/2026 à 05:00 UTC et un article porte `publie: 2026-11-30`
+- **WHEN** l'image est construite le 30/11/2026 et un article porte `publie: 2026-11-30`
 - **THEN** l'article est prérendu et listé en tête de `/blog`
 
 ### Requirement: Lien vers un article programmé
@@ -35,15 +35,10 @@ articles sont compilés.
 - **WHEN** l'auteur lance `ARTICLES_JUSQU_AU=2027-02-01 npm start`
 - **THEN** tous les articles programmés jusqu'au 01/02/2027 sont servis en local
 
-### Requirement: Parution hebdomadaire automatique
-Chaque lundi, l'image `web` de `main` SHALL être reconstruite si un article devient
-publiable ce jour-là, puis déployée en production sans intervention ; un lundi sans
-article SHALL ne rien reconstruire ni redéployer.
+### Requirement: Parution au déploiement suivant
+Un article programmé SHALL apparaître au premier build de l'image `web` dont la date, à
+l'heure de Paris, est égale ou postérieure à sa date `publie`, sans autre modification.
 
-#### Scenario: Lundi de parution
-- **WHEN** le lundi 07/12/2026 un article porte `publie: 2026-12-07`
-- **THEN** l'image `web` est reconstruite le matin, la production la tire à 07:30 et `/blog` liste l'article
-
-#### Scenario: Lundi sans parution
-- **WHEN** aucun article ne porte la date du lundi
-- **THEN** le workflow s'arrête sans construire, et le script du serveur journalise « image inchangée »
+#### Scenario: Déploiement après la date
+- **WHEN** un article porte `publie: 2026-12-07` et l'image `web` est reconstruite et déployée le 09/12/2026
+- **THEN** `/blog` liste l'article, daté du 7 décembre 2026
