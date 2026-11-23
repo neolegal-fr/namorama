@@ -1,6 +1,6 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
-import { AUTEUR, articleDe, dateLongue } from './articles';
+import { AUTEUR, type Article, articleEcritALaMainDe, dateLongue } from './articles';
 
 /**
  * En-tête d'un article du blog : fil d'Ariane, titre (projeté), signature,
@@ -10,9 +10,10 @@ import { AUTEUR, articleDe, dateLongue } from './articles';
  *
  *   <app-article-entete><h1>…</h1></app-article-entete>
  *
- * Les métadonnées viennent du registre (`articles.ts`), retrouvées par l'URL du
- * routeur : aucun article ne recopie sa date. L'URL est connue au prérendu,
- * l'en-tête est donc dans le HTML statique que lit Google.
+ * Les métadonnées viennent de l'article servi par l'API (`[article]`, passé par
+ * `ArticleMarkdownComponent`) ; à défaut, du registre écrit à la main, retrouvé par
+ * l'URL du routeur (page `/verifier-disponibilite-nom-de-marque`). Aucun article ne
+ * recopie sa date, et l'en-tête est dans le HTML servi que lit Google.
  */
 @Component({
   selector: 'app-article-entete',
@@ -40,6 +41,8 @@ import { AUTEUR, articleDe, dateLongue } from './articles';
 export class ArticleEnteteComponent {
   private readonly router = inject(Router);
   readonly auteur = AUTEUR;
-  readonly article = computed(() => articleDe(this.router.url));
+  /** Article servi ; absent pour une page dont l'entrée est écrite à la main. */
+  readonly source = input<Article | null>(null, { alias: 'article' });
+  readonly article = computed(() => this.source() ?? articleEcritALaMainDe(this.router.url));
   readonly date = dateLongue;
 }

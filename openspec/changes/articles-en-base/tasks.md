@@ -115,19 +115,21 @@
   rend 22 au 23/11/2026 (les 9 programmés absents), l'admin en liste 31 ; un second
   import ne crée aucune révision.
   23/11/2026 : « 31 fichiers : 31 créés, 0 inchangés, 31 publiés » ; `GET /articles` → 22, `article-liste` → 22 publiés + 9 programmés ; second import : « 0 créés, 31 inchangés, 0 publiés ».
-- [ ] 5.3 Réécrire `docs/ecrire-un-article.md` : écrire depuis l'administration, avec
+- [x] 5.3 Réécrire `docs/ecrire-un-article.md` : écrire depuis l'administration, avec
   Claude (jeton, commandes, `# revision`), programmer, conflits, restaurer ; retirer le
   circuit GitHub/PR/déploiement. Supprimer de la section « Blog » de `CLAUDE.md`
   ce qui décrivait le circuit par fichiers.
   Vérification : chaque commande citée exécutée telle qu'écrite contre l'API du worktree.
+  23/11/2026 : guide réécrit (administration, Claude, programmation, conflits et historique, erreurs). Exécutées telles qu'écrites, depuis `web/`, contre l'API du worktree : `article-liste`, `article-lire`, `article-verifier --publier`, `article-envoyer`, `article-publier`, `article-depublier`, `article-importer` ; brouillon 404, publié 200, dépublié 404.
 
 ## 6. Rendu serveur du blog (web)
 
-- [ ] 6.1 `angular.json` en `outputMode: "server"` ; `blog`, `blog/:slug` et les 18
+- [x] 6.1 `angular.json` en `outputMode: "server"` ; `blog`, `blog/:slug` et les 18
   `CHEMINS_HISTORIQUES` en `RenderMode.Server` ; les autres routes inchangées.
   Vérification : `npm run build` produit `browser/` (accueil, `/en`, pages légales,
   `/verifier-disponibilite-nom-de-marque` toujours prérendus) et `server/server.mjs`.
-- [ ] 6.2 `ArticlesService` web (URL interne côté serveur via `API_INTERNE_URL`,
+  23/11/2026 : `ng build` — `browser/` (accueil, `/en`, `legal`, `privacy`, vérificateur prérendus : « Prerendered 5 static routes ») et `server/server.mjs`. `security.allowedHosts` posé ; le bundle serveur tourne sans `node_modules` (copié seul hors du dépôt).
+- [x] 6.2 `ArticlesService` web (URL interne côté serveur via `API_INTERNE_URL`,
   `config.apiUrl` côté navigateur, `TransferState`) ; registre, index, en-tête et
   `ArticleMarkdownComponent` alimentés par l'API au lieu de `articles.generes.ts` ;
   l'entrée écrite à la main de `/verifier-disponibilite-nom-de-marque` conservée et
@@ -135,18 +137,23 @@
   Vérification : `npm test` (specs des composants du blog adaptées à un service simulé) ;
   au navigateur, une navigation interne entre deux articles ne recharge pas la page et
   ne rappelle pas l'API pour la première page servie.
-- [ ] 6.3 Statuts : `/blog/<inconnu>` → 404 (`RESPONSE_INIT`) ; API injoignable → 503 +
+  23/11/2026 : `npm test` 105 tests ; au navigateur (Playwright, `ng serve`) sur `/guides/trouver-nom-de-marque` : aucun appel à l'API depuis le navigateur au premier affichage (`TransferState`), clic sur un lien interne : pas de rechargement (marqueur `window` conservé, un seul document), un appel pour l'article suivant.
+  Corps de l'article extrait dans `ArticleCorpsComponent`, partagé avec l'aperçu de l'éditeur.
+- [x] 6.3 Statuts : `/blog/<inconnu>` → 404 (`RESPONSE_INIT`) ; API injoignable → 503 +
   `Retry-After: 120` et `blog_source_unavailable` journalisé.
   Vérification : `curl -sI` sur le service local — 404 pour `/blog/brief-de-namming` ;
   API arrêtée : 503 sur `/guides/trouver-nom-entreprise` et sur `/blog`.
-- [ ] 6.4 Dictionnaires i18n lus à côté du bundle serveur, pas sous `process.cwd()`.
+  23/11/2026 : `/blog/brief-de-namming` → 404 ; `/blog/brief-de-naming` (programmé au 07/12) → 404 ; API arrêtée : 503 + `Retry-After: 120` sur `/guides/trouver-nom-entreprise`, `/blog` et `/sitemap.xml`, `blog_source_unavailable` journalisé à chaque fois.
+- [x] 6.4 Dictionnaires i18n lus à côté du bundle serveur, pas sous `process.cwd()`.
   Vérification : `node dist/namorama-web/server/server.mjs` lancé depuis `/tmp` rend un
   article sans clé brute (`grep -c 'BLOG\.' ` = 0 dans le HTML).
-- [ ] 6.5 `sitemap.xml` servi par `server.ts` : gabarit `public/sitemap.xml` (marqueurs
+  23/11/2026 : service lancé depuis le dossier temporaire du job : H1, `<title>`, `BlogPosting` présents, 0 clé i18n brute. Sous `ng serve`, la sortie n'existe pas sur disque : la première version mettait toutes les pages en 500 (lecture de `browser/`), corrigé — `absolutiser` ne réécrit rien en développement.
+- [x] 6.5 `sitemap.xml` servi par `server.ts` : gabarit `public/sitemap.xml` (marqueurs
   conservés) complété par `GET /articles` ; 503 si l'API manque.
   Vérification : `curl` local — articles parus présents avec `lastmod`, brouillon et
   article programmé absents, `/guides` absent.
-- [ ] 6.6 Retirer `web/scripts/articles.mjs`, `articles.test.mjs`, les hooks
+  23/11/2026 : `sitemap.xml` servi : 28 `<url>` (6 du gabarit + 22 articles parus), article programmé absent, `/guides` absent ; 503 si l'API manque.
+- [x] 6.6 Retirer `web/scripts/articles.mjs`, `articles.test.mjs`, les hooks
   `prebuild` / `prestart` / `pretest`, `articles.generes.ts` et la dépendance `marked`
   du web ; test de cohérence entre `CHEMINS_HISTORIQUES` (web), la liste de l'API et
   `CHEMINS_DU_SITE` d'une part, les routes de `app.routes.ts` d'autre part.
@@ -154,9 +161,12 @@
   (`git clean -xfd web/src` puis build) ; le test échoue si l'on retire une adresse
   d'une des listes.
   Les fichiers de `web/src/content/articles/` ne sont supprimés qu'à la tâche 9.6.
-- [ ] 6.7 `CLAUDE.md` : section « Pages prérendues » et « Blog » — ce qui reste prérendu,
+  23/11/2026 : `articles.mjs`, `articles.test.mjs`, hooks et `articles.generes.ts` retirés ; `npm test` passe sans fichier généré. `chemins-du-site.spec.ts` compare API, web et `nginx.conf` ; échoue bien si l'on retire `/namorama-vs-looka` de la liste du web (essayé puis rétabli). `marked` quitte le web.
+  CI : un job `test-web` ajouté (le web n'avait aucun test exécuté en CI) — il conditionne les images web et blog.
+- [x] 6.7 `CLAUDE.md` : section « Pages prérendues » et « Blog » — ce qui reste prérendu,
   ce qui est rendu à la demande, `API_INTERNE_URL`, règle 503.
   Vérification : relecture.
+  23/11/2026 : sections « Pages prérendues » (pages rendues à la demande) et « Le blog est rendu à la demande, derrière nginx ». Mesure : ~0,4 à 0,6 s de CPU par page (rendu de toute la coquille), sur un poste chargé (charge 20 sur 12 cœurs) — au-dessus des ~200 ms visés par D6 ; suivi en production par `durationMs`.
 
 ## 7. Images, nginx et CI
 
@@ -165,69 +175,84 @@
   `namorama-blog` ; le job « Système de design » bloque les deux images.
   Vérification : `docker build --target ssr web` et `docker build web` passent en local ;
   CI verte sur la PR avec les trois images.
-- [ ] 7.2 `web/nginx.conf` : `location` du blog, des 18 adresses historiques et de
+- [x] 7.2 `web/nginx.conf` : `location` du blog, des 18 adresses historiques et de
   `/sitemap.xml` relayées à `blog:4000` par variable + `resolver 127.0.0.11` ; règle du
   slash final reprise sous `/blog/` ; aucune autre `location` modifiée.
   Vérification : `infra/docker-compose.yml` local avec un service `blog` —
   `curl -sI` : `/guides` 301 → `/blog`, `/blog/` 301 → `/blog`, `/namorama-vs-looka`
   200, `/app` servi par nginx (coquille), `/rapport/x` avec `X-Robots-Tag` ; nginx
   démarre service `blog` arrêté, et le blog répond alors 502/503 sans toucher `/`.
-- [ ] 7.3 `infra/docker-compose.yml` et recettes `just start` / `agent-start` : le dev
+  23/11/2026 : images `namorama-blog:essai` et `namorama-web:essai` sur un réseau Docker, curl avec `X-Forwarded-For` comme le nginx de l'hôte : `/guides` et `/blog/` → 301 `/blog` ; `/blog`, `/namorama-vs-looka`, `/guides/trouver-nom-de-marque` → 200 avec leur H1 ; `/blog/brief-de-namming` et l'article programmé → 404 ; `/`, `/legal` servis par nginx ; `/rapport/x` avec `X-Robots-Tag`. Service arrêté : **503 + `Retry-After: 120`**, `/` toujours 200 ; nginx démarre sans le conteneur `blog` et le retrouve à son retour.
+  **Trouvé à ce test** : Angular 21 sert la coquille vide (200, sans erreur) à toute requête portant `X-Forwarded-*` sans `trustProxyHeaders` — en production, toutes les pages du blog seraient parties vides aux robots. En-têtes retirés par nginx et par `server.ts` (`en-tetes-de-proxy.ts`, testé). Ajouté aussi : `.angular` dans `.dockerignore`.
+- [x] 7.3 `infra/docker-compose.yml` et recettes `just start` / `agent-start` : le dev
   passe par `ng serve` (rendu serveur intégré), `API_INTERNE_URL` pointe l'API du
   worktree.
   Vérification : `just agent-start` puis `curl` sur `http://localhost:420N/blog` →
   HTML contenant les titres des articles de la base du worktree.
+  23/11/2026 : `infra/docker-compose.yml` inchangé (le développement passe par `ng serve`, qui rend les routes serveur) ; `just start` et `agent-start` passent `API_INTERNE_URL`. `just agent-start` puis `curl localhost:4202/blog` : titres des articles de `namorama_w2`.
 
 ## 8. Écran « Articles » (web)
 
-- [ ] 8.1 Onglet `/admin/articles` : tableau (chemin, titre, catégorie, état
+- [x] 8.1 Onglet `/admin/articles` : tableau (chemin, titre, catégorie, état
   brouillon / programmé / publié, date, dernière modification et auteur), bouton
   principal « Nouvel article » ; textes FR/EN.
   Vérification : au navigateur avec les 31 articles importés, en clair et en sombre, à
   390 px et sur bureau.
-- [ ] 8.2 Éditeur `/admin/articles/:id` : Markdown et aperçu côte à côte (onglets à
+  23/11/2026 : Playwright, 31 articles importés : 31 lignes en clair et en sombre, à 390 px et 1 280 px (captures relues). À 390 px, les puces de filtre s'écrasaient sur deux lignes : elles défilent désormais (`flex-shrink: 0`).
+- [x] 8.2 Éditeur `/admin/articles/:id` : Markdown et aperçu côte à côte (onglets à
   390 px), vérification regroupée à 500 ms, causes à la place de l'aperçu et
   « Enregistrer » désactivé si invalide ; « Publier » / « Dépublier » secondaires avec
   confirmation ; « Supprimer » pour un brouillon jamais paru.
   Vérification : au navigateur — scénarios « Bloc d'appel à l'action », « Erreur de
   saisie », publication d'un brouillon puis visite de sa page ; clair/sombre,
   390 px/bureau.
-- [ ] 8.3 Historique en tiroir avec « Restaurer » ; bandeau de conflit 409 (texte
+  23/11/2026 : Playwright — bloc `::: cta label="Tester un nom"` inséré : l'aperçu montre le bouton à sa place ; lien cassé : causes à la place de l'aperçu, « Enregistrer » désactivé ; enregistrement → révision +1, page publique servie aussitôt avec le bloc ; nouvel article : brouillon (404 public) → Publier (200 public) → repasser en brouillon ; « Supprimer » absent après parution, présent et effectif sur un brouillon jamais paru. Adresse déjà prise : signalée dès la vérification (la vérification d'un nouveau texte sur un chemin existant le traitait comme une modification — corrigé dans l'API, test ajouté) ; un 409 de création ne s'affiche plus comme un conflit d'écriture.
+- [x] 8.3 Historique en tiroir avec « Restaurer » ; bandeau de conflit 409 (texte
   conservé, révision et auteur nommés, « Voir la version en ligne »).
   Vérification : au navigateur — conflit provoqué par `just article-envoyer` pendant
   l'édition ; restauration d'une révision antérieure.
-- [ ] 8.4 Section « Jetons de rédaction » : liste, création avec valeur montrée une fois
+  23/11/2026 : Playwright — `just article-envoyer` pendant l'édition : bandeau « révision N, par Essai local », texte conservé, version en ligne ouverte à côté, « Repartir de cette version » ; historique (tiroir) : restauration d'une révision antérieure → nouvelle révision.
+- [x] 8.4 Section « Jetons de rédaction » : liste, création avec valeur montrée une fois
   et « Copier », révocation confirmée.
   Vérification : au navigateur — un jeton créé fonctionne avec `just article-liste`, puis
   refusé après révocation.
-- [ ] 8.5 `docs/systeme-de-design.md` §5 : motif « éditeur à aperçu » (disposition,
+  23/11/2026 : Playwright — jeton créé, valeur montrée une fois, `article liste` passe avec lui ; révoqué → 401 ; la liste n'affiche que le préfixe. Aucune erreur JavaScript sur l'ensemble du parcours.
+- [x] 8.5 `docs/systeme-de-design.md` §5 : motif « éditeur à aperçu » (disposition,
   bascule à 390 px, bouton principal unique, place des erreurs) avec la décision et
   l'option écartée (design D7).
   Vérification : relecture ; le motif renvoie aux composants réellement employés.
-- [ ] 8.6 `just design-check`.
+  23/11/2026 : §5 « Éditeur à aperçu (administration) » et `app-article-corps` ; §4, jeton `--nm-font-mono` (ajouté à `tokens.css`).
+- [x] 8.6 `just design-check`.
   Vérification : la commande passe sans relever `web/design-reference.json`.
+  23/11/2026 : « aucune valeur en dur ajoutée (664 occurrences héritées, figées) ». Les deux écrans nouveaux partent de zéro.
 
 ## 9. Parité et intégration
 
-- [ ] 9.1 `web/scripts/comparer-rendus.mjs` : pour une liste d'adresses, compare deux
+- [x] 9.1 `web/scripts/comparer-rendus.mjs` : pour une liste d'adresses, compare deux
   origines (texte visible normalisé, `href`, `id` des titres, JSON-LD).
   Vérification : exécuté contre deux origines identiques → aucun écart ; contre une page
   modifiée à la main → l'écart est signalé.
-- [ ] 9.2 Parité locale : build prérendu de `main` servi d'un côté, service `blog` sur la
+  23/11/2026 : même origine des deux côtés → « 3 identiques, 0 écart » ; une page modifiée à la main (un mot) → écart signalé à l'endroit exact, sortie 1.
+- [x] 9.2 Parité locale : build prérendu de `main` servi d'un côté, service `blog` sur la
   base importée de l'autre, pour `/blog` et les 22 articles parus.
   Vérification : `comparer-rendus.mjs` — aucun écart ; résultat noté sous la tâche.
-- [ ] 9.3 Lisibilité inchangée : trois articles (dont `/namorama-vs-namelix` et un avec
+  23/11/2026 : build prérendu d'avant le chantier (servi en statique) contre les conteneurs (base importée) : **27 pages identiques sur 27** — `/blog`, les 22 articles parus, `/en`, `/legal`, `/privacy`, le vérificateur ; texte visible, liens, identifiants des titres et JSON-LD.
+- [x] 9.3 Lisibilité inchangée : trois articles (dont `/namorama-vs-namelix` et un avec
   `trois-risques`) en clair et en sombre, à 390 px et sur bureau, servis par le service.
   Vérification : au navigateur ; contraste des cellules du tableau ≥ 4,5:1 en sombre.
-- [ ] 9.4 Robot sans JavaScript : `curl` de `/blog/noms-chatgpt-deja-pris` contient H1,
+  23/11/2026 : `/namorama-vs-namelix`, `/generateur-nom-de-marque` (bloc « trois risques ») et `/blog/noms-chatgpt-deja-pris`, servis par les conteneurs, en clair et en sombre, à 390 et 1 280 px : contraste minimal mesuré **4,95:1** (cellules du tableau en clair) ; en sombre ≥ 6,92:1. Captures relues.
+- [x] 9.4 Robot sans JavaScript : `curl` de `/blog/noms-chatgpt-deja-pris` contient H1,
   titres, `<title>` et `BlogPosting`.
   Vérification : commande et extrait notés sous la tâche.
-- [ ] 9.5 Parution à la date : article de test daté du lendemain, horloge du service
+  23/11/2026 : `curl -A GPTBot -H 'X-Forwarded-For: …' /blog/noms-chatgpt-deja-pris` : `<title>`, H1 « Velora, Nuvira, Avelis : pourquoi les noms proposés par ChatGPT sont déjà pris », titres de section, `BlogPosting`, `canonical` ; aucune URL d'actif relative.
+- [x] 9.5 Parution à la date : article de test daté du lendemain, horloge du service
   et de l'API avancée (`faketime` ou `TZ` + date de test) au lendemain 0 h 05 Paris.
   Vérification : 404 avant, 200 après, présent sur `/blog` et dans `sitemap.xml`.
-- [ ] 9.6 Supprimer `web/src/content/articles/` du dépôt.
+  23/11/2026 : une seconde API, horloge décalée par un préchargement (`Date` décalé), sur la base du worktree : à 23 h 50 le 29/11 (Paris), `/blog/agence-responsable-nom-deja-depose` (programmé au 30/11) → 404 et 22 articles parus ; à 0 h 05 le 30/11 → 200 et 23 parus. Index et plan du site dérivent de cette même liste.
+- [x] 9.6 Supprimer `web/src/content/articles/` du dépôt.
   Vérification : `npm run build` et `npm test` passent ; `grep -r content/articles web/
   docs/ CLAUDE.md` ne renvoie plus que l'historique de chantiers archivés.
+  23/11/2026 : `web/src/content/articles/`, `scripts/articles.mjs` et son test supprimés ; `npm run build` et `npm test` (106 tests) passent ; API : `tsc` et 571 tests. Les références restantes sont dans l'historique OpenSpec (chantiers archivés et `publier-les-articles-a-date`).
 
 ## 10. Livraison
 

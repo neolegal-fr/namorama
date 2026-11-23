@@ -123,7 +123,9 @@ alternance sombre → clair → sombre est une composition, fixe. L'application 
 
 - **Space Grotesk** (`--nm-font-display`) : titres, chiffres, **noms de marque**. **IBM Plex
   Sans** (`--nm-font-body`) : texte courant et interface. Ni l'une ni l'autre ne couvre `ja`
-  et `zh` : les piles de repli système doivent rester.
+  et `zh` : les piles de repli système doivent rester. **`--nm-font-mono`** (police
+  système, rien de téléchargé) : texte source à aligner — le Markdown de l'éditeur
+  d'articles, un chemin, une valeur de jeton.
 - Les tailles viennent de l'échelle `--nm-text-*` (`tokens.css`) : `h1-hero`, `h1-screen`,
   `h2`, `h3`, `name-card`, `lead`, `body`, `body-sm`, `ui`, `ui-sm`, `overline`,
   `overline-sm`, avec leurs interlignages (`--nm-leading-*`) et interlettrages
@@ -215,6 +217,38 @@ achat) et « en cours ». Classes : `.nm-verdict--free|taken|unknown|watch|locke
 - `app-brand-report-view` / `app-brand-report-locked` : le rapport, acheté ou verrouillé.
   Son pied porte toujours l'avertissement juridique et le périmètre INPI/EUIPO.
 - `nmVisibleOnce` : ce qui coûte un appel au modèle se déclenche à la visibilité (CLAUDE.md).
+- `app-article-corps` (`components/content/article-corps.ts`) : le corps d'un article du
+  blog — en-tête, titre, segments, blocs `cta` et `trois-risques`. Le **même** composant
+  rend la page publique et l'aperçu de l'éditeur : ce qu'on voit en écrivant est ce que lit
+  le visiteur. En aperçu (`[liensActifs]="false"`), un clic sur un lien ne quitte pas
+  l'éditeur.
+
+### Éditeur à aperçu (administration)
+
+Motif de l'écran **Administration → Articles** (chantier `articles-en-base`) : un texte
+source à gauche, son rendu réel à droite.
+
+- **Bureau (≥ 900 px)** : deux colonnes égales, l'aperçu collé en haut au défilement.
+  **En dessous**, un seul volet à la fois, choisi par un `.nm-seg` « Markdown / Aperçu ».
+- **Champ source** : `<textarea>` natif en `--nm-font-mono`, sans bibliothèque d'édition.
+  *Écarté : CodeMirror ou un éditeur Markdown riche* — une dépendance lourde pour un écran
+  d'un seul utilisateur, sur un Markdown volontairement simple.
+- **Vérification pendant la frappe**, regroupée 500 ms après la dernière touche, par
+  l'API (le même compilateur que l'enregistrement). Texte refusé : **les causes prennent la
+  place de l'aperçu**, dans les couleurs d'erreur (`--nm-app-verdict-taken-*`), et le
+  bouton principal se désactive. Un statut `aria-live` sous le champ dit « valide »,
+  « N problème(s) », « modifications non enregistrées ».
+- **Un seul bouton principal**, « Enregistrer », sous le champ. Les actions de l'article
+  (publier, repasser en brouillon, historique, voir la page) sont secondaires ou
+  tertiaires, dans l'en-tête ; « Supprimer » est tertiaire, en couleur d'erreur, et
+  n'apparaît que pour un brouillon jamais paru.
+- **Conflit d'écriture** : bandeau d'erreur qui nomme la révision et son auteur ; le texte
+  saisi reste dans le champ, la version en ligne s'ouvre à côté (dialogue).
+- **États d'un article** : puce icône + libellé — publié (`--nm-app-accent-surface`),
+  programmé (`--nm-app-verdict-unknown-*`, ambre : en attente), brouillon
+  (`--nm-app-badge-*`). La couleur ne porte jamais l'information seule (§8).
+- *Écarté : un dialogue plein écran pour l'édition* — un article de 1 500 mots s'édite mieux
+  sur une page qui a son adresse et se recharge sans rien perdre de l'enregistré.
 
 ### PrimeNG
 

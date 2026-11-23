@@ -169,6 +169,18 @@ suppression par jeton : elle reste un geste de l'écran.
 ensemble : les articles historiques se citent mutuellement, et des cycles rendraient
 impossible une publication un par un (cas de l'import, D10).
 
+Ajouté à l'implémentation : **`PUT /redaction/articles/lot`** (`enregistrerLot`). La
+publication groupée ne suffisait pas : des articles qui se citent en boucle ne peuvent pas
+non plus être **créés** un par un — le premier cite une adresse encore inconnue. Le lot les
+juge ensemble, n'écrit rien si un seul est refusé, et laisse tel quel un article dont la
+source est inchangée (un import rejoué ne crée aucune révision). Les routes de rédaction
+ont leur propre parseur JSON (2 Mo) : le blog entier pèse 228 Ko, au-delà des 100 Ko par
+défaut.
+
+Le filtre d'exceptions global ne rendait que `message` : il transmet désormais les autres
+champs d'une exception levée avec un objet (`causes`, `revisionCourante`, `auteur`,
+`citants`), sans les journaliser — une cause peut citer le texte d'un article.
+
 Les réponses publiques portent `Cache-Control: no-cache`. Le « jour courant » est calculé
 par l'API, à l'heure de Paris (`TZ=Europe/Paris` déjà posé dans l'image).
 
@@ -189,6 +201,11 @@ par l'API, à l'heure de Paris (`TZ=Europe/Paris` déjà posé dans l'image).
 - `sitemap.xml` est servi par un gestionnaire Express de `server.ts` : le fichier
   statique `public/sitemap.xml` garde ses marqueurs et sert de gabarit, les lignes
   d'articles viennent de `GET /articles`.
+- **En-têtes de proxy retirés** (`X-Forwarded-*`, `Forwarded`), par nginx et par
+  `server.ts`. Constaté au test des conteneurs : Angular 21 sert la coquille **vide**, en
+  200 et sans erreur, à toute requête qui en porte sans `trustProxyHeaders` ; le nginx de
+  l'hôte les pose partout. *Écarté : déclarer ces en-têtes de confiance* — le rendu n'a
+  pas besoin de l'adresse du client, et les retirer ne dépend d'aucune liste de proxys.
 - **Pas de cache** entre nginx et le service. *Écarté : `proxy_cache` de quelques
   minutes* — une correction ne serait plus visible tout de suite, et il faudrait une
   invalidation à l'enregistrement. À réviser si le rendu dépasse ~200 ms ou si le trafic
@@ -270,9 +287,8 @@ conflit qu'on veut voir.
 
 ### D10. L'import des 31 articles
 
-Par l'API elle-même, avec un jeton nommé « import » : `just article-importer
-web/src/content/articles` envoie chaque fichier en brouillon, puis publie **tous** les
-chemins en un seul appel (D5). Les dates `publie` / `misAJour` du fichier sont gardées ;
+Par l'API elle-même, avec un jeton nommé « import » : `just article-importer <dossier>`
+envoie tous les fichiers en **un lot publié** (D5), jugé d'un bloc. Les dates `publie` / `misAJour` du fichier sont gardées ;
 les 9 articles programmés restent programmés. La révision 1 de chaque article porte
 l'auteur « import ».
 

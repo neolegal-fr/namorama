@@ -115,6 +115,15 @@ describe('ArticlesService — vérification et création', () => {
     expect(events.event).toHaveBeenCalledWith('article_rejected', expect.objectContaining({ path: '/blog/a', causes: 1 }));
   });
 
+  it('vérifier un nouveau texte sur un chemin pris le signale ; avec sa révision, c’est une modification', async () => {
+    const { svc } = monter();
+    await svc.enregistrer({ source: source('/blog/a') }, ADMIN);
+    const nouveau = await svc.verifier(source('/blog/a', 'Autre.'));
+    expect(!nouveau.ok && nouveau.causes.join()).toMatch(/déjà pris/);
+    const { source: lue } = await svc.exporter('/blog/a');
+    expect((await svc.verifier(lue.replace('Un paragraphe.', 'Autre.'))).ok).toBe(true);
+  });
+
   it('une création sur un chemin pris est un conflit', async () => {
     const { svc } = monter();
     await svc.enregistrer({ source: source('/blog/a') }, ADMIN);

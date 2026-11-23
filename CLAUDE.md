@@ -591,8 +591,11 @@ Le docker-compose de prod est dans `/var/snap/docker/common/namorama/docker-comp
 ### Mettre à jour la prod (après un push sur `main`)
 
 ```bash
-ssh nicolas@192.168.1.95 "cd /var/snap/docker/common/namorama && docker compose pull api web && docker compose up -d api web"
+ssh nicolas@192.168.1.95 "cd /var/snap/docker/common/namorama && docker compose pull api web blog && docker compose up -d api web blog"
 ```
+
+> `blog` (image `namorama-blog`) rend le blog à la demande derrière le nginx de `web`
+> (voir « Le blog est rendu à la demande, derrière nginx »).
 
 > Attendre que GitHub Actions ait terminé le build avant de lancer cette commande.
 
@@ -954,6 +957,40 @@ prérendu devait éviter.
   que transformée en lien mort.
 - Les `url(...)` des feuilles de style n'ont rien à corriger : une fois la CSS
   chargée depuis `/styles-XXXX.css`, ses chemins relatifs repartent de la racine.
+- Les pages **rendues à la demande** (blog, voir ci-dessous) ne passent pas par ce
+  script : `web/src/server.ts` applique la même règle (`absolutiser.ts`) à chaque
+  réponse HTML.
+
+### Le blog est rendu à la demande, derrière nginx
+
+Depuis `articles-en-base`, `angular.json` est en `outputMode: "server"`. Le build
+produit toujours `browser/` — accueil, `/en`, pages légales et vérificateur prérendus,
+coquille, actifs — servi par **nginx, inchangé, en frontal**, et `server/server.mjs`,
+lancé par l'image **`namorama-blog`** (cible `ssr` du même `web/Dockerfile`). nginx ne
+relaie au service que `/blog`, `/blog/…`, `/guides/…`, les 18 adresses historiques et
+`/sitemap.xml`.
+
+- **Routes fixes** : `blog`, `blog/:slug` et `CHEMINS_HISTORIQUES` en
+  `RenderMode.Server`, chacune avec son résolveur (`articles-api.ts`). Le routeur ne sait
+  pas attendre l'API pour décider qu'une adresse est un article : un nouvel article vit
+  donc sous `/blog/…`, sans route à ajouter.
+- **L'API est lue par le réseau interne** (`API_INTERNE_URL`, `http://api:3000` en
+  prod) ; le navigateur reprend la page par `TransferState`, sans rappeler l'API.
+- **Une panne n'est pas une absence** : article inconnu → 404 ; API injoignable → **503
+  avec `Retry-After: 120`**, pour la page comme pour `sitemap.xml`, et
+  `blog_source_unavailable` sur la sortie du service. Un 404 ferait désindexer un
+  article qui existe ; un index vide en 200 aussi.
+- **`Cache-Control: no-cache`**, pas de cache entre nginx et le service : une correction
+  est servie à la visite suivante. Une page coûte ~0,4 à 0,6 s de CPU (rendu de toute
+  la coquille, mesuré le 23/11/2026 sur un poste chargé) ; chaque requête journalise
+  `durationMs` (`docker logs namorama-blog-1`) — c'est là qu'on verra si un cache
+  devient nécessaire.
+- `security.allowedHosts` (`angular.json`) borne les `Host` acceptés (namorama.com,
+  www, localhost) ; `NG_ALLOWED_HOSTS` le remplace.
+- Les dictionnaires i18n sont lus à côté du bundle serveur (`browser/assets/i18n`),
+  plus sous `process.cwd()` : dans l'image, la page sortait en clés brutes.
+- `sitemap.xml` : `public/sitemap.xml` n'est plus qu'un gabarit, aux marqueurs vides ;
+  les lignes des articles parus y sont insérées à chaque demande (`plan-du-site.ts`).
 
 ### La coquille cliente déclare sa langue avant de démarrer
 

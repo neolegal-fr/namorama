@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { Meta, Title } from '@angular/platform-browser';
-import { AUTEUR, articleDe, type Article } from './articles';
+import { AUTEUR, articleEcritALaMainDe, type Article } from './articles';
 
 const ORIGIN = 'https://namorama.com';
 
@@ -44,6 +44,11 @@ export interface ContentSeo {
    * d'identité du site (`WebApplication`) reste, lui, dans `index.html`.
    */
   jsonLd?: unknown;
+  /**
+   * Article du blog servi par l'API : ses dates nourrissent les balises
+   * `article:*` et le `BlogPosting`. Absent, on cherche une entrée écrite à la main.
+   */
+  article?: Article;
 }
 
 /**
@@ -108,7 +113,7 @@ export function applyContentSeo(seo: ContentSeo): void {
 
   // Article du blog : dates en Open Graph, et un `BlogPosting` à côté du
   // balisage propre à la page. Les dates viennent du registre, jamais de la page.
-  const article = articleDe(seo.path);
+  const article = seo.article ?? articleEcritALaMainDe(seo.path);
   if (article) {
     meta.updateTag({ property: 'article:published_time', content: article.publie });
     meta.updateTag({ property: 'article:modified_time', content: article.misAJour });

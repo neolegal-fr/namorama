@@ -1,15 +1,22 @@
-import { Component, computed, signal } from '@angular/core';
-import { RouterModule } from '@angular/router';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { map } from 'rxjs';
 import { ArticleCtaComponent } from './article-cta';
 import { applyContentSeo } from './content-seo';
-import { ARTICLES, AUTEUR, CATEGORIES, type CategorieArticle, dateLongue } from './articles';
+import { type Article, AUTEUR, CATEGORIES, type CategorieArticle, dateLongue, indexDuBlog } from './articles';
+import type { Lecture } from './articles-api';
 
 /**
  * Index du blog (/blog), qui remplace l'ancien hub /guides (301 côté nginx).
  *
- * Tous les articles sont dans le HTML prérendu : le filtre par catégorie ne
- * fait que masquer des cartes côté navigateur, il ne retire rien de ce que lit
- * un robot.
+ * Rendue par le serveur à chaque visite à partir des articles parus (`resoudreParus`) :
+ * un article publié ou programmé paraît sans déploiement. Tous les articles sont dans
+ * le HTML servi : le filtre par catégorie ne fait que masquer des cartes côté
+ * navigateur, il ne retire rien de ce que lit un robot.
+ *
+ * Source en panne : la page le dit (503 côté serveur) plutôt que d'afficher un blog
+ * vide, qu'un robot prendrait pour la vérité.
  */
 @Component({
   selector: 'app-blog-index',
@@ -28,10 +35,13 @@ import { ARTICLES, AUTEUR, CATEGORIES, type CategorieArticle, dateLongue } from 
         {{ auteur.nom }}, {{ auteur.role }}.
       </p>
 
+      @if (indisponible()) {
+        <p class="lead">Les articles ne peuvent pas être affichés pour le moment. Réessayez dans quelques minutes.</p>
+      } @else {
       <div class="blog-filtres" role="group" aria-label="Filtrer par catégorie">
         <button type="button" class="blog-filtre" [class.actif]="categorie() === null"
                 [attr.aria-pressed]="categorie() === null" (click)="categorie.set(null)">
-          Tous <span class="nb">{{ total }}</span>
+          Tous <span class="nb">{{ articles().length }}</span>
         </button>
         @for (c of categories; track c) {
           <button type="button" class="blog-filtre" [class.actif]="categorie() === c"
@@ -53,6 +63,7 @@ import { ARTICLES, AUTEUR, CATEGORIES, type CategorieArticle, dateLongue } from 
           </a>
         }
       </div>
+      }
 
       <app-article-cta></app-article-cta>
     </section>
@@ -131,16 +142,23 @@ import { ARTICLES, AUTEUR, CATEGORIES, type CategorieArticle, dateLongue } from 
 export class BlogIndexComponent {
   readonly auteur = AUTEUR;
   readonly categories = CATEGORIES;
-  readonly total = ARTICLES.length;
   readonly date = dateLongue;
   readonly categorie = signal<CategorieArticle | null>(null);
+  private readonly lecture = toSignal(
+    inject(ActivatedRoute).data.pipe(map((d) => d['articles'] as Lecture<Article[]> | undefined)),
+  );
+  readonly indisponible = computed(() => this.lecture()?.etat !== 'ok');
+  readonly articles = computed(() => {
+    const lu = this.lecture();
+    return indexDuBlog(lu?.etat === 'ok' ? lu.valeur : []);
+  });
   readonly visibles = computed(() => {
     const c = this.categorie();
-    return c ? ARTICLES.filter((a) => a.categorie === c) : ARTICLES;
+    return c ? this.articles().filter((a) => a.categorie === c) : this.articles();
   });
 
   compte(c: CategorieArticle): number {
-    return ARTICLES.filter((a) => a.categorie === c).length;
+    return this.articles().filter((a) => a.categorie === c).length;
   }
 
   constructor() {

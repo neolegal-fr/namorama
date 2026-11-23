@@ -217,9 +217,12 @@ export class ArticlesService {
     const source = sansRevision(sourceBrute ?? '');
     const m = this.dataSource.manager;
     const path = lireEnTete(source).entete.path;
+    // Sans `id` ni ligne `# revision`, c'est une création : un chemin existant est
+    // « pris », comme l'enregistrement le dirait — pas une modification de cet article.
+    const creation = !options.id && lireEnTete(sourceBrute ?? '').revision === null;
     const existant = options.id
       ? await m.findOne(Article, { where: { id: options.id } })
-      : path
+      : path && !creation
         ? await m.findOne(Article, { where: { path } })
         : null;
     const publie = options.publier || existant?.etat === 'publie';

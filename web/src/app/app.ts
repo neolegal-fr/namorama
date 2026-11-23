@@ -508,6 +508,7 @@ export class AppComponent implements OnInit {
     { label: 'Coûts IA',     icon: 'pi pi-calculator', command: () => this.router.navigate(['/admin/costs']) },
     { label: 'Tarifs IA',    icon: 'pi pi-dollar',    command: () => this.router.navigate(['/admin/prices']) },
     { label: 'Sessions',     icon: 'pi pi-video',     command: () => this.router.navigate(['/admin/replays']) },
+    { label: 'Articles',     icon: 'pi pi-file-edit', command: () => this.router.navigate(['/admin/articles']) },
   ];
 
   /** Panneau de compte mobile (bottom sheet). */

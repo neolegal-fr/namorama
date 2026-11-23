@@ -3,12 +3,9 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
-    "prestart": "node scripts/articles.mjs",
     "start": "ng serve",
-    "prebuild": "node --test scripts/articles.test.mjs && node scripts/articles.mjs",
     "build": "ng build && node scripts/absolutiser-les-assets.mjs",
     "watch": "ng build --watch --configuration development",
-    "pretest": "node --test scripts/articles.test.mjs && node scripts/articles.mjs",
     "test": "ng test"
   },
   "prettier": {
@@ -40,6 +37,7 @@
     "@primeng/themes": "^21.0.4",
     "@primeuix/themes": "^2.0.3",
     "@rrweb/rrweb-plugin-console-record": "2.1.7",
+    "express": "^5.3.0",
     "keycloak-angular": "^21.0.0",
     "keycloak-js": "^26.2.4",
     "primeflex": "^4.0.0",
@@ -55,6 +53,7 @@
     "@angular/build": "^21.2.21",
     "@angular/cli": "^21.2.21",
     "@angular/compiler-cli": "^21.2.20",
+    "@types/express": "^5.0.6",
     "@types/node": "^22.20.1",
     "jsdom": "^30.0.1",
     "marked": "^18.2.1",

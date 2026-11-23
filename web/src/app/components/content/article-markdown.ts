@@ -1,81 +1,81 @@
-import { Component, inject } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { ArticleEnteteComponent } from './article-entete';
-import { ArticleCtaComponent } from './article-cta';
-import { TroisRisquesComponent } from './trois-risques';
+import { Component, Injector, inject, runInInjectionContext } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { map, tap } from 'rxjs';
+import { ArticleCorpsComponent } from './article-corps';
 import { applyContentSeo } from './content-seo';
-import { articleMarkdownDe, type SegmentArticle } from './articles';
+import type { ArticleMarkdown } from './articles';
+import { cheminDe, type Lecture } from './articles-api';
 
-type SegmentAffiche = Exclude<SegmentArticle, { type: 'html' }> | { type: 'html'; html: SafeHtml };
+type Vue = { etat: 'ok'; article: ArticleMarkdown } | { etat: 'absent' | 'indisponible' };
 
 /**
- * Affiche un article écrit en Markdown (`src/content/articles/`).
+ * Page d'un article du blog, lu dans l'API par `resoudreArticle` (chantier
+ * `articles-en-base`) : rendue par le serveur à la demande, reprise telle quelle par le
+ * navigateur (`TransferState`). Le corps est rendu par `ArticleCorpsComponent`, le même
+ * que l'aperçu de l'éditeur.
  *
- * Le HTML vient de `scripts/articles.mjs`, au build, à partir de fichiers du
- * dépôt relus en PR ; la compilation y refuse tout HTML brut. Il est donc marqué
- * sûr : l'assainisseur d'Angular retirerait sinon les `id` des titres, cibles
- * des ancres.
- *
- * Les liens internes sont des `<a href="/…">` ordinaires, lisibles tels quels
- * dans le HTML prérendu ; un clic simple passe par le routeur pour ne pas
- * recharger l'application.
+ * Article absent (404) ou source en panne (503) : la page le dit, sans index, et sans
+ * confondre les deux — une panne n'est pas une absence.
  */
 @Component({
   selector: 'app-article-markdown',
   standalone: true,
-  imports: [ArticleEnteteComponent, ArticleCtaComponent, TroisRisquesComponent],
-  host: { '(click)': 'suivreLien($event)' },
+  imports: [ArticleCorpsComponent, RouterModule],
   template: `
-    <article class="article">
-      <app-article-entete>
-        <h1 [innerHTML]="h1"></h1>
-      </app-article-entete>
-      @for (s of segments; track $index) {
-        @if (s.type === 'html') {
-          <div class="article-corps" [innerHTML]="s.html"></div>
-        } @else if (s.type === 'cta') {
-          <app-article-cta
-            [heading]="s.heading ?? cta.heading"
-            [subheading]="s.subheading ?? cta.subheading"
-            [label]="s.label ?? cta.label"
-          ></app-article-cta>
-        } @else {
-          <app-trois-risques [heading]="s.heading ?? risques.heading" [intro]="s.intro ?? risques.intro"></app-trois-risques>
-        }
+    @if (vue(); as v) {
+      @if (v.etat === 'ok') {
+        <app-article-corps [article]="v.article"></app-article-corps>
+      } @else {
+        <section class="article">
+          <nav class="meta" aria-label="Fil d'Ariane"><a routerLink="/">Accueil</a> &rsaquo; <a routerLink="/blog">Blog</a></nav>
+          @if (v.etat === 'absent') {
+            <h1>Article introuvable</h1>
+            <p class="lead">Aucun article n'est publié à cette adresse. Il a peut-être été renommé ou retiré.</p>
+          } @else {
+            <h1>Article momentanément indisponible</h1>
+            <p class="lead">Le blog ne répond pas pour le moment. Réessayez dans quelques minutes.</p>
+          }
+          <p><a routerLink="/blog">Voir tous les articles du blog</a></p>
+        </section>
       }
-    </article>
+    }
   `,
-  styles: ['.article-corps { display: contents; }'],
 })
 export class ArticleMarkdownComponent {
   private readonly router = inject(Router);
-  readonly h1: SafeHtml;
-  readonly segments: SegmentAffiche[];
-  /** Valeurs par défaut des blocs, quand l'article ne les précise pas. */
-  readonly cta = new ArticleCtaComponent();
-  readonly risques = new TroisRisquesComponent();
+  private readonly route = inject(ActivatedRoute);
+  private readonly injector = inject(Injector);
 
-  constructor() {
-    const chemin: string = inject(ActivatedRoute).snapshot.data['article'];
-    const article = articleMarkdownDe(chemin);
-    if (!article) throw new Error(`Article Markdown introuvable : ${chemin}`);
-    const sanitizer = inject(DomSanitizer);
-    this.h1 = sanitizer.bypassSecurityTrustHtml(article.h1);
-    this.segments = article.segments.map((s) =>
-      s.type === 'html' ? { type: 'html', html: sanitizer.bypassSecurityTrustHtml(s.html) } : s,
-    );
-    applyContentSeo({ title: article.title, description: article.description, path: article.path });
-  }
+  /**
+   * Suit `route.data`, pas un instantané : passer de `/blog/a` à `/blog/b` réutilise
+   * ce composant, et le constructeur ne repasse pas.
+   */
+  readonly vue = toSignal(
+    this.route.data.pipe(
+      map((d) => vueDe(d['article'] as Lecture<ArticleMarkdown> | undefined)),
+      tap((v) => this.referencer(v)),
+    ),
+  );
 
-  /** Clic simple sur un lien interne : navigation par le routeur. */
-  suivreLien(event: MouseEvent): void {
-    if (event.defaultPrevented || event.button !== 0) return;
-    if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
-    const lien = (event.target as Element | null)?.closest?.('a');
-    const href = lien?.getAttribute('href');
-    if (!lien || !href || !href.startsWith('/') || lien.hasAttribute('target')) return;
-    event.preventDefault();
-    this.router.navigateByUrl(href);
+  private referencer(v: Vue): void {
+    runInInjectionContext(this.injector, () => {
+      if (v.etat === 'ok') {
+        const a = v.article;
+        applyContentSeo({ title: a.title, description: a.description, path: a.path, article: a });
+      } else {
+        applyContentSeo({
+          title: v.etat === 'absent' ? 'Article introuvable' : 'Article momentanément indisponible',
+          description: 'Le blog Namorama.',
+          path: cheminDe(this.router.url),
+          noindex: true,
+        });
+      }
+    });
   }
+}
+
+function vueDe(lu: Lecture<ArticleMarkdown> | undefined): Vue {
+  if (lu?.etat === 'ok') return { etat: 'ok', article: lu.valeur };
+  return { etat: lu?.etat === 'absent' ? 'absent' : 'indisponible' };
 }

@@ -5,7 +5,7 @@ start:
     docker-compose -f infra/docker-compose.yml up -d
     @echo "Attente du démarrage des bases de données..."
     sleep 5
-    (cd api && npm run start:dev) & (cd web && npm start)
+    (cd api && npm run start:dev) & (cd web && API_INTERNE_URL=http://localhost:3001 npm start)
 
 # Arrêter les serveurs de la copie principale (ports 3001 et 4200) et Docker.
 # Par port, pas par motif : `pkill -f nest` tuait aussi les serveurs des

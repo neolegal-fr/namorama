@@ -10,12 +10,15 @@ import { AdminFeedbackComponent } from './components/admin/admin-feedback.compon
 import { AdminModelPricesComponent } from './components/admin/admin-model-prices.component';
 import { AdminCostsComponent } from './components/admin/admin-costs.component';
 import { AdminReplaysComponent } from './components/admin/admin-replays.component';
+import { AdminArticlesComponent } from './components/admin/admin-articles.component';
+import { AdminArticleEditeurComponent } from './components/admin/admin-article-editeur.component';
 import { LegalComponent } from './components/legal/legal.component';
 import { PrivacyComponent } from './components/privacy/privacy.component';
 import { BlogIndexComponent } from './components/content/blog-index';
 import { VerifierDisponibiliteMarqueComponent } from './components/content/verifier-disponibilite-nom-de-marque';
 import { ArticleMarkdownComponent } from './components/content/article-markdown';
-import { ARTICLES_MARKDOWN } from './components/content/articles.generes';
+import { CHEMINS_HISTORIQUES } from './components/content/chemins-historiques';
+import { resoudreArticle, resoudreParus } from './components/content/articles-api';
 import { RapportPartageComponent } from './components/content/rapport-partage';
 import { RapportPublicComponent } from './components/content/rapport-public';
 import { adminGuard } from './guards/admin.guard';
@@ -29,13 +32,15 @@ export const routes: Routes = [
   // L'index s'appelle « blog » depuis le 23/11/2026. nginx répond déjà 301 sur
   // /guides ; cette redirection ne sert qu'à la navigation interne au client.
   { path: 'guides', redirectTo: 'blog', pathMatch: 'full' },
-  { path: 'blog', component: BlogIndexComponent },
-  // Articles écrits en Markdown (src/content/articles/) : une route par fichier,
-  // dérivée de son en-tête par scripts/articles.mjs.
-  ...ARTICLES_MARKDOWN.map((a) => ({
-    path: a.path.slice(1),
+  // Blog : articles en base, lus dans l'API par un résolveur et rendus par le serveur
+  // à la demande (chantier `articles-en-base`). Un nouvel article vit sous
+  // `/blog/<identifiant>` ; les adresses antérieures au blog sont figées.
+  { path: 'blog', component: BlogIndexComponent, resolve: { articles: resoudreParus } },
+  { path: 'blog/:slug', component: ArticleMarkdownComponent, resolve: { article: resoudreArticle } },
+  ...CHEMINS_HISTORIQUES.map((p) => ({
+    path: p.slice(1),
     component: ArticleMarkdownComponent,
-    data: { article: a.path },
+    resolve: { article: resoudreArticle },
   })),
   { path: 'verifier-disponibilite-nom-de-marque', component: VerifierDisponibiliteMarqueComponent },
   { path: 'rapport/:token', component: RapportPartageComponent },
@@ -67,6 +72,9 @@ export const routes: Routes = [
       { path: 'costs', component: AdminCostsComponent },
       { path: 'prices', component: AdminModelPricesComponent },
       { path: 'replays', component: AdminReplaysComponent },
+      // Articles du blog en base : rédaction sans déploiement (articles-en-base).
+      { path: 'articles', component: AdminArticlesComponent },
+      { path: 'articles/:id', component: AdminArticleEditeurComponent },
     ],
   },
   { path: 'legal', component: LegalComponent },

@@ -1,0 +1,240 @@
+/* Administration → Articles. Univers applicatif : rôles --nm-app-* seulement, il suit
+   le thème (docs/systeme-de-design.md §2). Densité d'administration (§7). */
+
+.ar-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding-top: 1rem;
+  max-width: 72rem;
+  color: var(--nm-app-text);
+}
+
+.ar-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.ar-titre {
+  margin: 0 0 0.35rem;
+  font-family: var(--nm-font-display);
+  font-size: var(--nm-text-h3);
+  color: var(--nm-app-text);
+}
+
+.ar-sous-titre {
+  margin: 0 0 0.35rem;
+  font-size: var(--nm-text-overline);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--nm-app-text-3);
+}
+
+.ar-intro {
+  margin: 0;
+  max-width: 48rem;
+  font-size: var(--nm-text-ui);
+  line-height: 1.5;
+  color: var(--nm-app-text-2);
+}
+
+.ar-erreur {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--nm-app-verdict-taken-fg);
+  border-radius: var(--nm-radius-sm);
+  background: var(--nm-app-verdict-taken-bg);
+  color: var(--nm-app-verdict-taken-fg);
+  font-size: var(--nm-text-ui);
+}
+
+.ar-filtres {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+/* Défilement horizontal plutôt que des puces écrasées sur deux lignes (§7). */
+.ar-filtres > * {
+  flex-shrink: 0;
+}
+
+.ar-tableau {
+  overflow-x: auto;
+  border: 1px solid var(--nm-app-border);
+  border-radius: var(--nm-radius-lg);
+  background: var(--nm-app-surface);
+}
+
+.ar-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--nm-text-ui);
+}
+
+.ar-table th {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  font-size: var(--nm-text-overline);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nm-app-text-3);
+  border-bottom: 1px solid var(--nm-app-border);
+  white-space: nowrap;
+}
+
+.ar-table td {
+  padding: 0.6rem 0.75rem;
+  vertical-align: top;
+  border-bottom: 1px solid var(--nm-app-divider);
+}
+
+.ar-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ar-lien {
+  display: block;
+  font-weight: 600;
+  color: var(--nm-app-text);
+  text-decoration: none;
+}
+
+.ar-lien:hover {
+  color: var(--nm-app-accent);
+  text-decoration: underline;
+}
+
+.ar-lien:focus-visible {
+  outline: 2px solid var(--nm-app-accent);
+  outline-offset: 2px;
+}
+
+.ar-chemin,
+.ar-auteur {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: var(--nm-text-overline);
+  color: var(--nm-app-text-3);
+  overflow-wrap: anywhere;
+}
+
+.ar-chemin {
+  font-family: var(--nm-font-mono);
+}
+
+/* État : la couleur ne porte jamais l'information seule — icône et libellé (§8). */
+.ar-etat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--nm-radius-xs);
+  font-size: var(--nm-text-overline);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ar-etat--publie {
+  background: var(--nm-app-accent-surface);
+  color: var(--nm-app-accent);
+}
+
+.ar-etat--programme {
+  background: var(--nm-app-verdict-unknown-bg);
+  color: var(--nm-app-verdict-unknown-fg);
+}
+
+.ar-etat--brouillon {
+  background: var(--nm-app-badge-bg);
+  color: var(--nm-app-badge-fg);
+}
+
+.ar-vide {
+  color: var(--nm-app-text-3);
+  text-align: center;
+}
+
+.ar-jetons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.ar-revoque td {
+  color: var(--nm-app-text-3);
+}
+
+.ar-actions {
+  text-align: right;
+}
+
+.ar-masque {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.ar-valeur {
+  display: block;
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--nm-app-border);
+  border-radius: var(--nm-radius-sm);
+  background: var(--nm-app-surface-alt);
+  font-family: var(--nm-font-mono);
+  font-size: var(--nm-text-ui);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.ar-champ {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: var(--nm-text-ui);
+  color: var(--nm-app-text-2);
+}
+
+.ar-champ input {
+  min-height: var(--nm-touch-min);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--nm-app-border-strong);
+  border-radius: var(--nm-radius-sm);
+  background: var(--nm-app-surface);
+  color: var(--nm-app-text);
+  font: inherit;
+}
+
+.ar-champ input:focus-visible {
+  outline: 2px solid var(--nm-app-accent);
+  outline-offset: 2px;
+}
+
+.ar-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Téléphone : colonnes secondaires retirées plutôt qu'un défilement latéral. */
+@media (max-width: 640px) {
+  .ar-large {
+    display: none;
+  }
+
+  .ar-table th,
+  .ar-table td {
+    padding: 0.5rem;
+  }
+}
