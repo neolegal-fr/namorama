@@ -34,5 +34,5 @@
 
 ## Workflow follow-up
 
-- [ ] Archiver après `articles-en-blog` et `articles-en-markdown`, qui créent puis
+- [x] Archiver après `articles-en-blog` et `articles-en-markdown`, qui créent puis
   complètent la capacité `blog`.

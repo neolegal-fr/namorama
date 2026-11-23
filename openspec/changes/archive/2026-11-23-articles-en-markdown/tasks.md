@@ -104,4 +104,6 @@
 
 - [ ] Première correction réelle faite depuis l'éditeur web de GitHub, jusqu'à la
   production : noter le délai et les accrocs.
-- [ ] Archiver après `articles-en-blog`, qui crée la capacité `blog`.
+  Reporté : chantier archivé le 23/11/2026 à la demande de l'auteur, avant toute
+  correction réelle depuis GitHub.
+- [x] Archiver après `articles-en-blog`, qui crée la capacité `blog`.

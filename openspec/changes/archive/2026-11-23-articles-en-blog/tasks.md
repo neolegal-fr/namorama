@@ -32,3 +32,5 @@
 ## Workflow follow-up
 
 - [ ] Resoumettre le plan du site dans la Search Console et suivre l'indexation des trois nouveaux articles à J+30.
+  Reporté : chantier archivé le 23/11/2026 à la demande de l'auteur, avant J+30. Suivi
+  d'indexation à faire hors chantier, vers le 23/12/2026.
