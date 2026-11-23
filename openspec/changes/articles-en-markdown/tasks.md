@@ -76,11 +76,15 @@
 
 ## 4. Documentation
 
-- [ ] 4.1 `docs/ecrire-un-article.md` : en-tête, blocs, attributs, typographie, ajout
+- [x] 4.1 `docs/ecrire-un-article.md` : en-tête, blocs, attributs, typographie, ajout
   et correction depuis l'éditeur web de GitHub, prévisualisation locale, publication.
   Section « Blog » du `CLAUDE.md` réécrite (un article = un fichier).
   Vérification : un article d'essai écrit en suivant le guide seul compile, puis est
   retiré.
+  23/11/2026 : article d'essai `/blog/nom-de-restaurant` écrit avec les seuls exemples
+  du guide (en-tête, chapeau, ancre, tableau oui/non, liens interne et externe, `1er`,
+  `&nbsp;`, deux blocs) : compilé du premier coup, insécables vérifiées octet par octet,
+  ligne ajoutée au plan du site ; retiré, plan du site revenu à l'identique.
 
 ## 5. Livraison
 
