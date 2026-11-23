@@ -24,8 +24,10 @@
 
 ## 3. Livraison
 
-- [ ] 3.1 PR, CI verte, fusion, déploiement (`docker compose pull web && up -d web`).
-- [ ] 3.2 Vérifier en production : `/blog` 200, `/guides` 301 → `/blog`, un ancien article 200, `BlogPosting` présent dans le HTML servi.
+- [x] 3.1 PR, CI verte, fusion, déploiement (`docker compose pull web && up -d web`).
+  PR #197 fusionnée le 23/11/2026, build `main` vert, image `web` déployée.
+- [x] 3.2 Vérifier en production : `/blog` 200, `/guides` 301 → `/blog`, un ancien article 200, `BlogPosting` présent dans le HTML servi.
+  23/11/2026 : `/blog` 200 avec 22 cartes ; `/guides` 301 → `/blog` ; `/guides/trouver-nom-de-marque`, les trois `/blog/…` et `/generateur-nom-saas` 200 ; `BlogPosting`, `article:published_time` et « Publié le 23 novembre 2026 » dans le HTML servi ; `sitemap.xml` à 27 URL.
 
 ## Workflow follow-up
 

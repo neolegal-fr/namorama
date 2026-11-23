@@ -26,6 +26,15 @@
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
+  <!-- Lignes des articles Markdown : réécrites à chaque build par
+       scripts/articles.mjs, d'après l'en-tête de chaque fichier. -->
+  <!-- articles:debut (généré par scripts/articles.mjs) -->
+  <url>
+    <loc>https://namorama.com/blog/deposer-marque-inpi-prix-delais</loc>
+    <lastmod>2026-11-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
   <url>
     <loc>https://namorama.com/blog/nom-entreprise-artisan</loc>
     <lastmod>2026-11-23</lastmod>
@@ -39,38 +48,8 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://namorama.com/blog/deposer-marque-inpi-prix-delais</loc>
-    <lastmod>2026-11-23</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://namorama.com/guides/trouver-nom-de-marque</loc>
+    <loc>https://namorama.com/generateur-nom-de-domaine</loc>
     <lastmod>2026-09-03</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://namorama.com/guides/trouver-nom-entreprise</loc>
-    <lastmod>2026-09-03</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://namorama.com/guides/trouver-nom-de-produit</loc>
-    <lastmod>2026-08-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://namorama.com/guides/trouver-nom-de-startup</loc>
-    <lastmod>2026-08-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://namorama.com/nom-de-startup-court-invente</loc>
-    <lastmod>2026-08-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -87,43 +66,7 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://namorama.com/generateur-nom-de-domaine</loc>
-    <lastmod>2026-09-03</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://namorama.com/generateur-nom-de-produit</loc>
-    <lastmod>2026-08-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://namorama.com/generateur-nom-startup-ia</loc>
-    <lastmod>2026-08-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://namorama.com/generateur-nom-ecommerce</loc>
-    <lastmod>2026-09-03</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://namorama.com/generateur-nom-saas</loc>
-    <lastmod>2026-08-20</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://namorama.com/generateur-nom-marque-vetement</loc>
-    <lastmod>2026-09-03</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://namorama.com/generateur-nom-marque-cosmetique</loc>
     <lastmod>2026-09-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -135,7 +78,67 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://namorama.com/verifier-disponibilite-nom-de-marque</loc>
+    <loc>https://namorama.com/generateur-nom-de-produit</loc>
+    <lastmod>2026-08-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://namorama.com/generateur-nom-ecommerce</loc>
+    <lastmod>2026-09-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://namorama.com/generateur-nom-marque-cosmetique</loc>
+    <lastmod>2026-09-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://namorama.com/generateur-nom-saas</loc>
+    <lastmod>2026-08-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://namorama.com/generateur-nom-startup-ia</loc>
+    <lastmod>2026-08-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://namorama.com/nom-de-startup-court-invente</loc>
+    <lastmod>2026-08-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://namorama.com/namorama-vs-looka</loc>
+    <lastmod>2026-08-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://namorama.com/namorama-vs-namelix</loc>
+    <lastmod>2026-08-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://namorama.com/guides/trouver-nom-de-produit</loc>
+    <lastmod>2026-08-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://namorama.com/guides/trouver-nom-de-startup</loc>
+    <lastmod>2026-08-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://namorama.com/guides/trouver-nom-entreprise</loc>
     <lastmod>2026-09-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -147,14 +150,15 @@
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://namorama.com/namorama-vs-namelix</loc>
-    <lastmod>2026-08-20</lastmod>
+    <loc>https://namorama.com/guides/trouver-nom-de-marque</loc>
+    <lastmod>2026-09-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
+  <!-- articles:fin -->
   <url>
-    <loc>https://namorama.com/namorama-vs-looka</loc>
-    <lastmod>2026-08-20</lastmod>
+    <loc>https://namorama.com/verifier-disponibilite-nom-de-marque</loc>
+    <lastmod>2026-09-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

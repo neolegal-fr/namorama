@@ -867,24 +867,36 @@ passe, il ne passe pas en SSH non interactif).
 > Rotation à 14 jours : ce journal reste une source d'appoint. Le compte durable des
 > visites vit en base (`visitor_session`), pas ici.
 
-### Blog : un registre, des adresses qui ne bougent pas
+### Blog : un article = un fichier Markdown
 
 Les pages de contenu sont présentées en blog depuis le 23/11/2026 : index `/blog`
 (`/guides` y redirige en 301, nginx du conteneur web), en-tête daté et signé
-« Nicolas Riousset, créateur de Namorama », `BlogPosting` dans le JSON-LD.
+« Nicolas Riousset, créateur de Namorama », `BlogPosting` dans le JSON-LD. Depuis le
+chantier `articles-en-markdown`, chaque article textuel est **un fichier** de
+`web/src/content/articles/`, modifiable depuis l'éditeur web de GitHub. Guide
+d'écriture : [`docs/ecrire-un-article.md`](docs/ecrire-un-article.md).
 
-- **`articles.ts` est la source unique** des métadonnées (chemin, titre, extrait,
-  catégorie, dates, temps de lecture). L'index, `<app-article-entete>` (trouvé par
-  l'URL du routeur) et `applyContentSeo` (par `path`) le lisent ; aucun article ne
-  recopie sa date.
-- **Les adresses existantes ne changent pas** (`/guides/…`, `/generateur-…`) : elles
-  sont indexées. Les nouveaux articles vivent sous `/blog/…`.
-- Dates tirées de git (premier commit, dernier commit qui touche au texte) ; lecture =
-  mots du gabarit / 220, arrondi au supérieur.
-- **Ajouter un article** : le composant (H1 enveloppé dans `<app-article-entete>`),
-  l'entrée du registre, la route dans `app.routes.ts` **et** `app.routes.server.ts`
-  (prérendu), la ligne de `sitemap.xml` avec `lastmod`. `articles.spec.ts` échoue si
-  l'une manque.
+- **Compilé au build** par `web/scripts/articles.mjs` (`prebuild`, `prestart`,
+  `pretest`) en `articles.generes.ts`, **non versionné** : lancer les tests par
+  `npm test`, pas `npx ng test` sur un dépôt neuf, sinon le module manque. Les lignes
+  d'articles de `sitemap.xml` sont réécrites entre deux marqueurs à chaque build :
+  committer le fichier s'il a bougé.
+- **La compilation refuse** un en-tête incomplet, une catégorie ou une date fausse, un
+  chemin pris, du HTML brut, un attribut ou un bloc inconnu, un lien interne vers une
+  adresse que le site ne sert pas : une erreur d'article arrête la CI de la PR.
+- **L'en-tête du fichier est la source unique** : routes (`app.routes.ts`), prérendu
+  (`app.routes.server.ts`), registre (`articles.ts`), index, en-tête d'article,
+  JSON-LD et plan du site en sont dérivés. Temps de lecture calculé (mots / 220).
+- **Les adresses publiées ne changent pas** (`/guides/…`, `/generateur-…`) : elles sont
+  indexées. Les nouveaux articles vivent sous `/blog/…`.
+- Le HTML compilé est marqué sûr (`ArticleMarkdownComponent`) : il vient du dépôt, relu
+  en PR, et le compilateur refuse tout HTML d'auteur. Les blocs `::: cta` et
+  `::: trois-risques` restent les vrais composants Angular.
+- **Exception** : `/verifier-disponibilite-nom-de-marque` reste un composant (vérificateur
+  interactif) et garde son entrée écrite à la main dans `articles.ts`.
+- La migration a été vérifiée au texte près (texte visible, liens, ancres, JSON-LD des 21
+  pages prérendues) ; elle a corrigé au passage une espace qu'Angular supprimait entre
+  deux balises en ligne.
 - Un article ne cite jamais une description d'utilisateur telle quelle ; un chiffre
   mesuré (registre, base) porte sa date.
 
