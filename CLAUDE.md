@@ -884,6 +884,14 @@ d'écriture : [`docs/ecrire-un-article.md`](docs/ecrire-un-article.md).
 - **La compilation refuse** un en-tête incomplet, une catégorie ou une date fausse, un
   chemin pris, du HTML brut, un attribut ou un bloc inconnu, un lien interne vers une
   adresse que le site ne sert pas : une erreur d'article arrête la CI de la PR.
+- **Un article paraît à sa date `publie`, à l'heure de Paris** (chantier
+  `publier-les-articles-a-date`) : avant, il n'est pas compilé du tout, et un lien vers
+  lui fait échouer la compilation. La date est évaluée **au build** (HTML prérendu) : un
+  article paraît au **premier déploiement de l'image web qui suit sa date**. Pas de tâche
+  planifiée, choix du 23/11/2026 : un déploiement automatique aurait emporté tout le front
+  de `main`, et le rythme de livraison suffit. Prévisualiser une série :
+  `ARTICLES_JUSQU_AU=AAAA-MM-JJ npm start`. Série `agences-*.md` (agences, freelances,
+  conseils) programmée du 23/11/2026 au 25/01/2027, recherche dans `docs/cible-agences.md`.
 - **L'en-tête du fichier est la source unique** : routes (`app.routes.ts`), prérendu
   (`app.routes.server.ts`), registre (`articles.ts`), index, en-tête d'article,
   JSON-LD et plan du site en sont dérivés. Temps de lecture calculé (mots / 220).

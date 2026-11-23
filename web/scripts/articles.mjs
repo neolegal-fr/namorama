@@ -115,7 +115,7 @@ function attributs(fichier, html) {
   return { html: html.slice(0, m.index), attrs };
 }
 
-function convertisseur(fichier, cheminsConnus) {
+function convertisseur(fichier, cheminsConnus, programmes) {
   const marked = new Marked({ gfm: true, breaks: false });
   marked.use({
     walkTokens(token) {
@@ -146,6 +146,12 @@ function convertisseur(fichier, cheminsConnus) {
         const t = title ? ` title="${title}"` : '';
         if (href.startsWith('/')) {
           const chemin = href.split(/[?#]/)[0];
+          if (programmes.has(chemin)) {
+            throw new ErreurArticle(
+              fichier,
+              `lien vers ${href}, article programmé le ${programmes.get(chemin)} : un article ne renvoie qu'à des articles déjà parus`,
+            );
+          }
           if (!cheminsConnus.has(chemin)) {
             throw new ErreurArticle(fichier, `lien interne vers une adresse que le site ne sert pas : ${href}`);
           }
@@ -188,8 +194,11 @@ function compterMots(texte) {
     .filter((m) => /[\p{L}\p{N}]/u.test(m)).length;
 }
 
-/** Compile un article. `cheminsConnus` : toutes les adresses servies par le site. */
-export function compilerArticle(fichier, source, cheminsConnus) {
+/**
+ * Compile un article. `cheminsConnus` : toutes les adresses servies par le site ;
+ * `programmes` : chemin → date des articles pas encore parus.
+ */
+export function compilerArticle(fichier, source, cheminsConnus, programmes = new Map()) {
   const { entete, corps } = lireEnTete(fichier, source);
   const lignes = corps.split(/\r?\n/);
   while (lignes.length && !lignes[0].trim()) lignes.shift();
@@ -197,7 +206,7 @@ export function compilerArticle(fichier, source, cheminsConnus) {
   if (!h1) throw new ErreurArticle(fichier, 'le corps doit commencer par le titre « # … »');
   lignes.shift();
 
-  const marked = convertisseur(fichier, cheminsConnus);
+  const marked = convertisseur(fichier, cheminsConnus, programmes);
   const segments = [];
   let tampon = [];
   const viderTampon = () => {
@@ -230,8 +239,33 @@ export function compilerArticle(fichier, source, cheminsConnus) {
   };
 }
 
-/** Compile tous les articles ; vérifie l'unicité des chemins. */
-export function compilerArticles(fichiers, cheminsDuSite) {
+// ── Date de publication ──────────────────────────────────────────────────────
+
+/** Date du jour à Paris, AAAA-MM-JJ : la seule horloge du produit (CLAUDE.md). */
+export function dateDeParis(maintenant = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(maintenant);
+}
+
+/**
+ * Date qui décide des articles parus : `ARTICLES_JUSQU_AU` (prévisualisation
+ * locale d'articles programmés), sinon la date du jour à Paris.
+ */
+export function dateDePublication(env = process.env, maintenant = new Date()) {
+  const forcee = env.ARTICLES_JUSQU_AU;
+  if (forcee === undefined || forcee === '') return dateDeParis(maintenant);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(forcee) || !new Date(`${forcee}T00:00:00Z`).toISOString().startsWith(forcee)) {
+    throw new Error(`ARTICLES_JUSQU_AU doit être une date AAAA-MM-JJ, reçu « ${forcee} »`);
+  }
+  return forcee;
+}
+
+/**
+ * Compile les articles parus au jour `jour` (AAAA-MM-JJ) ; vérifie l'unicité des
+ * chemins. Un article dont `publie` est postérieur n'est pas compilé : il n'a ni
+ * route, ni place dans l'index ou le plan du site. Un lien vers lui est une
+ * erreur, pas un lien mort jusqu'à sa parution.
+ */
+export function compilerArticles(fichiers, cheminsDuSite, jour = '9999-12-31') {
   const chemins = new Set(cheminsDuSite);
   const declares = new Map();
   for (const { nom, source } of fichiers) {
@@ -241,8 +275,18 @@ export function compilerArticles(fichiers, cheminsDuSite) {
     if (chemins.has(p)) throw new ErreurArticle(nom, `path ${p} déjà servi par une autre page du site`);
     declares.set(p, nom);
   }
-  for (const p of declares.keys()) chemins.add(p);
-  return fichiers.map(({ nom, source }) => compilerArticle(nom, source, chemins));
+  const programmes = new Map();
+  const parus = fichiers.filter(({ source }) => {
+    const p = /^path:\s*["']?([^"'\s]+)/m.exec(source)?.[1];
+    const publie = /^publie:\s*["']?(\d{4}-\d{2}-\d{2})/m.exec(source)?.[1];
+    if (p && publie && publie > jour) {
+      programmes.set(p, publie);
+      return false;
+    }
+    return true;
+  });
+  for (const p of declares.keys()) if (!programmes.has(p)) chemins.add(p);
+  return parus.map(({ nom, source }) => compilerArticle(nom, source, chemins, programmes));
 }
 
 // ── Plan du site ─────────────────────────────────────────────────────────────
@@ -285,9 +329,10 @@ function principal() {
     .map((f) => ({ nom: `src/content/articles/${f}`, source: readFileSync(join(dossier, f), 'utf-8') }));
   const routes = readFileSync(join(web, 'src/app/app.routes.ts'), 'utf-8');
 
+  const jour = dateDePublication();
   let articles;
   try {
-    articles = compilerArticles(fichiers, cheminsDesRoutes(routes));
+    articles = compilerArticles(fichiers, cheminsDesRoutes(routes), jour);
   } catch (e) {
     if (e instanceof ErreurArticle) {
       console.error(`\n✗ Article invalide — ${e.message}\n`);
@@ -308,7 +353,11 @@ function principal() {
   const nouveau = planDuSite(xml, articles);
   if (nouveau !== xml) writeFileSync(plan, nouveau);
 
-  console.log(`✓ ${articles.length} article(s) Markdown compilé(s)`);
+  const programmes = fichiers.length - articles.length;
+  console.log(
+    `✓ ${articles.length} article(s) Markdown compilé(s) au ${jour}` +
+      (programmes ? `, ${programmes} programmé(s) pour plus tard` : ''),
+  );
 }
 
 if (process.argv[1] && basename(process.argv[1]) === 'articles.mjs') principal();

@@ -30,6 +30,12 @@
        scripts/articles.mjs, d'après l'en-tête de chaque fichier. -->
   <!-- articles:debut (généré par scripts/articles.mjs) -->
   <url>
+    <loc>https://namorama.com/blog/agences-qui-trouve-les-noms-de-marque</loc>
+    <lastmod>2026-11-23</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://namorama.com/blog/deposer-marque-inpi-prix-delais</loc>
     <lastmod>2026-11-23</lastmod>
     <changefreq>monthly</changefreq>

@@ -17,6 +17,25 @@ site et des données structurées `BlogPosting`. Aucun autre fichier à toucher.
 5. Fusionner, attendre le build de `main`, puis déployer l'image web :
    `ssh namorama-prod "cd /var/snap/docker/common/namorama && docker compose pull web && docker compose up -d web"`.
 
+## Programmer un article
+
+Un article dont la date `publie` n'est pas encore venue (à l'heure de Paris) **n'est pas
+compilé** : ni page, ni carte dans l'index, ni ligne dans le plan du site. On peut donc
+fusionner une série entière d'avance ; chaque article paraît à sa date.
+
+- **L'article paraît au premier déploiement de l'image web qui suit sa date.** Le site est
+  du HTML prérendu : la date est évaluée au build, pas à la visite. Aucune tâche planifiée
+  ne reconstruit le site ; si rien n'est déployé pendant une semaine, l'article attend.
+  Pour le publier le jour dit, déployer l'image web ce jour-là (commande ci-dessus).
+- **Ne renvoyer qu'aux articles déjà parus**, ou parus le même jour. Un lien vers un
+  article programmé plus tard fait échouer la compilation (voir « Erreurs »). Pour
+  qu'un ancien article renvoie à un nouveau, le modifier après la parution.
+- **Relire la série avant de fusionner** : `ARTICLES_JUSQU_AU=2027-02-01 npm start`
+  compile tout ce qui est programmé jusqu'à cette date. Ne pas committer le
+  `sitemap.xml` produit ainsi : relancer `node scripts/articles.mjs` sans la variable.
+- **Vérifier une parution** : après le déploiement, l'adresse de l'article répond 200 et
+  il figure sur `/blog`.
+
 ## L'en-tête
 
 Entre deux lignes `---`, en tête de fichier. Les huit champs sont obligatoires.
@@ -121,6 +140,8 @@ La compilation s'arrête au premier problème, en nommant le fichier :
 | `misAJour (…) antérieure à publie` | dates inversées |
 | `path … déjà déclaré par …` / `déjà servi` | adresse prise par un autre article ou une page |
 | `lien interne vers une adresse que le site ne sert pas` | lien `/…` faux |
+| `lien vers …, article programmé le …` | renvoi vers un article pas encore paru |
+| `ARTICLES_JUSQU_AU doit être une date AAAA-MM-JJ` | variable de prévisualisation mal écrite |
 | `HTML brut interdit` | une balise `<…>` dans le texte |
 | `attribut non autorisé` | `{…}` autre que `#id`, `.lead`, `.yes`, `.no` |
 | `bloc inconnu` / `jamais fermé` | bloc `:::` mal écrit ou sans `:::` final |
