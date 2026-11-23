@@ -32,14 +32,15 @@
 
 ## 2. Rédaction : enregistrer, publier, révisions (API)
 
-- [ ] 2.1 `ArticlesService` : `verifier` (rendu ou causes, sans écrire), `enregistrer`
+- [x] 2.1 `ArticlesService` : `verifier` (rendu ou causes, sans écrire), `enregistrer`
   (création en brouillon, modification avec `revisionAttendue`, 409 avec révision et
   auteur courants, aucune révision si la source est identique), révision écrite dans la
   même transaction que l'article.
   Vérification : spec — scénarios « Vérification sans enregistrement », « Nouvel article
   en brouillon », « Enregistrement concurrent refusé », « Aller-retour sans
   modification ».
-- [ ] 2.2 Liens selon la date de parution : un article publié ne cite pas un brouillon
+  23/11/2026 : `articles.service.spec.ts` (base en mémoire) — les quatre scénarios passent.
+- [x] 2.2 Liens selon la date de parution : un article publié ne cite pas un brouillon
   ni un article à paraître après lui ; `publier` accepte une liste de chemins validée
   comme un tout ; `depublier` refusé tant qu'un article paru cite la cible ;
   `premiereParution` posée et remise à nulle (D3) ; chemin figé et suppression refusée
@@ -47,62 +48,73 @@
   Vérification : spec — « Article programmé qui cite le suivant », « Lien dans un
   brouillon », « Dépublication d'un article cité », « Renommage d'un article paru »,
   « Article déjà paru » (suppression), et deux articles qui se citent publiés ensemble.
-- [ ] 2.3 Restauration d'une révision (nouvelle révision, rien d'effacé) et lecture de
+  23/11/2026 : scénarios couverts par `articles.service.spec.ts`, plus `enregistrerLot` (ajouté : des articles qui se citent en boucle ne peuvent pas être **créés** un par un — le premier citerait une adresse inconnue ; c'est le chemin de l'import, rejouable sans révision).
+- [x] 2.3 Restauration d'une révision (nouvelle révision, rien d'effacé) et lecture de
   l'historique.
   Vérification : spec — « Correction annulée » (5 révisions → restaurer la 3 → 6).
-- [ ] 2.4 Contrôleur `/admin/articles` (`@Roles realm:admin`, design D5) et événements
+  23/11/2026 : 5 révisions → restaurer la 3 → révision 6, source de la 3, historique 6..1.
+- [x] 2.4 Contrôleur `/admin/articles` (`@Roles realm:admin`, design D5) et événements
   `article_saved`, `article_published`, `article_unpublished`, `article_restored`,
   `article_deleted`, `article_rejected` (D11).
   Vérification : spec e2e du contrôleur — 401 sans jeton Keycloak, 403 sans rôle
   `admin` ; un événement par geste, sans champ `corps` ni `source` (assertion sur la
   ligne journalisée).
-- [ ] 2.5 `CLAUDE.md`, section « Blog » : la source est la base, la compilation a lieu à
+  23/11/2026 : `jetons.spec.ts` vérifie le rôle `realm:admin` des contrôleurs ; contre l'API du worktree : 401 sans jeton, **403** avec le jeton Keycloak d'un compte ordinaire créé puis supprimé (`/admin/articles`, `/admin/jetons`). Événements sans texte vérifiés en test et dans le journal local.
+  Le filtre global ne rendait que `message` : il transmet désormais les champs d'une exception objet (`causes`, `revisionCourante`, `citants`), sans les journaliser (`http-exception.filter.spec.ts`).
+- [x] 2.5 `CLAUDE.md`, section « Blog » : la source est la base, la compilation a lieu à
   l'enregistrement, règles des chemins, des liens et des révisions ; renvoi au
   chantier.
   Vérification : relecture ; plus aucune mention de `prebuild` ni de
   `articles.generes.ts` comme source d'un article.
+  23/11/2026 : section « Blog : les articles vivent en base » réécrite.
 
 ## 3. Jetons de rédaction (API)
 
-- [ ] 3.1 Entité et service `jeton_api` : création (`nmr_` + 32 octets base64url, valeur
+- [x] 3.1 Entité et service `jeton_api` : création (`nmr_` + 32 octets base64url, valeur
   rendue une fois, SHA-256 stocké, préfixe gardé), liste, révocation,
   `derniereUtilisation` au plus une fois par minute ; routes `/admin/jetons` ;
   événements `api_token_created`, `api_token_revoked`.
   Vérification : spec — « Création », « Révocation », « Valeur lue en base » (aucune
   colonne ne contient la valeur rendue).
-- [ ] 3.2 `JetonDeRedactionGuard` (en-tête `X-Namorama-Jeton`) et contrôleur
+  23/11/2026 : `jetons.spec.ts`.
+- [x] 3.2 `JetonDeRedactionGuard` (en-tête `X-Namorama-Jeton`) et contrôleur
   `/redaction/articles` (`@Public()` de `nest-keycloak-connect`) : liste, lecture au
   format Markdown avec `# revision: N`, vérification, enregistrement, publication,
   dépublication ; auteur de révision = nom du jeton.
   Vérification : spec e2e — jeton valide accepté, révoqué refusé en 401, jeton présenté
   sur `/admin/stats` refusé en 401, « Auteur d'une modification ».
-- [ ] 3.3 `CLAUDE.md` : jetons de rédaction (portée, en-tête, stockage haché,
+  23/11/2026 : `jetons.spec.ts` (garde) ; contre l'API du worktree : jeton valide 200, sans jeton 401, jeton présenté sur `/admin/stats` et `/admin/articles` 401 ; auteur des révisions = nom du jeton.
+- [x] 3.3 `CLAUDE.md` : jetons de rédaction (portée, en-tête, stockage haché,
   révocation) dans la section « Blog ».
   Vérification : relecture.
+  23/11/2026 : dans la section « Blog ».
 
 ## 4. Lecture publique (API)
 
-- [ ] 4.1 `GET /articles` (parus, métadonnées) et `GET /articles/contenu?path=` (un article
+- [x] 4.1 `GET /articles` (parus, métadonnées) et `GET /articles/contenu?path=` (un article
   paru, segments compris, 404 sinon), `@Public()`, `Cache-Control: no-cache` ; « paru » =
   `etat = publie` et `publie` ≤ jour courant à Paris.
   Vérification : spec — brouillon absent ; article daté du lendemain absent puis présent
   en avançant l'horloge du test au lendemain 0 h 05 Paris (« Article programmé un
   lundi », « Le jour venu »).
+  23/11/2026 : `articles.service.spec.ts` — brouillon absent ; article du 30/11 absent à 23 h 50 le 29/11 (Paris), présent à 0 h 05 le 30/11. `curl /articles` : 22 articles après import.
 
 ## 5. Commandes pour Claude et import
 
-- [ ] 5.1 `scripts/article.mjs` et recettes `just article-liste`, `article-lire`,
+- [x] 5.1 `scripts/article.mjs` et recettes `just article-liste`, `article-lire`,
   `article-verifier`, `article-envoyer [--publier]`, `article-publier`,
   `article-depublier` (design D9) ; `NAMORAMA_JETON_ARTICLES` obligatoire,
   `NAMORAMA_API_URL` par défaut `https://api.namorama.com`.
   Vérification : contre l'API du worktree — lire → envoyer sans changement : aucune
   révision ; envoi d'un lien cassé : sortie non nulle, adresse citée, base inchangée ;
   sans variable : échec qui la nomme, aucun appel réseau.
-- [ ] 5.2 `just article-importer <dossier>` : envoi de chaque fichier en brouillon, puis
+  23/11/2026 : lire → envoyer sans changement : révision inchangée ; modification : révision 2 ; renvoi de l'ancienne lecture : 409 « révision en ligne : 2, par Essai local » ; lien cassé : sortie 1, adresse citée, article resté en r2 ; sans variable : échec qui la nomme. Recettes en `[no-cd]` : un chemin de fichier relatif vaut depuis le dossier courant.
+- [x] 5.2 `just article-importer <dossier>` : envoi de chaque fichier en brouillon, puis
   publication de tous les chemins en un appel (D10).
   Vérification : sur la base du worktree, import des 31 fichiers ; `GET /articles` en
   rend 22 au 23/11/2026 (les 9 programmés absents), l'admin en liste 31 ; un second
   import ne crée aucune révision.
+  23/11/2026 : « 31 fichiers : 31 créés, 0 inchangés, 31 publiés » ; `GET /articles` → 22, `article-liste` → 22 publiés + 9 programmés ; second import : « 0 créés, 31 inchangés, 0 publiés ».
 - [ ] 5.3 Réécrire `docs/ecrire-un-article.md` : écrire depuis l'administration, avec
   Claude (jeton, commandes, `# revision`), programmer, conflits, restaurer ; retirer le
   circuit GitHub/PR/déploiement. Supprimer de la section « Blog » de `CLAUDE.md`

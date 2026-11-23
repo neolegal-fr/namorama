@@ -867,46 +867,71 @@ passe, il ne passe pas en SSH non interactif).
 > Rotation à 14 jours : ce journal reste une source d'appoint. Le compte durable des
 > visites vit en base (`visitor_session`), pas ici.
 
-### Blog : un article = un fichier Markdown
+### Blog : les articles vivent en base
 
 Les pages de contenu sont présentées en blog depuis le 23/11/2026 : index `/blog`
 (`/guides` y redirige en 301, nginx du conteneur web), en-tête daté et signé
 « Nicolas Riousset, créateur de Namorama », `BlogPosting` dans le JSON-LD. Depuis le
-chantier `articles-en-markdown`, chaque article textuel est **un fichier** de
-`web/src/content/articles/`, modifiable depuis l'éditeur web de GitHub. Guide
+chantier `articles-en-base`, un article est **une ligne de la table `article`**, et non
+plus un fichier du dépôt : il se corrige et se publie **sans PR ni déploiement**, depuis
+**Administration → Articles** ou par Claude avec un jeton de rédaction. Guide
 d'écriture : [`docs/ecrire-un-article.md`](docs/ecrire-un-article.md).
 
-- **Compilé au build** par `web/scripts/articles.mjs` (`prebuild`, `prestart`,
-  `pretest`) en `articles.generes.ts`, **non versionné** : lancer les tests par
-  `npm test`, pas `npx ng test` sur un dépôt neuf, sinon le module manque. Les lignes
-  d'articles de `sitemap.xml` sont réécrites entre deux marqueurs à chaque build :
-  committer le fichier s'il a bougé.
-- **La compilation refuse** un en-tête incomplet, une catégorie ou une date fausse, un
-  chemin pris, du HTML brut, un attribut ou un bloc inconnu, un lien interne vers une
-  adresse que le site ne sert pas : une erreur d'article arrête la CI de la PR.
-- **Un article paraît à sa date `publie`, à l'heure de Paris** (chantier
-  `publier-les-articles-a-date`) : avant, il n'est pas compilé du tout, et un lien vers
-  lui fait échouer la compilation. La date est évaluée **au build** (HTML prérendu) : un
-  article paraît au **premier déploiement de l'image web qui suit sa date**. Pas de tâche
-  planifiée, choix du 23/11/2026 : un déploiement automatique aurait emporté tout le front
-  de `main`, et le rythme de livraison suffit. Prévisualiser une série :
-  `ARTICLES_JUSQU_AU=AAAA-MM-JJ npm start`. Série `agences-*.md` (agences, freelances,
-  conseils) programmée du 23/11/2026 au 25/01/2027, recherche dans `docs/cible-agences.md`.
-- **L'en-tête du fichier est la source unique** : routes (`app.routes.ts`), prérendu
-  (`app.routes.server.ts`), registre (`articles.ts`), index, en-tête d'article,
-  JSON-LD et plan du site en sont dérivés. Temps de lecture calculé (mots / 220).
-- **Les adresses publiées ne changent pas** (`/guides/…`, `/generateur-…`) : elles sont
-  indexées. Les nouveaux articles vivent sous `/blog/…`.
-- Le HTML compilé est marqué sûr (`ArticleMarkdownComponent`) : il vient du dépôt, relu
-  en PR, et le compilateur refuse tout HTML d'auteur. Les blocs `::: cta` et
+- **La source est un Markdown à en-tête**, au format des anciens fichiers
+  (`path`, `title`, `description`, `titre`, `extrait`, `categorie`, `publie`, `misAJour`),
+  gardée telle quelle dans `article.source`. Le reste de la ligne en est dérivé.
+- **Compilé à l'enregistrement** par `api/src/articles/compilateur/` (porté de l'ancien
+  `web/scripts/articles.mjs`, parité vérifiée sur les 31 articles) : segments HTML et blocs,
+  typographie, temps de lecture (mots / 220). La lecture publique ne compile rien.
+- **Un article invalide est refusé à l'enregistrement, avec toutes ses causes** : en-tête
+  incomplet, catégorie ou date fausse, chemin pris, HTML brut (avec sa ligne), attribut ou
+  bloc inconnu, lien interne vers une adresse que le site ne sert pas. Les adresses
+  connues sont `CHEMINS_DU_SITE` (`compilateur/chemins.ts`) et les articles en base.
+- **Un lien vers un article doit avoir paru le jour où l'article qui le cite est servi** :
+  sa date `publie`, ou aujourd'hui s'il a déjà paru (un guide de juin mis à jour en
+  septembre cite un article de septembre). Un brouillon peut citer un brouillon ; c'est la
+  publication qui tranche. Des articles qui se citent en boucle se publient ensemble
+  (`publier` prend une liste ; l'import passe par un lot, `PUT /redaction/articles/lot`).
+- **États** : brouillon (jamais servi) ou publié, servi **à partir de sa date `publie`, à
+  l'heure de Paris, à la visite** — plus de parution « au déploiement suivant ». Un nouvel
+  article est un brouillon. La dépublication est refusée tant qu'un article publié le cite
+  (`article.liens`). Seul un brouillon jamais paru se supprime.
+- **Les adresses publiées ne changent pas** : un article paru (`premiereParution` passée)
+  garde son chemin. Un nouvel article vit sous `/blog/<identifiant>` ; les 18 adresses
+  antérieures au blog sont figées dans `CHEMINS_HISTORIQUES` (API, web et `nginx.conf`,
+  qu'un test compare).
+- **Révisions** (`article_revision`) : chaque enregistrement qui change la source en garde
+  une, complète, avec son auteur (adresse du compte ou nom du jeton) ; une restauration en
+  crée une nouvelle sans rien effacer. Renvoyer une source identique ne crée rien.
+- **Écriture concurrente** : une modification cite la révision sur laquelle elle a été
+  écrite (`revisionAttendue`, ou la ligne `# revision: N` qu'ajoute la lecture) ; si
+  l'article a changé depuis, 409 avec la révision et l'auteur courants, rien n'est écrasé.
+- **Jetons de rédaction** (`jeton_api`), créés et révoqués dans Administration → Articles :
+  valeur `nmr_…` montrée **une seule fois**, seule son empreinte SHA-256 est gardée,
+  révocation immédiate. Présentés dans l'en-tête **`X-Namorama-Jeton`** — pas
+  `Authorization`, que le garde Keycloak tente de valider même sur une route publique.
+  Portée : les seules routes `/redaction/articles` (`JetonDeRedactionGuard`) ; ils
+  n'ouvrent rien d'autre, et la suppression reste un geste de l'écran.
+- **Commandes** (`scripts/article.mjs`) : `just article-liste`, `article-lire`,
+  `article-verifier`, `article-envoyer [--publier]`, `article-publier`,
+  `article-depublier`, `article-importer`, avec `NAMORAMA_JETON_ARTICLES` (jamais dans le
+  dépôt) et `NAMORAMA_API_URL` (défaut : la production).
+- **Journal** : `article_saved`, `article_published`, `article_unpublished`,
+  `article_restored`, `article_deleted`, `article_rejected` (nombre de causes),
+  `api_token_created`, `api_token_revoked` — chemin, révision, type et identifiant
+  d'auteur, **jamais le texte ni une valeur de jeton**. Les `causes` d'un refus sont
+  rendues au client (le filtre global transmet les champs d'une exception objet) mais
+  pas journalisées : elles peuvent citer le texte.
+- Le HTML compilé est marqué sûr (`ArticleMarkdownComponent`) : seul un administrateur ou
+  un jeton écrit, et le compilateur refuse tout HTML d'auteur. Les blocs `::: cta` et
   `::: trois-risques` restent les vrais composants Angular.
-- **Exception** : `/verifier-disponibilite-nom-de-marque` reste un composant (vérificateur
-  interactif) et garde son entrée écrite à la main dans `articles.ts`.
-- La migration a été vérifiée au texte près (texte visible, liens, ancres, JSON-LD des 21
-  pages prérendues) ; elle a corrigé au passage une espace qu'Angular supprimait entre
-  deux balises en ligne.
+- **Exception** : `/verifier-disponibilite-nom-de-marque` reste un composant prérendu
+  (vérificateur interactif) et garde son entrée écrite à la main dans `articles.ts`.
 - Un article ne cite jamais une description d'utilisateur telle quelle ; un chiffre
   mesuré (registre, base) porte sa date.
+
+> Migration `2026-11-23-articles-en-base.sql`, avant l'image API ; puis import des
+> articles (`just article-importer`) avant l'image web qui cesse de les prérendre.
 
 ### Pages prérendues : les URL d'actifs sont ABSOLUES
 

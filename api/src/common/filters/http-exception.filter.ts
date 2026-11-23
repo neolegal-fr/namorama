@@ -34,11 +34,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: string | string[] = 'Erreur interne du serveur';
+    // Champs propres à une exception levée avec un objet (`causes` d'un article refusé,
+    // `revisionCourante` d'un conflit…) : rendus au client, jamais journalisés — les
+    // causes d'un refus peuvent citer le texte d'un article.
+    let complements: Record<string, unknown> = {};
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const res = exception.getResponse();
       message = typeof res === 'string' ? res : (res as any).message || message;
+      if (res && typeof res === 'object') {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { statusCode, message: _m, error, ...reste } = res as Record<string, unknown>;
+        complements = reste;
+      }
     } else if (erreurClientExpress(exception)) {
       // Erreur levée AVANT Nest, par le parseur de corps : corps trop gros
       // (413), JSON illisible (400). Ce n'est pas une panne du serveur. En 500,
@@ -89,6 +98,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     response.status(status).json({
+      ...complements,
       statusCode: status,
       message,
       timestamp: new Date().toISOString(),
