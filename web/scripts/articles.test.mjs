@@ -1,7 +1,15 @@
 // node --test scripts/articles.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compilerArticle, compilerArticles, planDuSite, typographie, cheminsDesRoutes } from './articles.mjs';
+import {
+  compilerArticle,
+  compilerArticles,
+  planDuSite,
+  typographie,
+  cheminsDesRoutes,
+  dateDeParis,
+  dateDePublication,
+} from './articles.mjs';
 
 const CHEMINS = new Set(['/', '/app', '/blog', '/guides/trouver-nom-de-marque']);
 const entete = (extra = {}) => {
@@ -136,4 +144,64 @@ test('plan du site : lignes entre les marqueurs, plus récent d’abord', () => 
 test('routes lues dans app.routes.ts', () => {
   const c = cheminsDesRoutes("{ path: '' }, { path: 'blog' }, { path: 'projects/:id' }, { path: '**' }");
   assert.deepEqual([...c].sort(), ['/', '/blog']);
+});
+
+// ── Articles programmés (chantier publier-les-articles-a-date) ───────────────
+
+const fichier = (slug, publie, corps = 'Texte.') => ({
+  nom: `${slug}.md`,
+  source: article(corps, { path: `/blog/${slug}`, publie, misAJour: publie }),
+});
+
+test('article du jour compilé, article du lendemain écarté', () => {
+  const out = compilerArticles([fichier('lundi', '2026-11-30'), fichier('suivant', '2026-12-07')], CHEMINS, '2026-11-30');
+  assert.deepEqual(out.map((a) => a.path), ['/blog/lundi']);
+});
+
+test('sans date, tout est compilé (tests et appels existants)', () => {
+  assert.equal(compilerArticles([fichier('a', '2026-11-30'), fichier('b', '2027-02-01')], CHEMINS).length, 2);
+});
+
+test('lien vers un article programmé : erreur qui nomme le lien et la date', () => {
+  assert.throws(
+    () =>
+      compilerArticles(
+        [fichier('lundi', '2026-11-30', 'Voir [la suite](/blog/suivant#x).'), fichier('suivant', '2026-12-21')],
+        CHEMINS,
+        '2026-11-30',
+      ),
+    (e) => /^lundi\.md : lien vers \/blog\/suivant#x, article programmé le 2026-12-21/.test(e.message),
+  );
+});
+
+test('lien vers un article paru le même jour accepté', () => {
+  const out = compilerArticles(
+    [fichier('a', '2026-11-30', 'Voir [b](/blog/b).'), fichier('b', '2026-11-30')],
+    CHEMINS,
+    '2026-11-30',
+  );
+  assert.equal(out.length, 2);
+});
+
+test('chemin d’un article programmé déjà servi par le site : toujours refusé', () => {
+  assert.throws(
+    () => compilerArticles([{ nom: 'x.md', source: article('T', { path: '/blog', publie: '2027-01-01', misAJour: '2027-01-01' }) }], CHEMINS, '2026-11-30'),
+    /déjà servi/,
+  );
+});
+
+test('date du jour à Paris, pas celle du processus', () => {
+  // 23:30 UTC le 29/11 = 00:30 le 30/11 à Paris (heure d'hiver).
+  assert.equal(dateDeParis(new Date('2026-11-29T23:30:00Z')), '2026-11-30');
+  // 05:00 UTC un lundi d'été = 07:00 à Paris, même jour.
+  assert.equal(dateDeParis(new Date('2027-06-07T05:00:00Z')), '2027-06-07');
+});
+
+test('ARTICLES_JUSQU_AU remplace la date du jour, et doit être une date', () => {
+  const maintenant = new Date('2026-11-23T10:00:00Z');
+  assert.equal(dateDePublication({}, maintenant), '2026-11-23');
+  assert.equal(dateDePublication({ ARTICLES_JUSQU_AU: '' }, maintenant), '2026-11-23');
+  assert.equal(dateDePublication({ ARTICLES_JUSQU_AU: '2027-02-01' }, maintenant), '2027-02-01');
+  assert.throws(() => dateDePublication({ ARTICLES_JUSQU_AU: '01/02/2027' }, maintenant), /ARTICLES_JUSQU_AU doit être une date/);
+  assert.throws(() => dateDePublication({ ARTICLES_JUSQU_AU: '2027-02-30' }, maintenant), /ARTICLES_JUSQU_AU/);
 });

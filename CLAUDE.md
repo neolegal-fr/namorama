@@ -884,6 +884,17 @@ d'écriture : [`docs/ecrire-un-article.md`](docs/ecrire-un-article.md).
 - **La compilation refuse** un en-tête incomplet, une catégorie ou une date fausse, un
   chemin pris, du HTML brut, un attribut ou un bloc inconnu, un lien interne vers une
   adresse que le site ne sert pas : une erreur d'article arrête la CI de la PR.
+- **Un article paraît à sa date `publie`, à l'heure de Paris** (chantier
+  `publier-les-articles-a-date`) : avant, il n'est pas compilé du tout, et un lien vers
+  lui fait échouer la compilation. Le lundi à 05:00 UTC, `publier-les-articles.yml`
+  reconstruit l'image web si un article paraît ce jour-là ; à 07:30 (Paris), la crontab
+  de `nicolas` sur le serveur lance `publier-les-articles.sh` (versionné dans
+  `infra/prod/`), qui tire l'image `web` et la redéploie si elle a changé — l'API n'est
+  jamais concernée. Journal : `logs/publication-articles.log`. Conséquence : **le lundi,
+  la production reçoit tout le front de `main`** ; un front fusionné qui attendrait une
+  API non déployée partirait avec. Prévisualiser une série :
+  `ARTICLES_JUSQU_AU=AAAA-MM-JJ npm start`. Série `agences-*.md` (agences, freelances,
+  conseils) programmée du 30/11/2026 au 01/02/2027, recherche dans `docs/cible-agences.md`.
 - **L'en-tête du fichier est la source unique** : routes (`app.routes.ts`), prérendu
   (`app.routes.server.ts`), registre (`articles.ts`), index, en-tête d'article,
   JSON-LD et plan du site en sont dérivés. Temps de lecture calculé (mots / 220).
