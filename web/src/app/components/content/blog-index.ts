@@ -70,23 +70,23 @@ import { ARTICLES, AUTEUR, CATEGORIES, type CategorieArticle, dateLongue } from 
       gap: 0.4rem;
       min-height: 40px;
       padding: 0.35rem 0.95rem;
-      border: 1px solid var(--p-surface-200, #e5e7eb);
+      border: 1px solid var(--nm-app-border);
       border-radius: 999px;
       background: transparent;
-      color: var(--p-surface-700);
+      color: var(--nm-app-text);
       font: inherit;
       font-size: 0.92rem;
       cursor: pointer;
       transition: border-color 0.15s, background 0.15s;
     }
-    .blog-filtre:hover { border-color: var(--p-primary-300, #6ee7b7); }
+    .blog-filtre:hover { border-color: var(--nm-app-accent-border); }
     .blog-filtre.actif {
-      background: var(--p-primary-50, #ecfdf5);
-      border-color: var(--p-primary-400, #34d399);
-      color: var(--p-surface-900);
+      background: var(--nm-app-accent-surface);
+      border-color: var(--nm-app-accent);
+      color: var(--nm-app-text);
       font-weight: 600;
     }
-    .blog-filtre .nb { font-size: 0.8rem; color: var(--p-surface-500); }
+    .blog-filtre .nb { font-size: 0.8rem; color: var(--nm-app-text-3); }
     .blog-liste {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
@@ -98,15 +98,14 @@ import { ARTICLES, AUTEUR, CATEGORIES, type CategorieArticle, dateLongue } from 
       flex-direction: column;
       gap: 0.5rem;
       padding: 1.25rem 1.4rem;
-      border: 1px solid var(--p-surface-200, #e5e7eb);
+      border: 1px solid var(--nm-app-border);
       border-radius: 0.8rem;
-      text-decoration: none !important;
-      color: inherit !important;
-      transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 0.15s, transform 0.15s;
     }
     .blog-carte:hover {
-      border-color: var(--p-primary-300, #6ee7b7);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+      border-color: var(--nm-app-accent-border);
       transform: translateY(-2px);
     }
     .blog-carte.une { grid-column: 1 / -1; padding: 1.75rem 1.9rem; }
@@ -116,17 +115,17 @@ import { ARTICLES, AUTEUR, CATEGORIES, type CategorieArticle, dateLongue } from 
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      color: var(--p-primary-700, #047857);
+      color: var(--nm-app-accent);
     }
     .blog-carte h2 {
       font-size: 1.15rem;
       font-weight: 700;
       line-height: 1.3;
       margin: 0;
-      color: var(--p-surface-900);
+      color: var(--nm-app-text);
     }
-    .blog-carte p { margin: 0; color: var(--p-surface-600); line-height: 1.5; flex: 1; }
-    .blog-date { font-size: 0.85rem; color: var(--p-surface-500); }
+    .blog-carte p { margin: 0; color: var(--nm-app-text-2); line-height: 1.5; flex: 1; }
+    .blog-date { font-size: 0.85rem; color: var(--nm-app-text-3); }
   `],
 })
 export class BlogIndexComponent {

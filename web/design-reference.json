@@ -58,9 +58,6 @@
       "couleurs": 2,
       "stylesEnLigne": 5
     },
-    "src/app/components/content/guides-index.ts": {
-      "couleurs": 3
-    },
     "src/app/components/content/rapport-public.css": {
       "taillesPx": 1
     },
