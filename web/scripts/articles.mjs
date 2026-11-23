@@ -34,13 +34,26 @@ export class ErreurArticle extends Error {
 
 // ── Typographie ──────────────────────────────────────────────────────────────
 
-/** Espaces insécables du français, sur du texte (jamais du code ni une URL). */
-export function typographie(texte) {
-  return texte
+// Marques provisoires de l'exposant (zone à usage privé d'Unicode) : posées sur
+// le texte avant conversion, remplacées par <sup> après, quand le HTML de
+// l'auteur a déjà été refusé.
+const SUP_DEBUT = '\uE000';
+const SUP_FIN = '\uE001';
+
+/**
+ * Typographie française, sur du texte (jamais du code ni une URL) : espaces
+ * insécables, et « 1er » en exposant quand `exposants` est vrai (corps HTML ;
+ * pas dans les blocs, affichés comme texte).
+ */
+export function typographie(texte, exposants = false) {
+  const t = texte
     .replace(/ ([:;!?»])/g, `${NBSP}$1`)
     .replace(/« /g, `«${NBSP}`)
     .replace(/(\d) (€|%)/g, `$1${NBSP}$2`);
+  return exposants ? t.replace(/(?<![\p{L}\p{N}])1er(?![\p{L}\p{N}])/gu, `1${SUP_DEBUT}er${SUP_FIN}`) : t;
 }
+
+const exposants = (html) => html.replaceAll(SUP_DEBUT, '<sup>').replaceAll(SUP_FIN, '</sup>');
 
 // ── En-tête ──────────────────────────────────────────────────────────────────
 
@@ -109,7 +122,7 @@ function convertisseur(fichier, cheminsConnus) {
       if (token.type === 'html') {
         throw new ErreurArticle(fichier, `HTML brut interdit : « ${token.raw.trim().slice(0, 60)} »`);
       }
-      if (token.type === 'text' && !token.tokens) token.text = typographie(token.text);
+      if (token.type === 'text' && !token.tokens) token.text = typographie(token.text, true);
     },
     renderer: {
       heading({ tokens, depth }) {
@@ -189,7 +202,7 @@ export function compilerArticle(fichier, source, cheminsConnus) {
   let tampon = [];
   const viderTampon = () => {
     const md = tampon.join('\n').trim();
-    if (md) segments.push({ type: 'html', html: marked.parse(md).replace(/<table>/g, '<table class="compare">') });
+    if (md) segments.push({ type: 'html', html: exposants(marked.parse(md)).replace(/<table>/g, '<table class="compare">') });
     tampon = [];
   };
   for (let i = 0; i < lignes.length; i++) {
@@ -207,7 +220,7 @@ export function compilerArticle(fichier, source, cheminsConnus) {
   }
   viderTampon();
 
-  const titre = marked.parseInline(h1[1].trim());
+  const titre = exposants(marked.parseInline(h1[1].trim()));
   const texteComplet = [titre, ...segments.map((s) => (s.type === 'html' ? s.html : Object.values(s).join(' ')))].join(' ');
   return {
     ...entete,

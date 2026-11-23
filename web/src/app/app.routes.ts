@@ -12,27 +12,7 @@ import { AdminCostsComponent } from './components/admin/admin-costs.component';
 import { AdminReplaysComponent } from './components/admin/admin-replays.component';
 import { LegalComponent } from './components/legal/legal.component';
 import { PrivacyComponent } from './components/privacy/privacy.component';
-import { GuideNomDeMarqueComponent } from './components/content/guide-nom-de-marque';
-import { ComparatifGenerateursComponent } from './components/content/comparatif-generateurs';
-import { ComparatifNamelixComponent } from './components/content/comparatif-namelix';
-import { ComparatifLookaComponent } from './components/content/comparatif-looka';
 import { BlogIndexComponent } from './components/content/blog-index';
-import { NomEntrepriseArtisanComponent } from './components/content/nom-entreprise-artisan';
-import { NomsChatgptDejaPrisComponent } from './components/content/noms-chatgpt-deja-pris';
-import { GuideNomEntrepriseComponent } from './components/content/guide-nom-entreprise';
-import { GuideNomDeProduitComponent } from './components/content/guide-nom-de-produit';
-import { GuideNomDeStartupComponent } from './components/content/guide-nom-de-startup';
-import { GenerateurNomDeMarqueComponent } from './components/content/generateur-nom-de-marque';
-import { GenerateurNomEntrepriseComponent } from './components/content/generateur-nom-entreprise';
-import { GenerateurNomMarqueVetementComponent } from './components/content/generateur-nom-marque-vetement';
-import { GenerateurNomDeDomaineComponent } from './components/content/generateur-nom-de-domaine';
-import { RechercheAnterioriteMarqueInpiComponent } from './components/content/recherche-anteriorite-marque-inpi';
-import { GenerateurNomStartupIaComponent } from './components/content/generateur-nom-startup-ia';
-import { GenerateurNomEcommerceComponent } from './components/content/generateur-nom-ecommerce';
-import { GenerateurNomSaasComponent } from './components/content/generateur-nom-saas';
-import { GenerateurNomProduitComponent } from './components/content/generateur-nom-produit';
-import { GenerateurNomMarqueCosmetiqueComponent } from './components/content/generateur-nom-marque-cosmetique';
-import { NomCourtInventeComponent } from './components/content/nom-court-invente';
 import { VerifierDisponibiliteMarqueComponent } from './components/content/verifier-disponibilite-nom-de-marque';
 import { ArticleMarkdownComponent } from './components/content/article-markdown';
 import { ARTICLES_MARKDOWN } from './components/content/articles.generes';
@@ -57,23 +37,6 @@ export const routes: Routes = [
     component: ArticleMarkdownComponent,
     data: { article: a.path },
   })),
-  { path: 'blog/nom-entreprise-artisan', component: NomEntrepriseArtisanComponent },
-  { path: 'blog/noms-chatgpt-deja-pris', component: NomsChatgptDejaPrisComponent },
-  { path: 'guides/trouver-nom-de-marque', component: GuideNomDeMarqueComponent },
-  { path: 'guides/trouver-nom-entreprise', component: GuideNomEntrepriseComponent },
-  { path: 'guides/trouver-nom-de-produit', component: GuideNomDeProduitComponent },
-  { path: 'guides/trouver-nom-de-startup', component: GuideNomDeStartupComponent },
-  { path: 'generateur-nom-de-marque', component: GenerateurNomDeMarqueComponent },
-  { path: 'generateur-nom-entreprise', component: GenerateurNomEntrepriseComponent },
-  { path: 'generateur-nom-marque-vetement', component: GenerateurNomMarqueVetementComponent },
-  { path: 'generateur-nom-de-domaine', component: GenerateurNomDeDomaineComponent },
-  { path: 'recherche-anteriorite-marque-inpi', component: RechercheAnterioriteMarqueInpiComponent },
-  { path: 'generateur-nom-startup-ia', component: GenerateurNomStartupIaComponent },
-  { path: 'generateur-nom-ecommerce', component: GenerateurNomEcommerceComponent },
-  { path: 'generateur-nom-saas', component: GenerateurNomSaasComponent },
-  { path: 'generateur-nom-de-produit', component: GenerateurNomProduitComponent },
-  { path: 'generateur-nom-marque-cosmetique', component: GenerateurNomMarqueCosmetiqueComponent },
-  { path: 'nom-de-startup-court-invente', component: NomCourtInventeComponent },
   { path: 'verifier-disponibilite-nom-de-marque', component: VerifierDisponibiliteMarqueComponent },
   { path: 'rapport/:token', component: RapportPartageComponent },
   /*
@@ -84,9 +47,6 @@ export const routes: Routes = [
    * contrôlés, gratuitement, et le reste s'annonce derrière l'inscription.
    */
   { path: 'report', component: RapportPublicComponent },
-  { path: 'comparatif-generateurs-de-noms', component: ComparatifGenerateursComponent },
-  { path: 'namorama-vs-namelix', component: ComparatifNamelixComponent },
-  { path: 'namorama-vs-looka', component: ComparatifLookaComponent },
   { path: 'app', component: WizardComponent },
   { path: 'projects/:id', component: WizardComponent },
   { path: 'payment/success', component: PaymentResultComponent },

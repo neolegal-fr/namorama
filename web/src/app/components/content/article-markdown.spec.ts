@@ -5,7 +5,11 @@ import { ARTICLES_MARKDOWN } from './articles.generes';
 
 /** Scénarios « Blocs réutilisables » et « Navigation interne sans rechargement ». */
 describe('ArticleMarkdownComponent', () => {
-  const article = ARTICLES_MARKDOWN.find((a) => a.segments.some((s) => s.type === 'cta'))!;
+  // Un article qui a un bloc, un lien interne et un lien externe.
+  const html = (a: (typeof ARTICLES_MARKDOWN)[number]) => a.segments.map((s) => (s.type === 'html' ? s.html : '')).join('');
+  const article = ARTICLES_MARKDOWN.find(
+    (a) => a.segments.some((s) => s.type === 'cta') && /href="\//.test(html(a)) && /target="_blank"/.test(html(a)),
+  )!;
 
   function monter() {
     TestBed.configureTestingModule({

@@ -51,12 +51,28 @@
 
 ## 3. Migration des articles
 
-- [ ] 3.1 Convertir les 20 autres articles textuels (premier jet scripté, relu à la
+- [x] 3.1 Convertir les 20 autres articles textuels (premier jet scripté, relu à la
   main), supprimer leurs composants et leurs entrées de registre.
   Vérification : comparaison avant/après sans différence non justifiée, différences
   justifiées notées ici ; 27 routes prérendues ; `npx ng test --watch=false`.
-- [ ] 3.2 `just design-check` ; `just design-resserrer` si des styles en ligne ont
+  23/11/2026 : 21 fichiers, 21 compilés sans erreur (aucun lien interne cassé),
+  27 routes prérendues, `npm test` 96/96. Comparaison : 17 pages identiques, 4 écarts
+  justifiés :
+  - `/generateur-nom-de-produit`, `/guides/trouver-nom-entreprise` : `rel` des liens vers
+    data.inpi.fr passe de `noopener noreferrer` à `noopener`, comme tous les autres liens
+    externes du blog.
+  - `/generateur-nom-de-marque` : « 6 min de lecture » au lieu de 5, temps désormais
+    calculé sur le texte.
+  - `/generateur-nom-saas` : « suffixes. -ify » au lieu de « suffixes.-ify ». Angular
+    supprimait l'espace entre `</strong>` et `<code>` ; le Markdown la garde. Correction.
+  « 1<sup>er</sup> » (3 articles) : règle typographique ajoutée à la compilation (`1er`
+  en exposant dans le corps), testée. Vu au navigateur : bloc « trois risques » et
+  exposant (1280 px), tableau oui/non (1280 px), appel à l'action (390 px), sans
+  débordement.
+- [x] 3.2 `just design-check` ; `just design-resserrer` si des styles en ligne ont
   disparu, et committer `web/design-reference.json`.
+  23/11/2026 : aucune valeur en dur ajoutée ; 672 occurrences héritées inchangées (les
+  gabarits supprimés n'en portaient pas), pas de resserrement à committer.
 
 ## 4. Documentation
 

@@ -110,6 +110,12 @@ test('typographie française, hors code et hors URL', () => {
   assert.equal(typographie('Pourquoi ?'), 'Pourquoi ?');
 });
 
+test('« 1er » en exposant dans le corps, pas dans le code ni les blocs', () => {
+  const a = compiler(article('Mesuré le 1er août, pas le 11er. `1er`\n\n::: cta\nLe 1er mois.\n:::'));
+  assert.match(a.segments[0].html, /le 1<sup>er<\/sup> août, pas le 11er\. <code>1er<\/code>/);
+  assert.equal(a.segments[1].subheading, 'Le 1er mois.');
+});
+
 test('1 100 mots → 5 min de lecture', () => {
   const corps = Array.from({ length: 1098 }, () => 'mot').join(' ');
   assert.equal(compiler(article(corps)).lecture, 5); // + « Le titre » = 1 100 mots
