@@ -891,7 +891,7 @@ d'écriture : [`docs/ecrire-un-article.md`](docs/ecrire-un-article.md).
   planifiée, choix du 23/11/2026 : un déploiement automatique aurait emporté tout le front
   de `main`, et le rythme de livraison suffit. Prévisualiser une série :
   `ARTICLES_JUSQU_AU=AAAA-MM-JJ npm start`. Série `agences-*.md` (agences, freelances,
-  conseils) programmée du 30/11/2026 au 01/02/2027, recherche dans `docs/cible-agences.md`.
+  conseils) programmée du 23/11/2026 au 25/01/2027, recherche dans `docs/cible-agences.md`.
 - **L'en-tête du fichier est la source unique** : routes (`app.routes.ts`), prérendu
   (`app.routes.server.ts`), registre (`articles.ts`), index, en-tête d'article,
   JSON-LD et plan du site en sont dérivés. Temps de lecture calculé (mots / 220).

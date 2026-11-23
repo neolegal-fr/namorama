@@ -5,8 +5,8 @@ description: "Partager un projet de naming avec un client, transformer ses réac
 titre: "Chercher un nom avec son client : partager, recueillir, décider"
 extrait: "Le client qui dit « je ne sais pas, mais pas ça » n'est pas un obstacle : c'est un brief qu'il faut écrire. Comment travailler la recherche à deux."
 categorie: Méthode
-publie: 2027-01-04
-misAJour: 2027-01-04
+publie: 2026-12-28
+misAJour: 2026-12-28
 ---
 
 # Chercher un nom avec son client : partager, recueillir ses retours, le faire décider

@@ -5,8 +5,8 @@ description: "Activité, public, pays, longueur, mots interdits, marques de réf
 titre: "Le brief de naming : dix questions à poser à votre client"
 extrait: "Dix questions à poser avant la première proposition, et comment transformer chaque réponse en critère qu'on peut vérifier plutôt qu'en impression."
 categorie: Méthode
-publie: 2026-12-14
-misAJour: 2026-12-14
+publie: 2026-12-07
+misAJour: 2026-12-07
 ---
 
 # Le brief de naming : les questions à poser à votre client avant de chercher un nom

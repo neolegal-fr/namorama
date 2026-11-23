@@ -5,8 +5,8 @@ description: "Recherche à l'identique, recherche de similarité, choix des clas
 titre: "Agence et conseil en propriété industrielle : qui vérifie quoi"
 extrait: "L'agence élimine l'évident, le conseil juge le proche. Ce que chacun vérifie, quand, et le dossier qui évite au conseil de refaire le travail."
 categorie: Marque & droit
-publie: 2027-01-11
-misAJour: 2027-01-11
+publie: 2027-01-04
+misAJour: 2027-01-04
 ---
 
 # Agence et conseil en propriété industrielle : qui vérifie quoi, et à quel moment

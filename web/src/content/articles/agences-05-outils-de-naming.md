@@ -5,8 +5,8 @@ description: "Générateurs IA, outils de disponibilité, recherche de marques, 
 titre: "Outils de naming pour agences : le comparatif 2026"
 extrait: "Namelix, NameStation, Corsearch, TMview, ChatGPT… Ce que chaque outil couvre dans le travail d'une agence, de la génération au conseil en propriété industrielle."
 categorie: Comparatifs
-publie: 2026-12-28
-misAJour: 2026-12-28
+publie: 2026-12-21
+misAJour: 2026-12-21
 ---
 
 # Outils de naming pour agences et freelances : le comparatif 2026

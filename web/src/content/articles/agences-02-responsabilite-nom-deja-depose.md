@@ -5,8 +5,8 @@ description: "Une agence qui vend du naming doit proposer un nom disponible : un
 titre: "Agence : êtes-vous responsable si le nom proposé est déjà déposé ?"
 extrait: "Une agence de communication a été condamnée en appel pour avoir livré un nom déjà déposé. Ce que cela change dans vos devis et vos vérifications."
 categorie: Marque & droit
-publie: 2026-12-07
-misAJour: 2026-12-07
+publie: 2026-11-30
+misAJour: 2026-11-30
 ---
 
 # Agence de communication : êtes-vous responsable si le nom proposé est déjà déposé ?

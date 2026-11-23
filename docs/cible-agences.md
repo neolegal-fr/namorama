@@ -1,7 +1,7 @@
 # Cible : ceux qui cherchent un nom pour quelqu'un d'autre
 
 Recherche du 23/11/2026, à l'origine de la série d'articles `web/src/content/articles/agences-*.md`
-(datés un par lundi, du 30/11/2026 au 01/02/2027 ; chacun paraît au premier déploiement qui suit sa date). Aucun article antérieur ne visait ces lecteurs :
+(datés un par lundi, du 23/11/2026 au 25/01/2027 ; chacun paraît au premier déploiement qui suit sa date). Aucun article antérieur ne visait ces lecteurs :
 le conseil en propriété industrielle n'y apparaissait que comme l'étape « faites valider par… »,
 et le partage de projet n'était mentionné nulle part.
 
@@ -81,16 +81,16 @@ période) limiterait une agence active.
 
 | Lundi | Chemin | Catégorie |
 |---|---|---|
-| 30/11/2026 | `/blog/agences-qui-trouve-les-noms-de-marque` (pilier) | Méthode |
-| 07/12/2026 | `/blog/agence-responsable-nom-deja-depose` | Marque & droit |
-| 14/12/2026 | `/blog/brief-de-naming` | Méthode |
-| 21/12/2026 | `/blog/shortlist-de-noms-verifiee` | Méthode |
-| 28/12/2026 | `/blog/outils-de-naming-pour-agences` | Comparatifs |
-| 04/01/2027 | `/blog/chercher-un-nom-avec-son-client` | Méthode |
-| 11/01/2027 | `/blog/agence-et-conseil-en-propriete-industrielle` | Marque & droit |
-| 18/01/2027 | `/blog/freelance-naming-face-a-l-ia` | Méthode |
-| 25/01/2027 | `/blog/nommer-une-marque-pour-plusieurs-pays` | Méthode |
-| 01/02/2027 | `/blog/agence-web-client-sans-nom` | Secteurs |
+| 23/11/2026 | `/blog/agences-qui-trouve-les-noms-de-marque` (pilier) | Méthode |
+| 30/11/2026 | `/blog/agence-responsable-nom-deja-depose` | Marque & droit |
+| 07/12/2026 | `/blog/brief-de-naming` | Méthode |
+| 14/12/2026 | `/blog/shortlist-de-noms-verifiee` | Méthode |
+| 21/12/2026 | `/blog/outils-de-naming-pour-agences` | Comparatifs |
+| 28/12/2026 | `/blog/chercher-un-nom-avec-son-client` | Méthode |
+| 04/01/2027 | `/blog/agence-et-conseil-en-propriete-industrielle` | Marque & droit |
+| 11/01/2027 | `/blog/freelance-naming-face-a-l-ia` | Méthode |
+| 18/01/2027 | `/blog/nommer-une-marque-pour-plusieurs-pays` | Méthode |
+| 25/01/2027 | `/blog/agence-web-client-sans-nom` | Secteurs |
 
 Chaque article ne renvoie qu'aux articles déjà parus. Une fois la série publiée, les anciens
 articles (atelier de nommage, antériorité INPI, comparatif) pourront renvoyer vers elle.

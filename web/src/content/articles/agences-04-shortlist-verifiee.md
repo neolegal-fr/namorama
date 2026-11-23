@@ -5,8 +5,8 @@ description: "Combien de candidats générer, dans quel ordre les vérifier, com
 titre: "La shortlist vérifiée : ne présentez plus un nom non vérifié"
 extrait: "Un client qui aime un nom déjà pris est un client qu'on a mis en danger. L'entonnoir qui l'évite, des cent candidats aux trois noms présentés."
 categorie: Méthode
-publie: 2026-12-21
-misAJour: 2026-12-21
+publie: 2026-12-14
+misAJour: 2026-12-14
 ---
 
 # Shortlist de noms : ne présentez plus à votre client un nom que vous n'avez pas vérifié

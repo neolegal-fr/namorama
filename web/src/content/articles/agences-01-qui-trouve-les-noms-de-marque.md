@@ -5,8 +5,8 @@ description: "Agences de naming, de communication, freelances, conseils en propr
 titre: "Agences, freelances, conseils : qui trouve les noms de marque"
 extrait: "Une agence de naming, une agence de communication, un freelance, un conseil en marques : quatre métiers, un même goulot. Ce qui bloque, et où."
 categorie: Méthode
-publie: 2026-11-30
-misAJour: 2026-11-30
+publie: 2026-11-23
+misAJour: 2026-11-23
 ---
 
 # Agences, freelances, conseils : qui trouve les noms de marque, et ce qui les bloque

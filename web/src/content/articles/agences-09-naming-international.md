@@ -5,8 +5,8 @@ description: "Prononciation, sens dans chaque langue, extensions locales, regist
 titre: "Nommer une marque pour plusieurs pays : la check-list de l'agence"
 extrait: "Hopwork est devenu Malt, Mondo est devenu Monzo. Ce qu'il faut vérifier, pays par pays, avant de présenter un nom « international »."
 categorie: Méthode
-publie: 2027-01-25
-misAJour: 2027-01-25
+publie: 2027-01-18
+misAJour: 2027-01-18
 ---
 
 # Nommer une marque pour plusieurs pays : ce que l'agence doit vérifier avant de promettre

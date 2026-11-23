@@ -5,8 +5,8 @@ description: "Un site commence par un domaine. Quand le client n'a pas de nom, o
 titre: "Agence web : le client arrive sans nom, ou avec un nom pris"
 extrait: "Un site commence par un domaine, et le domaine par un nom. Ce que l'agence web doit vérifier, et le piège du domaine déposé à son propre nom."
 categorie: Secteurs
-publie: 2027-02-01
-misAJour: 2027-02-01
+publie: 2027-01-25
+misAJour: 2027-01-25
 ---
 
 # Agence web : quand le client arrive sans nom, ou avec un nom déjà pris

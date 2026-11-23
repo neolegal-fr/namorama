@@ -5,8 +5,8 @@ description: "Un assistant IA donne vingt noms en dix secondes. Ce qu'un freelan
 titre: "Freelance en naming : vendre une mission quand le client a ChatGPT"
 extrait: "Le client a vu vingt noms s'afficher en dix secondes. Ce que vous vendez, ce n'est pas la liste : c'est ce qui en reste après vérification."
 categorie: Méthode
-publie: 2027-01-18
-misAJour: 2027-01-18
+publie: 2027-01-11
+misAJour: 2027-01-11
 ---
 
 # Freelance en naming : vendre une mission quand votre client a ChatGPT
