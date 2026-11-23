@@ -6,7 +6,7 @@ titre: Comparatif des générateurs de noms
 extrait: Quel outil choisir, et pourquoi la vérification de disponibilité réelle change tout.
 categorie: Comparatifs
 publie: 2026-06-10
-misAJour: 2026-09-03
+misAJour: 2026-11-23
 ---
 
 # Générateurs de noms de marque : comment choisir (et pourquoi la disponibilité change tout)
@@ -35,10 +35,10 @@ Namorama appartient à une cinquième catégorie, plus étroite : génération I
 | Analyse des noms du secteur | Non {.no} | Non {.no} | Oui, avant génération {.yes} |
 | Suggestions en français | Rare {.no} | Souvent anglophones {.no} | Oui, et 18 autres langues {.yes} |
 | Extensions locales (.fr, .be, .ch) | Rare {.no} | Rare {.no} | Oui, au choix {.yes} |
-| Vérification de marque déposée | Non {.no} | Non {.no} | Lien INPI pré-rempli |
+| Vérification de marque déposée | Non {.no} | Rare, et registre américain seulement {.no} | INPI et EUIPO, nom et orthographes voisines (rapport) {.yes} |
 | Sans abonnement | Variable | Variable | Oui, 100 crédits offerts {.yes} |
 
-Une ligne mérite d'être lue honnêtement : **personne**, Namorama compris, ne vérifie automatiquement les marques déposées. C'est l'angle mort de toute la catégorie, et nous y revenons plus bas.
+Une ligne mérite d'être lue honnêtement : celle des marques. C'est l'angle mort de la catégorie. Les rares générateurs qui vérifient les marques, comme Namify, interrogent le registre américain (USPTO), qui ne dit rien d'une marque française. Le rapport de marque de Namorama interroge l'**INPI** et l'**EUIPO**, sous le nom et ses autres orthographes. Il trouve les marques **identiques**, pas celles qui se ressemblent : nous y revenons plus bas.
 
 ## Ce que « disponible » veut dire vraiment {#disponibilite}
 
@@ -82,9 +82,11 @@ Lancez une recherche : vous verrez la génération IA et la vérification de dis
 
 ## Ce qu'aucun générateur ne fait à votre place {#limites}
 
-Autant le dire clairement, y compris pour nous : un domaine libre ne signifie pas qu'un nom est utilisable. Trois vérifications restent à votre charge.
+Autant le dire clairement, y compris pour nous : un domaine libre ne signifie pas qu'un nom est utilisable. Trois vérifications restent à votre charge, au moins en partie.
 
-- **La marque déposée.** Un nom peut être libre en `.com` et déjà déposé à l'INPI dans votre classe d'activité. C'est le risque juridique le plus sérieux, et aucun générateur du marché ne le contrôle automatiquement. Namorama vous fournit un lien de recherche INPI pré-rempli pour chaque nom retenu — c'est une aide, pas une garantie, et une recherche d'antériorité auprès d'un conseil reste la seule réponse solide avant un dépôt.
+- **La marque déposée.** Un nom peut être libre en `.com` et déjà déposé à l'INPI dans votre classe d'activité. C'est le risque juridique le plus sérieux.
+  - Pour les marques identiques, le rapport de marque de Namorama (50 crédits) interroge l'INPI et l'EUIPO. Il cherche le nom et ses autres orthographes : une marque déposée « Neo Legal » n'est pas trouvée par une recherche sur « neolegal ».
+  - Une marque qui ne fait que **ressembler** (« Kalm » face à « Calm ») peut aussi fonder une opposition. Aucun générateur grand public ne la cherche : c'est le rôle d'une recherche de similarité, auprès de l'INPI ou d'un conseil en propriété industrielle, avant le dépôt (voir [la recherche d'antériorité](/recherche-anteriorite-marque-inpi)).
 - **Le sens dans les autres langues.** Un nom inventé peut vouloir dire quelque chose de malheureux ailleurs. Si vous visez plusieurs marchés, faites-le lire à des locuteurs natifs.
 - **Le test de la radio.** Dictez le nom au téléphone à quelqu'un qui ne l'a jamais vu. S'il faut l'épeler, il vous coûtera cher pendant des années — en support, en bouche-à-oreille, en publicité.
 
