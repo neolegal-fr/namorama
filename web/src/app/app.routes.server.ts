@@ -1,4 +1,5 @@
 import { RenderMode, ServerRoute } from '@angular/ssr';
+import { ARTICLES_MARKDOWN } from './components/content/articles.generes';
 
 /**
  * Render modes par route pour la génération statique (SSG).
@@ -12,9 +13,10 @@ export const serverRoutes: ServerRoute[] = [
   { path: '', renderMode: RenderMode.Prerender },
   { path: 'en', renderMode: RenderMode.Prerender },
   { path: 'blog', renderMode: RenderMode.Prerender },
+  // Un article Markdown est toujours prérendu : c'est ce HTML que lisent les moteurs.
+  ...ARTICLES_MARKDOWN.map((a): ServerRoute => ({ path: a.path.slice(1), renderMode: RenderMode.Prerender })),
   { path: 'blog/nom-entreprise-artisan', renderMode: RenderMode.Prerender },
   { path: 'blog/noms-chatgpt-deja-pris', renderMode: RenderMode.Prerender },
-  { path: 'blog/deposer-marque-inpi-prix-delais', renderMode: RenderMode.Prerender },
   { path: 'guides/trouver-nom-de-marque', renderMode: RenderMode.Prerender },
   { path: 'guides/trouver-nom-entreprise', renderMode: RenderMode.Prerender },
   { path: 'guides/trouver-nom-de-produit', renderMode: RenderMode.Prerender },

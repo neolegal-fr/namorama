@@ -1,18 +1,22 @@
 /**
  * Registre des articles du blog.
  *
- * Source unique des métadonnées d'un article : l'index `/blog`, l'en-tête
- * (`<app-article-entete>`), les données structurées (`applyContentSeo`) et le
- * plan du site les lisent ici. Un article qui n'y figure pas n'a ni date, ni
- * auteur, ni place dans l'index.
+ * L'index `/blog`, l'en-tête (`<app-article-entete>`), les données structurées
+ * (`applyContentSeo`), les routes et le plan du site le lisent ici. Un article
+ * qui n'y figure pas n'a ni date, ni auteur, ni place dans l'index.
  *
- * Les dates viennent de l'historique git : `publie` = premier commit du
- * fichier, `misAJour` = dernier commit qui touche au texte. Le temps de lecture
- * est le nombre de mots du gabarit divisé par 220, arrondi au supérieur.
+ * Deux sources :
+ * - **les fichiers Markdown** de `src/content/articles/`, compilés au build par
+ *   `scripts/articles.mjs` dans `articles.generes.ts` : en-tête, texte, temps de
+ *   lecture calculé. C'est là qu'on écrit un article (`docs/ecrire-un-article.md`) ;
+ * - **les entrées écrites à la main** ci-dessous, pour les pages qui restent des
+ *   composants parce qu'elles ont une logique propre.
  *
  * Les adresses des articles antérieurs au blog (`/guides/…`,
  * `/generateur-…`) ne changent pas : elles sont indexées.
  */
+
+import { ARTICLES_MARKDOWN } from './articles.generes';
 
 export type CategorieArticle = 'Méthode' | 'Générateurs' | 'Secteurs' | 'Marque & droit' | 'Comparatifs';
 
@@ -40,12 +44,29 @@ export interface Article {
   lecture: number;
 }
 
+/** Un morceau du corps d'un article Markdown, dans l'ordre du texte. */
+export type SegmentArticle =
+  | { type: 'html'; html: string }
+  | { type: 'cta'; heading?: string; subheading?: string; label?: string }
+  | { type: 'trois-risques'; heading?: string; intro?: string };
+
+/** Article compilé depuis un fichier Markdown. */
+export interface ArticleMarkdown extends Article {
+  /** `<title>` et `og:title` (sans le suffixe « — Namorama »). */
+  title: string;
+  /** Meta description. */
+  description: string;
+  /** Titre H1, en HTML (en ligne). */
+  h1: string;
+  segments: SegmentArticle[];
+}
+
 export const AUTEUR = {
   nom: 'Nicolas Riousset',
   role: 'créateur de Namorama',
 };
 
-const ARTICLES_NON_TRIES: Article[] = [
+const ARTICLES_ECRITS_A_LA_MAIN: Article[] = [
   {
     path: '/blog/nom-entreprise-artisan',
     titre: "Nom d'entreprise d'artisan : électricien, nettoyage, rénovation…",
@@ -62,16 +83,6 @@ const ARTICLES_NON_TRIES: Article[] = [
     extrait:
       "Nous avons testé douze noms proposés par des assistants IA : aucun n'avait son .com libre. Pourquoi, et comment vérifier les vôtres en une minute.",
     categorie: 'Méthode',
-    publie: '2026-11-23',
-    misAJour: '2026-11-23',
-    lecture: 5,
-  },
-  {
-    path: '/blog/deposer-marque-inpi-prix-delais',
-    titre: 'Déposer sa marque à l’INPI : prix, délais et opposition',
-    extrait:
-      '190 € pour une classe, 40 € par classe en plus, deux mois d’opposition : le calendrier réel d’un dépôt, et ce qu’il faut vérifier avant de payer.',
-    categorie: 'Marque & droit',
     publie: '2026-11-23',
     misAJour: '2026-11-23',
     lecture: 5,
@@ -250,9 +261,15 @@ const ARTICLES_NON_TRIES: Article[] = [
 ];
 
 /** Articles du plus récent au plus ancien (à date égale, ordre de déclaration). */
-export const ARTICLES: readonly Article[] = [...ARTICLES_NON_TRIES].sort((a, b) =>
+export const ARTICLES: readonly Article[] = [...ARTICLES_MARKDOWN, ...ARTICLES_ECRITS_A_LA_MAIN].sort((a, b) =>
   b.publie.localeCompare(a.publie),
 );
+
+/** Article Markdown servi à ce chemin. */
+export function articleMarkdownDe(chemin: string): ArticleMarkdown | undefined {
+  const propre = chemin.split(/[?#]/)[0].replace(/(.)\/$/, '$1');
+  return ARTICLES_MARKDOWN.find((a) => a.path === propre);
+}
 
 /** Article servi à ce chemin (query string et slash final ignorés). */
 export function articleDe(chemin: string): Article | undefined {

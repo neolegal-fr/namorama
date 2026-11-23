@@ -19,7 +19,6 @@ import { ComparatifLookaComponent } from './components/content/comparatif-looka'
 import { BlogIndexComponent } from './components/content/blog-index';
 import { NomEntrepriseArtisanComponent } from './components/content/nom-entreprise-artisan';
 import { NomsChatgptDejaPrisComponent } from './components/content/noms-chatgpt-deja-pris';
-import { DeposerMarqueInpiComponent } from './components/content/deposer-marque-inpi';
 import { GuideNomEntrepriseComponent } from './components/content/guide-nom-entreprise';
 import { GuideNomDeProduitComponent } from './components/content/guide-nom-de-produit';
 import { GuideNomDeStartupComponent } from './components/content/guide-nom-de-startup';
@@ -35,6 +34,8 @@ import { GenerateurNomProduitComponent } from './components/content/generateur-n
 import { GenerateurNomMarqueCosmetiqueComponent } from './components/content/generateur-nom-marque-cosmetique';
 import { NomCourtInventeComponent } from './components/content/nom-court-invente';
 import { VerifierDisponibiliteMarqueComponent } from './components/content/verifier-disponibilite-nom-de-marque';
+import { ArticleMarkdownComponent } from './components/content/article-markdown';
+import { ARTICLES_MARKDOWN } from './components/content/articles.generes';
 import { RapportPartageComponent } from './components/content/rapport-partage';
 import { RapportPublicComponent } from './components/content/rapport-public';
 import { adminGuard } from './guards/admin.guard';
@@ -49,9 +50,15 @@ export const routes: Routes = [
   // /guides ; cette redirection ne sert qu'à la navigation interne au client.
   { path: 'guides', redirectTo: 'blog', pathMatch: 'full' },
   { path: 'blog', component: BlogIndexComponent },
+  // Articles écrits en Markdown (src/content/articles/) : une route par fichier,
+  // dérivée de son en-tête par scripts/articles.mjs.
+  ...ARTICLES_MARKDOWN.map((a) => ({
+    path: a.path.slice(1),
+    component: ArticleMarkdownComponent,
+    data: { article: a.path },
+  })),
   { path: 'blog/nom-entreprise-artisan', component: NomEntrepriseArtisanComponent },
   { path: 'blog/noms-chatgpt-deja-pris', component: NomsChatgptDejaPrisComponent },
-  { path: 'blog/deposer-marque-inpi-prix-delais', component: DeposerMarqueInpiComponent },
   { path: 'guides/trouver-nom-de-marque', component: GuideNomDeMarqueComponent },
   { path: 'guides/trouver-nom-entreprise', component: GuideNomEntrepriseComponent },
   { path: 'guides/trouver-nom-de-produit', component: GuideNomDeProduitComponent },
