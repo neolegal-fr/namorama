@@ -63,7 +63,7 @@ C'est la logique de Namorama :
 - **Le brief du client devient des contraintes garanties**, pas de simples suggestions au modèle : longueur maximale, mots et terminaisons exclus, mot imposé.
 - **Chaque nom proposé a déjà son domaine vérifié** au registre, dans les extensions du client. Ce qui ne passe pas n'arrive pas jusqu'à vous.
 - **Les réactions du client** (« plus francophones », « pas de noms composés ») s'ajoutent aux critères des recherches suivantes.
-- **Le rapport de marque** des finalistes vérifie l'INPI et l'EUIPO sous toutes les orthographes du nom, et six réseaux. Il est daté, et il s'envoie au client en pièce jointe. Il coûte 50 crédits.
+- **Le rapport de marque** des finalistes vérifie l'INPI et l'EUIPO sous toutes les orthographes du nom, et six réseaux. Il est daté, et il s'envoie au client en pièce jointe. Il coûte 50 crédits ([voir un exemple](/report?exemple=1)).
 - **La vérification d'une liste collée** : les noms du client, ou ceux de ChatGPT, séparés par des virgules, passent les mêmes contrôles. C'est la formule « Vérification » outillée.
 
 Côté coûts, 100 crédits sont offerts chaque mois. Les packs vont de 500 crédits pour 9 € à 5 000 crédits pour 29 €, sans abonnement. Une mission courante, soit une centaine de noms proposés (un crédit chacun) et cinq rapports, consomme environ 350 crédits : moins de 10 € d'outil, à intégrer dans votre devis.

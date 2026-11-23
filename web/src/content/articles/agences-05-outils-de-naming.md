@@ -73,7 +73,7 @@ Namechk, Namecheckr et leurs équivalents vérifient un pseudo sur des dizaines 
 |---|---|---|
 | Générer | En français et dans 18 autres langues, depuis le brief ; longueur, mots et terminaisons à éviter garantis par un filtre ; retours du client pris en compte | — |
 | Domaines | Vérifiés au registre (RDAP, sinon Whois) dans les extensions choisies, ccTLD européens compris ; « non vérifiable » quand le registre ne répond pas | — |
-| Marques | INPI et EUIPO à l'identique et sous les autres orthographes du nom, dans le rapport (50 crédits) | La similarité phonétique : conseil ou recherche INPI payante. Les registres hors Europe |
+| Marques | INPI et EUIPO à l'identique et sous les autres orthographes du nom, dans le rapport (50 crédits, [exemple](/report?exemple=1)) | La similarité phonétique : conseil ou recherche INPI payante. Les registres hors Europe |
 | Réseaux | Six réseaux dans le rapport | Instagram et Facebook, à vérifier à la main |
 | Client | Projet partagé par e-mail en lecture ou en écriture, crédits débités à l'agence ; rapport envoyé en pièce jointe | Pas d'espace par client, pas de rôles, pas de marque blanche |
 | Prix | 100 crédits offerts par mois, puis packs sans abonnement : 500 crédits pour 9 €, 2 000 pour 19 €, 5 000 pour 29 € | — |

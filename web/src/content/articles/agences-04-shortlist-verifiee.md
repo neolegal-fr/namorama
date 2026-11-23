@@ -62,7 +62,7 @@ Les trois filtres qu'un nom doit passer avant d'arriver devant le client.
 
 Les étapes 1 à 3 se font en une recherche. Le brief du client devient des contraintes garanties par un filtre. Chaque nom proposé a son domaine déjà vérifié auprès du registre, dans les extensions choisies, avec trois états : libre, pris, non vérifiable. Un réglage décide ce qu'on exige : au moins une extension libre, ou toutes. Pour un client qui veut le `.com` **et** le `.fr`, la seconde option écarte d'office les noms qui n'ont que l'un des deux. « 10 de plus » relance la génération sans reproposer les noms déjà écartés.
 
-Pour l'étape 4, le rapport de marque d'un nom interroge l'INPI et l'EUIPO à l'identique et sous ses autres orthographes, et ajoute six réseaux sociaux. Il coûte 50 crédits par nom. On le réserve donc aux cinq à dix noms qui ont survécu, pas aux cent candidats.
+Pour l'étape 4, le rapport de marque d'un nom interroge l'INPI et l'EUIPO à l'identique et sous ses autres orthographes, et ajoute six réseaux sociaux ([voir un exemple de rapport](/report?exemple=1)). Il coûte 50 crédits par nom. On le réserve donc aux cinq à dix noms qui ont survécu, pas aux cent candidats.
 
 Pour l'étape 5, « Aide-moi à choisir » compare les noms retenus et en recommande un, avec ses raisons. C'est un avis de plus, pas une décision : le jugement reste celui de l'agence et du client.
 

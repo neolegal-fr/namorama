@@ -65,7 +65,7 @@ Le choix dépend du budget du client et de la place du nom dans sa communication
 
 - **La génération dans la langue de chaque marché** : le français et 18 autres langues. Selon le style choisi, les noms sont inventés, descriptifs ou culturels. Un retour « plus francophone » ou « plus italien » oriente la série suivante.
 - **Les domaines dans toutes les extensions choisies**, nationales comprises, vérifiés auprès du registre de chacune. Quand un registre ne répond pas ou n'est pas interrogeable, le résultat est « non vérifiable », jamais une supposition. Le réglage « toutes les extensions disponibles » ne retient que les noms libres partout où le registre a répondu.
-- **Les marques de l'Union européenne** (EUIPO) et les marques françaises (INPI) dans le rapport, sous toutes les orthographes du nom.
+- **Les marques de l'Union européenne** (EUIPO) et les marques françaises (INPI) dans le rapport ([voir un exemple](/report?exemple=1)), sous toutes les orthographes du nom.
 
 Ce qu'il ne fait pas : la prononciation et le sens dans chaque langue, qui demandent des locuteurs, et les registres de marques nationaux autres que l'INPI, ni ceux du Royaume-Uni, de la Suisse ou des États-Unis.
 

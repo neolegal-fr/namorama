@@ -29,7 +29,7 @@ Le contrôle vient *après*, et il vient du titulaire antérieur : publication a
 
 ## Ce que Namorama vérifie, et ce qu'il ne vérifie pas {#namorama}
 
-Le **rapport de marque** de Namorama interroge les bases officielles **INPI (France)** et **EUIPO (Union européenne)**, et signale les dépôts identiques ou proches avec leurs **classes de Nice**. Il regroupe cela avec la disponibilité du nom de domaine et celle des pseudos sur les réseaux sociaux, dans un document unique que vous pouvez archiver ou transmettre à un associé.
+Le **rapport de marque** de Namorama interroge les bases officielles **INPI (France)** et **EUIPO (Union européenne)**, et signale les dépôts identiques ou proches avec leurs **classes de Nice**. Il regroupe cela avec la disponibilité du nom de domaine et celle des pseudos sur les réseaux sociaux, dans un document unique que vous pouvez archiver ou transmettre à un associé. [Voir un exemple de rapport complet](/report?exemple=1), sur le nom « namorama ».
 
 C'est un **signal de disponibilité**, destiné à écarter très tôt les noms manifestement pris et à concentrer votre attention — et votre budget — sur deux ou trois finalistes. Ce n'est **ni une recherche d'antériorité complète** (elle couvrirait systématiquement les similarités phonétiques, visuelles et intellectuelles, les marques semi-figuratives, les dénominations sociales), **ni un avis juridique**. Pour un dépôt qui engage votre activité, appuyez-vous sur la recherche officielle de l'INPI et, au moindre doute, sur un **conseil en propriété industrielle** : quelques centaines d'euros d'analyse évitent le seul incident vraiment coûteux du naming — devoir changer de nom une fois lancé.
 

@@ -65,7 +65,7 @@ Domaines, marques INPI et EUIPO avec les orthographes voisines, pseudos des rés
 
 ## Le piège des orthographes {#orthographes}
 
-La base de l'INPI indexe des mots. Une marque déposée en deux mots (« Neo Legal ») n'est pas trouvée par une recherche sur la forme collée (« neolegal »), ni l'inverse. C'est le faux négatif le plus fréquent d'une recherche gratuite faite à la main : on conclut « aucun dépôt », on paie 190 €, et l'opposition arrive deux mois plus tard. Le rapport de marque de Namorama cherche systématiquement les autres orthographes d'un nom pour cette raison.
+La base de l'INPI indexe des mots. Une marque déposée en deux mots (« Neo Legal ») n'est pas trouvée par une recherche sur la forme collée (« neolegal »), ni l'inverse. C'est le faux négatif le plus fréquent d'une recherche gratuite faite à la main : on conclut « aucun dépôt », on paie 190 €, et l'opposition arrive deux mois plus tard. Le rapport de marque de Namorama cherche systématiquement les autres orthographes d'un nom pour cette raison ([voir un exemple de rapport](/report?exemple=1)).
 
 ## Questions fréquentes {#faq}
 

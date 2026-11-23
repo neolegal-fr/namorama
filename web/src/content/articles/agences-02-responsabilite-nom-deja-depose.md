@@ -50,7 +50,7 @@ En novembre 2024, la SNCF a baptisé « Technis » sa nouvelle entité de mainte
 
 ## Garder la trace de ce qui a été vérifié {#trace}
 
-La meilleure protection d'une agence est un document. Il dit quels registres ont été consultés, pour quel nom, sous quelles orthographes, et à quelle date. C'est ce que produit le rapport de marque de Namorama :
+La meilleure protection d'une agence est un document. Il dit quels registres ont été consultés, pour quel nom, sous quelles orthographes, et à quelle date. C'est ce que produit le rapport de marque de Namorama ([voir un exemple](/report?exemple=1), sur le nom « namorama ») :
 
 - **Les marques INPI et EUIPO**, à l'identique et sous les autres orthographes du nom (collée, espacée, découpée), avec les classes, le statut et le lien vers chaque dépôt.
 - **Les domaines** dans les extensions choisies, vérifiés auprès des registres. Quand un registre ne répond pas, le rapport l'indique comme « non vérifiable » au lieu de deviner.
