@@ -386,35 +386,38 @@ body {
 }
 
 /* ─── Pages de contenu / articles SEO ─────────────── */
+/* Univers applicatif : les articles suivent le thème, avec les rôles --nm-app-*
+   (docs/systeme-de-design.md §2). Sur la palette PrimeNG, leurs titres tombaient
+   à 1,07:1 en mode sombre (mesuré le 23/11/2026). */
 .article {
     line-height: 1.65;
-    color: var(--p-surface-700);
+    color: var(--nm-app-text);
 }
 .article h1 {
     font-size: clamp(1.8rem, 4.5vw, 2.5rem);
     font-weight: 800;
     line-height: 1.15;
     letter-spacing: -0.02em;
-    color: var(--p-surface-900);
+    color: var(--nm-app-text);
     margin: 0 0 0.75rem;
 }
 .article .lead {
     font-size: 1.15rem;
-    color: var(--p-surface-600);
+    color: var(--nm-app-text-2);
     line-height: 1.6;
     margin: 0 0 2rem;
 }
 .article h2 {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--p-surface-900);
+    color: var(--nm-app-text);
     margin: 2.5rem 0 0.85rem;
     scroll-margin-top: 5rem;
 }
 .article h3 {
     font-size: 1.15rem;
     font-weight: 700;
-    color: var(--p-surface-900);
+    color: var(--nm-app-text);
     margin: 1.75rem 0 0.5rem;
 }
 .article p {
@@ -441,12 +444,12 @@ body {
     row-gap: 0.15rem;
     margin: -0.5rem 0 1.5rem;
     font-size: 0.9rem;
-    color: var(--p-surface-500);
+    color: var(--nm-app-text-2);
 }
-.article .article-signature strong { color: var(--p-surface-700); font-weight: 600; }
+.article .article-signature strong { color: var(--nm-app-text); font-weight: 600; }
 .article .meta {
     font-size: 0.85rem;
-    color: var(--p-surface-500);
+    color: var(--nm-app-text-2);
     margin-bottom: 1.5rem;
 }
 
@@ -473,18 +476,20 @@ body {
 }
 .article .compare th,
 .article .compare td {
-    border: 1px solid var(--p-surface-200);
+    border: 1px solid var(--nm-app-border);
     padding: 0.7rem 0.85rem;
     text-align: left;
     vertical-align: top;
 }
 .article .compare thead th {
-    background: var(--p-surface-50);
+    background: var(--nm-app-surface-alt);
     font-weight: 700;
-    color: var(--p-surface-900);
+    color: var(--nm-app-text);
 }
-.article .compare .yes { color: var(--p-primary-600, #059669); font-weight: 600; }
-.article .compare .no { color: var(--p-surface-400); }
+/* « Oui » : le vert de texte AA des deux thèmes (§4, deux verts) ; « Non » reste
+   informatif, donc jamais en --nm-app-text-3. */
+.article .compare .yes { color: var(--nm-app-verdict-free-fg); font-weight: 600; }
+.article .compare .no { color: var(--nm-app-text-2); }
 
 /* Sous 640px, les colonnes de ces comparatifs ne tiennent pas : le tableau
    débordait de ~100px et c'est la PAGE qui défilait latéralement. Il devient
