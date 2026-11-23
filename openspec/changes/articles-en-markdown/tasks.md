@@ -90,10 +90,15 @@
 
 ## 5. Livraison
 
-- [ ] 5.1 PR, CI verte, fusion, déploiement de l'image `web`.
-- [ ] 5.2 Production : `/blog` liste 22 articles ; trois articles pris dans des catégories
+- [x] 5.1 PR, CI verte, fusion, déploiement de l'image `web`.
+  23/11/2026 : PR #198 (CI verte), fusionnée, build `main` vert, image `web` déployée.
+- [x] 5.2 Production : `/blog` liste 22 articles ; trois articles pris dans des catégories
   différentes répondent 200 avec leur `BlogPosting` ; `/guides` répond 301 ; le texte
   servi égale celui d'avant la livraison.
+  23/11/2026 : `/blog` 200 avec 22 cartes ; `/guides` 301 → `/blog` ;
+  `/verifier-disponibilite-nom-de-marque` 200 ; plan du site à 27 URL. Les 21 pages
+  servies avant et après le déploiement comparées : 17 identiques, et exactement les 4
+  écarts justifiés en 3.1.
 
 ## Workflow follow-up
 
