@@ -102,8 +102,11 @@ Trois tables (migration `api/migrations/2026-11-…-articles-en-base.sql`, idemp
 
 - **`article`** : `id`, `path` (unique), `title`, `description`, `titre`, `extrait`,
   `categorie`, `publie` (DATE), `misAJour` (DATE), `etat` (`brouillon` | `publie`),
-  `premiereParution` (DATE, nulle tant que l'article n'a jamais été servi), `corps`
-  (Markdown, `MEDIUMTEXT`), `h1`, `segments` (JSON compilé, `MEDIUMTEXT`), `lecture`
+  `premiereParution` (DATE, nulle tant que l'article n'a jamais été servi), `source`
+  (Markdown complet, en-tête compris, `MEDIUMTEXT` — la vérité, les autres colonnes en
+  sont dérivées ; comparer la source reçue à celle-ci dit si un envoi change quelque
+  chose), `h1`, `segments` (JSON compilé, `MEDIUMTEXT`), `liens` (chemins internes cités,
+  pour refuser la dépublication d'un article cité sans recompiler tout le blog), `lecture`
   (minutes), `revision` (entier), `majLe`, `majPar` (libellé d'auteur).
 - **`article_revision`** : `articleId`, `numero`, `source` (texte Markdown complet, en-tête
   compris), `auteurType` (`compte` | `jeton`), `auteurId` (`sub` ou id de jeton),
@@ -117,6 +120,11 @@ compile rien. *Écarté : compiler à chaque lecture* — une erreur de compilat
 surgirait à la visite au lieu de l'enregistrement, et chaque page paierait `marked`.
 
 « A paru » se lit `premiereParution IS NOT NULL AND premiereParution <= aujourd'hui`.
+**Règle des liens** (corrigée à l'implémentation, tâche 1.3) : la cible d'un lien doit
+avoir paru le jour où l'article qui la cite est **servi** — sa date `publie`, ou
+aujourd'hui s'il a déjà paru. Comparer à la seule date `publie` refusait cinq guides de
+juin mis à jour en septembre pour citer des articles du 03/09.
+
 `premiereParution` prend la date `publie` à la publication et redevient nulle si l'article
 est dépublié avant cette date. C'est ce qui fige le chemin et interdit la suppression.
 

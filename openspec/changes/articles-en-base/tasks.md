@@ -5,23 +5,26 @@
 
 ## 1. Le modèle et le compilateur, côté API
 
-- [ ] 1.1 Migration `api/migrations/2026-11-…-articles-en-base.sql` : tables `article`,
+- [x] 1.1 Migration `api/migrations/2026-11-…-articles-en-base.sql` : tables `article`,
   `article_revision`, `jeton_api` (design D3), idempotente, commande d'application et
   retour arrière en en-tête ; entités TypeORM correspondantes.
   Vérification : appliquée deux fois de suite sur la base du worktree (`just agent-env`)
   sans erreur ; `DESCRIBE` des trois tables conforme aux entités ; l'API démarre avec
   `DB_SYNCHRONIZE=false`.
-- [ ] 1.2 Porter `web/scripts/articles.mjs` en TypeScript dans
+  23/11/2026 : `2026-11-23-articles-en-base.sql` appliqué deux fois sur `namorama_w2` sans erreur ; `SHOW CREATE TABLE` identique, pour les trois tables, au schéma que TypeORM génère sur une base vide (`DB_SYNCHRONIZE=true`) ; API démarrée sur `namorama_w2` avec `DB_SYNCHRONIZE=false`.
+- [x] 1.2 Porter `web/scripts/articles.mjs` en TypeScript dans
   `api/src/articles/compilateur/` (en-tête, typographie, blocs, liens, HTML brut refusé,
   temps de lecture, segments) ; ajouter `marked` aux dépendances de l'API ; porter les
   cas de `web/scripts/articles.test.mjs` en spec Jest. Les erreurs sont **accumulées**
   (liste de causes) au lieu de lever à la première.
   Vérification : `npm test -- compilateur` dans `api/` ; chaque cas porté passe ; un
   article à deux fautes renvoie deux causes.
-- [ ] 1.3 Parité du compilateur porté : compiler les 31 fichiers actuels avec l'ancien
+  23/11/2026 : `npx jest src/articles` — 40 tests (cas portés + causes accumulées, ligne du HTML brut, chemins, liens selon la date, ligne `# revision`). Suite complète de l'API : 537 tests. `marked` 18 est ESM seul : chargé par `require` à l'exécution (Node ≥ 22.12), transformé par ts-jest dans Jest (`transformIgnorePatterns`).
+- [x] 1.3 Parité du compilateur porté : compiler les 31 fichiers actuels avec l'ancien
   et le nouveau compilateur et comparer les `segments`, `h1` et `lecture`.
   Vérification : script jetable, 31 sur 31 identiques ; résultat noté sous la tâche.
-- [ ] 1.4 `CHEMINS_DU_SITE` (routes statiques servies) et `CHEMINS_HISTORIQUES` (18
+  23/11/2026 : **31 identiques sur 31** (segments, h1, lecture), tous les liens vérifiés comme à la publication. Le premier essai en refusait 5 : des guides de juin mis à jour en septembre citent des articles du 03/09. La règle était trop stricte — la cible doit avoir paru le jour où l'article est **servi** (sa date, ou aujourd'hui s'il a déjà paru), comme le faisait le compilateur de build ; corrigé dans le compilateur, la spec (scénario « Guide ancien mis à jour ») et les tests.
+- [x] 1.4 `CHEMINS_DU_SITE` (routes statiques servies) et `CHEMINS_HISTORIQUES` (18
   adresses hors `/blog/`) dans l'API ; règle « chemin `/blog/<identifiant>` ou
   historique » dans la validation.
   Vérification : spec — `/nom-de-restaurant` refusé avec la forme attendue,

@@ -26,6 +26,7 @@ import { ModelUsageModule } from './common/model-usage/model-usage.module';
 import { ModeleIAModule } from './common/modele-ia/modele-ia.module';
 import { EventsController } from './events/events.controller';
 import { ReplayModule } from './replay/replay.module';
+import { ArticlesModule } from './articles/articles.module';
 import { HorlogeService } from './common/horloge.service';
 
 @Module({
@@ -79,6 +80,7 @@ import { HorlogeService } from './common/horloge.service';
     BrandReportModule,
     ReplayModule,
     RetoursModule,
+    ArticlesModule,
   ],
   controllers: [AppController, EventsController],
   providers: [

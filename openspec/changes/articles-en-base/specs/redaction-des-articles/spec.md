@@ -64,8 +64,14 @@ lecture), sans créer de révision ni modifier le site.
   en base
 
 ### Requirement: Lien vers un article non paru
-Un article publié SHALL NOT pouvoir renvoyer à un article qui ne sera pas paru à sa propre
-date de publication — brouillon, ou publié à une date postérieure.
+Un article publié SHALL NOT pouvoir renvoyer à un article qui ne sera pas paru le jour où
+il est servi — sa date de publication, ou aujourd'hui s'il a déjà paru : brouillon, ou
+article publié à une date postérieure.
+
+#### Scenario: Guide ancien mis à jour
+- **WHEN** `/guides/trouver-nom-de-marque`, publié le 10/06/2026, est mis à jour le
+  03/09/2026 pour citer `/generateur-nom-de-marque`, publié le 03/09/2026
+- **THEN** la publication est acceptée
 
 #### Scenario: Article programmé qui cite le suivant
 - **WHEN** l'article publié le 30/11/2026 renvoie à `/blog/shortlist-de-noms-verifiee`,
