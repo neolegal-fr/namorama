@@ -1,0 +1,75 @@
+name: Publier les articles programmés
+
+# Chaque lundi, reconstruit l'image `web` de `main` si un article du blog devient
+# publiable ce jour-là (`publie:` de son en-tête = date du jour à Paris). La
+# compilation des articles (`web/scripts/articles.mjs`) écarte ceux dont la date
+# n'est pas encore venue : c'est cette reconstruction qui les fait paraître.
+#
+# Le déploiement n'est pas fait ici : une tâche planifiée du serveur tire l'image
+# le lundi à 07:30 heure de Paris (`infra/prod/publier-les-articles.sh`). GitHub
+# n'a aucune clé du serveur. Chantier OpenSpec `publier-les-articles-a-date`.
+#
+# Un lundi sans article ne construit rien : une image reconstruite à l'identique
+# changerait quand même d'empreinte et ferait recréer le conteneur pour rien.
+on:
+  schedule:
+    # 05:00 UTC = 6 h (hiver) ou 7 h (été) à Paris, avant le tirage de 07:30.
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      forcer:
+        description: "Reconstruire même si aucun article ne paraît aujourd'hui"
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: git.neolegal.fr
+  IMAGE_PREFIX: git.neolegal.fr/neolegal/namorama
+
+jobs:
+  publier:
+    name: Reconstruire l'image web
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Un article paraît-il aujourd'hui ?
+        id: garde
+        run: |
+          jour=$(TZ=Europe/Paris date +%F)
+          parus=$(grep -l -E "^publie: *['\"]?${jour}['\"]? *$" web/src/content/articles/*.md || true)
+          echo "Date à Paris : ${jour}"
+          if [ -n "$parus" ]; then
+            echo "Articles qui paraissent aujourd'hui :"; echo "$parus"
+            echo "construire=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ inputs.forcer }}" = "true" ]; then
+            echo "Aucun article aujourd'hui ; reconstruction forcée."
+            echo "construire=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Aucun article ne paraît aujourd'hui : rien à construire."
+            echo "construire=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to Gitea registry
+        if: steps.garde.outputs.construire == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.GITEA_USERNAME }}
+          password: ${{ secrets.GITEA_TOKEN }}
+
+      - name: Build and push Web image
+        if: steps.garde.outputs.construire == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: ./web
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-web:latest
+            ${{ env.IMAGE_PREFIX }}-web:${{ github.sha }}
