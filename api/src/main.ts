@@ -5,6 +5,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { AppLoggerService } from './common/logging/app-logger.service';
 import { RequestLoggingInterceptor } from './common/logging/request-logging.interceptor';
 import { parseurDuRejeu } from './replay/parseur-du-rejeu';
+import { parseurDesArticles } from './articles/parseur-des-articles';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true, bufferLogs: true });
@@ -26,6 +27,9 @@ async function bootstrap() {
   // directement, celui-ci DÉSACTIVAIT le parsage JSON de toute l'API — chaque
   // `POST` arrivait avec un corps vide. `rejeu-corps.spec.ts` le vérifie.
   app.use('/replay', parseurDuRejeu());
+  // Rédaction des articles : l'import envoie tout le blog en un lot (articles-en-base).
+  app.use('/admin/articles', parseurDesArticles());
+  app.use('/redaction/articles', parseurDesArticles());
   app.useGlobalInterceptors(new RequestLoggingInterceptor(logger));
 
   app.enableCors({

@@ -5,7 +5,7 @@ start:
     docker-compose -f infra/docker-compose.yml up -d
     @echo "Attente du démarrage des bases de données..."
     sleep 5
-    (cd api && npm run start:dev) & (cd web && npm start)
+    (cd api && npm run start:dev) & (cd web && API_INTERNE_URL=http://localhost:3001 npm start)
 
 # Arrêter les serveurs de la copie principale (ports 3001 et 4200) et Docker.
 # Par port, pas par motif : `pkill -f nest` tuait aussi les serveurs des
@@ -102,3 +102,46 @@ agent-clean:
 # Autoriser les ports 4201-4209 dans le Keycloak local déjà initialisé
 agent-realm:
     @scripts/agent-env.sh realm
+
+# ─── Articles du blog (rédaction par jeton) ─────────────────────────────────
+#
+# Les articles vivent en base : ces recettes les lisent et les écrivent par
+# l'API, avec un jeton de rédaction créé dans Administration → Articles.
+#   export NAMORAMA_JETON_ARTICLES=nmr_…   (jamais dans le dépôt)
+#   export NAMORAMA_API_URL=http://localhost:3003   (défaut : la production)
+# Guide : docs/ecrire-un-article.md.
+
+# Lister les articles (brouillons, programmés, publiés)
+[no-cd]
+article-liste:
+    @node "{{justfile_directory()}}/scripts/article.mjs" liste
+
+# Lire un article au format Markdown (avec sa ligne « # revision: N »)
+[no-cd]
+article-lire chemin fichier="":
+    @node "{{justfile_directory()}}/scripts/article.mjs" lire {{chemin}} {{fichier}}
+
+# Vérifier un fichier sans rien enregistrer (--publier : comme à la publication)
+[no-cd]
+article-verifier fichier *drapeaux:
+    @node "{{justfile_directory()}}/scripts/article.mjs" verifier {{fichier}} {{drapeaux}}
+
+# Enregistrer un fichier (création en brouillon, ou modification de la révision lue)
+[no-cd]
+article-envoyer fichier *drapeaux:
+    @node "{{justfile_directory()}}/scripts/article.mjs" envoyer {{fichier}} {{drapeaux}}
+
+# Publier un ou plusieurs articles (ensemble, s'ils se citent)
+[no-cd]
+article-publier +chemins:
+    @node "{{justfile_directory()}}/scripts/article.mjs" publier {{chemins}}
+
+# Repasser un article en brouillon
+[no-cd]
+article-depublier chemin:
+    @node "{{justfile_directory()}}/scripts/article.mjs" depublier {{chemin}}
+
+# Importer un dossier de fichiers .md en un lot, publié (migration des anciens articles)
+[no-cd]
+article-importer dossier:
+    @node "{{justfile_directory()}}/scripts/article.mjs" importer {{dossier}}

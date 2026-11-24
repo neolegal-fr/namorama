@@ -183,7 +183,8 @@ cmd_start() {
   # Les variables d'environnement priment sur api/.env : on les pose aussi ici,
   # au cas où le .env aurait été remplacé à la main.
   lancer api "$r/api" env PORT="$API_PORT" FRONTEND_URL="http://localhost:$WEB_PORT" npm run start:dev
-  lancer web "$r/web" npx ng serve --port "$WEB_PORT"
+  # Le blog est rendu par le serveur de développement : il lit l'API de CE worktree.
+  lancer web "$r/web" env API_INTERNE_URL="http://localhost:$API_PORT" npx ng serve --port "$WEB_PORT"
   echo "✓ Lancés : API :$API_PORT, front :$WEB_PORT — journaux dans .agent-run/{api,web}.log"
 }
 

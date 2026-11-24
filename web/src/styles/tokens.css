@@ -116,6 +116,9 @@
    */
   --nm-font-display: 'Space Grotesk', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --nm-font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  /* Texte source à aligner : le Markdown de l'éditeur d'articles (admin). Police
+     système, aucune fonte téléchargée pour un écran d'un seul utilisateur. */
+  --nm-font-mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Menlo, Consolas, monospace;
 
   /* Échelle de tailles. Les valeurs fluides sont reprises telles quelles du
      handoff : elles portent leur propre responsive, sans point de rupture. */

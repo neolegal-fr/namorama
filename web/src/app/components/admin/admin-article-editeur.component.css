@@ -1,0 +1,303 @@
+/* Éditeur d'article (admin). Motif « éditeur à aperçu », docs/systeme-de-design.md §5.
+   Univers applicatif : rôles --nm-app-* seulement (§2). */
+
+.ed-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 1rem;
+  color: var(--nm-app-text);
+}
+
+.ed-entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+
+.ed-entete-texte {
+  min-width: 0;
+}
+
+.ed-retour {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  font-size: var(--nm-text-ui);
+  color: var(--nm-app-text-2);
+  text-decoration: none;
+}
+
+.ed-retour:hover {
+  color: var(--nm-app-accent);
+}
+
+.ed-retour:focus-visible {
+  outline: 2px solid var(--nm-app-accent);
+  outline-offset: 2px;
+}
+
+.ed-titre {
+  margin: 0 0 0.35rem;
+  font-family: var(--nm-font-display);
+  font-size: var(--nm-text-h3);
+  color: var(--nm-app-text);
+  overflow-wrap: anywhere;
+}
+
+.ed-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.6rem;
+  margin: 0;
+  font-size: var(--nm-text-ui);
+  color: var(--nm-app-text-2);
+}
+
+.ed-chemin {
+  font-family: var(--nm-font-mono);
+  font-size: var(--nm-text-overline);
+  overflow-wrap: anywhere;
+}
+
+/* État : icône et libellé avec la couleur (§8). Mêmes paires que la liste. */
+.ed-etat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--nm-radius-xs);
+  font-size: var(--nm-text-overline);
+  font-weight: 600;
+}
+
+.ed-etat--publie {
+  background: var(--nm-app-accent-surface);
+  color: var(--nm-app-accent);
+}
+
+.ed-etat--programme {
+  background: var(--nm-app-verdict-unknown-bg);
+  color: var(--nm-app-verdict-unknown-fg);
+}
+
+.ed-etat--brouillon {
+  background: var(--nm-app-badge-bg);
+  color: var(--nm-app-badge-fg);
+}
+
+.ed-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ed-danger {
+  color: var(--nm-app-verdict-taken-fg);
+}
+
+.ed-bandeau {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--nm-radius-sm);
+  font-size: var(--nm-text-ui);
+}
+
+.ed-bandeau p,
+.ed-bandeau ul {
+  margin: 0;
+}
+
+.ed-bandeau ul {
+  flex-basis: 100%;
+  padding-left: 1.25rem;
+}
+
+.ed-bandeau--erreur {
+  border: 1px solid var(--nm-app-verdict-taken-fg);
+  background: var(--nm-app-verdict-taken-bg);
+  color: var(--nm-app-verdict-taken-fg);
+}
+
+/* Téléphone et tablette : un volet à la fois. */
+.ed-volets {
+  align-self: flex-start;
+}
+
+.ed-corps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.ed-volet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.ed-volet--cache {
+  display: none;
+}
+
+.ed-label {
+  font-size: var(--nm-text-overline);
+  color: var(--nm-app-text-3);
+}
+
+.ed-source {
+  min-height: 60vh;
+  padding: 0.75rem;
+  border: 1px solid var(--nm-app-border-strong);
+  border-radius: var(--nm-radius-sm);
+  background: var(--nm-app-surface);
+  color: var(--nm-app-text);
+  font-family: var(--nm-font-mono);
+  font-size: var(--nm-text-ui);
+  line-height: 1.55;
+  resize: vertical;
+  tab-size: 2;
+}
+
+.ed-source:focus-visible {
+  outline: 2px solid var(--nm-app-accent);
+  outline-offset: 2px;
+}
+
+.ed-barre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  position: sticky;
+  bottom: 0;
+  padding: 0.5rem 0;
+  background: var(--nm-app-bg);
+}
+
+.ed-statut {
+  font-size: var(--nm-text-ui);
+  color: var(--nm-app-text-2);
+}
+
+.ed-causes {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--nm-app-verdict-taken-fg);
+  border-radius: var(--nm-radius-sm);
+  background: var(--nm-app-verdict-taken-bg);
+  color: var(--nm-app-verdict-taken-fg);
+  font-size: var(--nm-text-ui);
+}
+
+.ed-causes p {
+  margin: 0 0 0.35rem;
+}
+
+.ed-causes ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+/* L'aperçu est la page publique en réduction : même composant, même feuille. */
+.ed-apercu {
+  max-height: 75vh;
+  overflow-y: auto;
+  padding: 0.75rem 1rem 0;
+  border: 1px solid var(--nm-app-border);
+  border-radius: var(--nm-radius-lg);
+  background: var(--nm-app-bg);
+}
+
+.ed-revisions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ed-revision {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--nm-app-divider);
+  font-size: var(--nm-text-ui);
+}
+
+.ed-revision-meta {
+  display: block;
+  font-size: var(--nm-text-overline);
+  color: var(--nm-app-text-3);
+}
+
+.ed-revision-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.ed-courante {
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--nm-radius-xs);
+  background: var(--nm-app-accent-surface);
+  color: var(--nm-app-accent);
+  font-size: var(--nm-text-overline);
+}
+
+.ed-lecture {
+  max-height: 60vh;
+  margin: 0;
+  padding: 0.75rem;
+  overflow: auto;
+  border: 1px solid var(--nm-app-border);
+  border-radius: var(--nm-radius-sm);
+  background: var(--nm-app-surface-alt);
+  color: var(--nm-app-text);
+  font-family: var(--nm-font-mono);
+  font-size: var(--nm-text-overline);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ed-boutons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Bureau large : les deux volets côte à côte, le sélecteur disparaît. */
+@media (min-width: 900px) {
+  .ed-volets {
+    display: none;
+  }
+
+  .ed-corps {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .ed-volet--cache {
+    display: flex;
+  }
+
+  .ed-volet--apercu {
+    position: sticky;
+    top: 1rem;
+  }
+}

@@ -1,0 +1,152 @@
+<p-confirmdialog key="articles"></p-confirmdialog>
+
+<section class="ar-page">
+  <header class="ar-entete">
+    <div>
+      <h1 class="ar-titre">Articles du blog</h1>
+      <p class="ar-intro">
+        Écrits ici ou par Claude avec un jeton, ils sont en ligne à la visite suivante, sans déploiement.
+        Un article publié paraît à sa date de publication, à l'heure de Paris.
+      </p>
+    </div>
+    <a class="nm-btn-primary" routerLink="/admin/articles/nouveau">
+      <i class="pi pi-plus" aria-hidden="true"></i> Nouvel article
+    </a>
+  </header>
+
+  @if (erreur(); as e) {
+    <p class="ar-erreur" role="alert"><i class="pi pi-exclamation-triangle" aria-hidden="true"></i> {{ e }}</p>
+  }
+
+  @if (articles(); as tous) {
+    <div class="ar-filtres" role="group" aria-label="Filtrer par état">
+      <button type="button" class="nm-filter" [class.nm-filter--on]="filtre() === null"
+              [attr.aria-pressed]="filtre() === null" (click)="filtre.set(null)">
+        Tous <span class="nm-filter__n">{{ tous.length }}</span>
+      </button>
+      @for (e of ordreEtats; track e) {
+        <button type="button" class="nm-filter" [class.nm-filter--on]="filtre() === e"
+                [attr.aria-pressed]="filtre() === e" (click)="filtre.set(e)">
+          {{ etats[e].libelle }} <span class="nm-filter__n">{{ compte(e) }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="ar-tableau">
+      <table class="ar-table">
+        <thead>
+          <tr>
+            <th scope="col">Article</th>
+            <th scope="col">État</th>
+            <th scope="col" class="ar-large">Catégorie</th>
+            <th scope="col">Publication</th>
+            <th scope="col" class="ar-large">Dernière modification</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of visibles(); track a.id) {
+            <tr>
+              <td>
+                <a class="ar-lien" [routerLink]="['/admin/articles', a.id]">{{ a.titre }}</a>
+                <span class="ar-chemin">{{ a.path }}</span>
+              </td>
+              <td>
+                <span [class]="'ar-etat ar-etat--' + a.etat">
+                  <i [class]="etats[a.etat].icone" aria-hidden="true"></i> {{ etats[a.etat].libelle }}
+                </span>
+              </td>
+              <td class="ar-large">{{ a.categorie }}</td>
+              <td><time [attr.datetime]="a.publie">{{ date(a.publie) }}</time></td>
+              <td class="ar-large">
+                {{ quand(a.majLe) }}
+                <span class="ar-auteur">r{{ a.revision }} · {{ a.majPar }}</span>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5" class="ar-vide">Aucun article dans cet état.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!erreur()) {
+    <p class="ar-intro">Chargement des articles…</p>
+  }
+
+  <section class="ar-jetons" aria-labelledby="titre-jetons">
+    <div class="ar-entete">
+      <div>
+        <h2 class="ar-sous-titre" id="titre-jetons">Jetons de rédaction</h2>
+        <p class="ar-intro">
+          Ce que Claude emploie pour lire, vérifier, enregistrer et publier un article
+          (<code>just article-*</code>, variable <code>NAMORAMA_JETON_ARTICLES</code>). Un jeton n'ouvre que les articles,
+          et ne supprime rien.
+        </p>
+      </div>
+      <button type="button" class="nm-btn-secondary" (click)="ouvrirCreation()">
+        <i class="pi pi-key" aria-hidden="true"></i> Créer un jeton
+      </button>
+    </div>
+
+    @if (jetons().length) {
+      <div class="ar-tableau">
+        <table class="ar-table">
+          <thead>
+            <tr>
+              <th scope="col">Nom</th>
+              <th scope="col">Préfixe</th>
+              <th scope="col" class="ar-large">Créé le</th>
+              <th scope="col">Dernière utilisation</th>
+              <th scope="col"><span class="ar-masque">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (j of jetons(); track j.id) {
+              <tr [class.ar-revoque]="!!j.revoqueLe">
+                <td>{{ j.nom }}</td>
+                <td><code>{{ j.prefixe }}…</code></td>
+                <td class="ar-large">{{ quand(j.creeLe) }}</td>
+                <td>{{ quand(j.derniereUtilisation) }}</td>
+                <td class="ar-actions">
+                  @if (j.revoqueLe) {
+                    <span class="ar-etat ar-etat--brouillon"><i class="pi pi-ban" aria-hidden="true"></i> Révoqué</span>
+                  } @else {
+                    <button type="button" class="nm-btn-tertiary" (click)="revoquer(j)">Révoquer</button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="ar-intro">Aucun jeton pour l'instant.</p>
+    }
+  </section>
+</section>
+
+<p-dialog [visible]="dialogueJeton()" (visibleChange)="dialogueJeton.set($event)" [modal]="true"
+          [header]="jetonCree() ? 'Jeton créé' : 'Créer un jeton de rédaction'" styleClass="ar-dialogue" [draggable]="false">
+  @if (jetonCree(); as j) {
+    <p class="ar-intro">
+      Copiez-le maintenant : <strong>il ne sera plus jamais affiché</strong>. Seule son empreinte est gardée.
+    </p>
+    <code class="ar-valeur">{{ j.valeur }}</code>
+    <div class="ar-boutons">
+      <button type="button" class="nm-btn-primary" (click)="copier(j.valeur)">
+        <i class="pi pi-copy" aria-hidden="true"></i> Copier
+      </button>
+      <button type="button" class="nm-btn-tertiary" (click)="dialogueJeton.set(false)">Fermer</button>
+    </div>
+  } @else {
+    <form (ngSubmit)="creerJeton()">
+      <label class="ar-champ">
+        <span>Nom (qui l'emploie, et d'où)</span>
+        <input name="nom" [(ngModel)]="nomDuJeton" maxlength="80" required placeholder="Claude Code — poste" autocomplete="off">
+      </label>
+      <div class="ar-boutons">
+        <button type="submit" class="nm-btn-primary" [disabled]="!nomDuJeton.trim() || creation()">Créer</button>
+        <button type="button" class="nm-btn-tertiary" (click)="dialogueJeton.set(false)">Annuler</button>
+      </div>
+    </form>
+  }
+</p-dialog>

@@ -79,4 +79,26 @@ describe('AllExceptionsFilter — niveaux de journalisation', () => {
     const { entry } = run(interne, '/replay');
     expect(entry.status).toBe(500);
   });
+
+  /** Un refus d'article rend ses causes au client, sans les journaliser (texte d'article). */
+  it('rend au client les champs d’une exception objet, sans les journaliser', () => {
+    const write = jest.fn();
+    const json = jest.fn();
+    const response = { getHeader: () => 'req-1', status: () => ({ json }) };
+    const request = { method: 'PUT', url: '/admin/articles', path: '/admin/articles' };
+    const host = { switchToHttp: () => ({ getResponse: () => response, getRequest: () => request }) };
+    const e = new BadRequestException({ message: 'Article refusé', causes: ['ligne 3 : HTML brut interdit : « <div>secret »'] });
+    new AllExceptionsFilter({ write, event: jest.fn() } as any).catch(e, host as any);
+    expect(json.mock.calls[0][0]).toMatchObject({ statusCode: 400, message: 'Article refusé', causes: [expect.stringContaining('HTML brut')] });
+    expect(JSON.stringify(write.mock.calls)).not.toContain('secret');
+  });
+
+  it('n’ajoute rien au corps d’une exception ordinaire', () => {
+    const json = jest.fn();
+    const response = { getHeader: () => undefined, status: () => ({ json }) };
+    const request = { method: 'GET', url: '/x', path: '/x' };
+    const host = { switchToHttp: () => ({ getResponse: () => response, getRequest: () => request }) };
+    new AllExceptionsFilter({ write: jest.fn(), event: jest.fn() } as any).catch(new BadRequestException(['a', 'b']), host as any);
+    expect(Object.keys(json.mock.calls[0][0]).sort()).toEqual(['message', 'path', 'statusCode', 'timestamp']);
+  });
 });

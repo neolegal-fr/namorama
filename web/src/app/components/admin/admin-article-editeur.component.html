@@ -1,0 +1,155 @@
+<p-confirmdialog key="editeur"></p-confirmdialog>
+
+<section class="ed-page">
+  <header class="ed-entete">
+    <div class="ed-entete-texte">
+      <a class="ed-retour" routerLink="/admin/articles"><i class="pi pi-arrow-left" aria-hidden="true"></i> Articles</a>
+      @if (article(); as a) {
+        <h1 class="ed-titre">{{ a.titre }}</h1>
+        <p class="ed-meta">
+          <span [class]="'ed-etat ed-etat--' + a.etat">
+            <i [class]="etats[a.etat].icone" aria-hidden="true"></i> {{ etats[a.etat].libelle }}
+          </span>
+          <code class="ed-chemin">{{ a.path }}</code>
+          <span>révision {{ a.revision }} · {{ a.majPar }}</span>
+          @if (a.etat !== 'brouillon') { <span>· {{ a.etat === 'programme' ? 'paraîtra le' : 'paru le' }} {{ date(a.publie) }}</span> }
+        </p>
+      } @else if (!chargement()) {
+        <h1 class="ed-titre">Nouvel article</h1>
+        <p class="ed-meta">Enregistré en brouillon : rien ne paraît avant la publication.</p>
+      }
+    </div>
+
+    @if (article(); as a) {
+      <div class="ed-actions">
+        @if (a.etat === 'brouillon') {
+          <button type="button" class="nm-btn-secondary" (click)="publier()" [disabled]="modifie()"
+                  [attr.title]="modifie() ? 'Enregistrer d’abord les modifications' : null">
+            <i class="pi pi-send" aria-hidden="true"></i> Publier
+          </button>
+        } @else {
+          <button type="button" class="nm-btn-secondary" (click)="depublier()">
+            <i class="pi pi-eye-slash" aria-hidden="true"></i> Repasser en brouillon
+          </button>
+        }
+        @if (a.etat !== 'brouillon') {
+          <a class="nm-btn-tertiary" [href]="a.path" target="_blank" rel="noopener">
+            <i class="pi pi-external-link" aria-hidden="true"></i> Voir la page
+          </a>
+        }
+        <button type="button" class="nm-btn-tertiary" (click)="ouvrirHistorique()">
+          <i class="pi pi-history" aria-hidden="true"></i> Historique
+        </button>
+        @if (a.etat === 'brouillon' && !a.aParu) {
+          <button type="button" class="nm-btn-tertiary ed-danger" (click)="supprimer()">
+            <i class="pi pi-trash" aria-hidden="true"></i> Supprimer
+          </button>
+        }
+      </div>
+    }
+  </header>
+
+  @if (conflit(); as c) {
+    <div class="ed-bandeau ed-bandeau--erreur" role="alert">
+      <p>
+        <strong>L'article a changé pendant que vous l'écriviez</strong> : révision {{ c.revision }}, par {{ c.auteur }}.
+        Rien n'a été écrasé ; votre texte est toujours là.
+      </p>
+      <button type="button" class="nm-btn-secondary" (click)="voirVersionEnLigne()">Voir la version en ligne</button>
+    </div>
+  }
+
+  @if (refus(); as r) {
+    <div class="ed-bandeau ed-bandeau--erreur" role="alert">
+      <p><strong>{{ r.titre }}</strong></p>
+      <ul>
+        @for (c of r.causes; track $index) { <li>{{ c }}</li> }
+      </ul>
+    </div>
+  }
+
+  <div class="nm-seg ed-volets" role="group" aria-label="Volet affiché">
+    <button type="button" class="nm-seg__btn" [class.nm-seg__btn--on]="volet() === 'markdown'"
+            [attr.aria-pressed]="volet() === 'markdown'" (click)="volet.set('markdown')">Markdown</button>
+    <button type="button" class="nm-seg__btn" [class.nm-seg__btn--on]="volet() === 'apercu'"
+            [attr.aria-pressed]="volet() === 'apercu'" (click)="volet.set('apercu')">Aperçu</button>
+  </div>
+
+  <div class="ed-corps">
+    <div class="ed-volet ed-volet--markdown" [class.ed-volet--cache]="volet() !== 'markdown'">
+      <label class="ed-label" for="ed-source">Markdown (en-tête, titre « # », sections « ## », blocs « ::: cta »)</label>
+      <textarea id="ed-source" class="ed-source" spellcheck="true" lang="fr"
+                [ngModel]="source()" (ngModelChange)="saisir($event)" [disabled]="chargement()"></textarea>
+      <div class="ed-barre">
+        <span class="ed-statut" aria-live="polite">
+          @if (verificationEnCours()) {
+            <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> Vérification…
+          } @else if (causes().length) {
+            <i class="pi pi-times-circle" aria-hidden="true"></i> {{ causes().length }} problème(s) à corriger
+          } @else if (valide()) {
+            <i class="pi pi-check-circle" aria-hidden="true"></i> Article valide
+            @if (apercu(); as p) { · {{ p.lecture }} min de lecture }
+          }
+          @if (modifie()) { · modifications non enregistrées }
+        </span>
+        <button type="button" class="nm-btn-primary" (click)="enregistrer()"
+                [disabled]="!valide() || !modifie() || enregistrement()">
+          @if (enregistrement()) { <i class="pi pi-spin pi-spinner" aria-hidden="true"></i> }
+          Enregistrer
+        </button>
+      </div>
+    </div>
+
+    <div class="ed-volet ed-volet--apercu" [class.ed-volet--cache]="volet() !== 'apercu'" aria-label="Aperçu de l'article">
+      @if (causes().length) {
+        <div class="ed-causes" role="status">
+          <p><strong>Le texte ne peut pas être enregistré :</strong></p>
+          <ul>
+            @for (c of causes(); track $index) { <li>{{ c }}</li> }
+          </ul>
+        </div>
+      } @else if (apercu(); as p) {
+        <div class="ed-apercu">
+          <app-article-corps [article]="p" [liensActifs]="false"></app-article-corps>
+        </div>
+      } @else {
+        <p class="ed-meta">L'aperçu apparaît dès que le texte est vérifié.</p>
+      }
+    </div>
+  </div>
+</section>
+
+<p-drawer [visible]="historiqueOuvert()" (visibleChange)="historiqueOuvert.set($event)" position="right"
+          header="Historique des révisions" styleClass="ed-tiroir">
+  <ol class="ed-revisions">
+    @for (r of revisions(); track r.numero) {
+      <li class="ed-revision">
+        <div>
+          <strong>Révision {{ r.numero }}</strong>
+          @if (r.numero === article()?.revision) { <span class="ed-courante">en ligne</span> }
+          <span class="ed-revision-meta">{{ quand(r.creeLe) }} · {{ r.auteurNom }}
+            @if (r.auteurType === 'jeton') { <i class="pi pi-key" aria-label="jeton de rédaction"></i> }</span>
+        </div>
+        <div class="ed-revision-actions">
+          <button type="button" class="nm-btn-tertiary" (click)="voirRevision(r)">Voir</button>
+          @if (r.numero !== article()?.revision) {
+            <button type="button" class="nm-btn-tertiary" (click)="restaurer(r)">Restaurer</button>
+          }
+        </div>
+      </li>
+    }
+  </ol>
+</p-drawer>
+
+<p-dialog [visible]="!!versionEnLigne()" (visibleChange)="!$event && versionEnLigne.set(null)" [modal]="true"
+          [header]="versionEnLigne()?.titre ?? ''" styleClass="ed-dialogue" [draggable]="false">
+  @if (versionEnLigne(); as v) {
+    <pre class="ed-lecture">{{ v.source }}</pre>
+    <div class="ed-boutons">
+      @if (conflit()) {
+        <button type="button" class="nm-btn-secondary" (click)="reprendreVersionEnLigne()">Repartir de cette version</button>
+      }
+      <button type="button" class="nm-btn-tertiary" (click)="versionEnLigne.set(null)">Fermer</button>
+    </div>
+  }
+</p-dialog>

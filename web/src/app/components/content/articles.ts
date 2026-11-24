@@ -1,22 +1,15 @@
 /**
  * Registre des articles du blog.
  *
- * L'index `/blog`, l'en-tête (`<app-article-entete>`), les données structurées
- * (`applyContentSeo`), les routes et le plan du site le lisent ici. Un article
- * qui n'y figure pas n'a ni date, ni auteur, ni place dans l'index.
- *
  * Deux sources :
- * - **les fichiers Markdown** de `src/content/articles/`, compilés au build par
- *   `scripts/articles.mjs` dans `articles.generes.ts` : en-tête, texte, temps de
- *   lecture calculé. C'est là qu'on écrit un article (`docs/ecrire-un-article.md`) ;
+ * - **la base**, lue par l'API (`ArticlesApi`) : tous les articles textuels, écrits et
+ *   publiés depuis l'administration ou par Claude (chantier `articles-en-base`) ;
  * - **les entrées écrites à la main** ci-dessous, pour les pages qui restent des
  *   composants parce qu'elles ont une logique propre.
  *
- * Les adresses des articles antérieurs au blog (`/guides/…`,
- * `/generateur-…`) ne changent pas : elles sont indexées.
+ * Les adresses des articles antérieurs au blog (`/guides/…`, `/generateur-…`) ne
+ * changent pas : elles sont indexées (`CHEMINS_HISTORIQUES`).
  */
-
-import { ARTICLES_MARKDOWN } from './articles.generes';
 
 export type CategorieArticle = 'Méthode' | 'Générateurs' | 'Secteurs' | 'Marque & droit' | 'Comparatifs';
 
@@ -50,7 +43,7 @@ export type SegmentArticle =
   | { type: 'cta'; heading?: string; subheading?: string; label?: string }
   | { type: 'trois-risques'; heading?: string; intro?: string };
 
-/** Article compilé depuis un fichier Markdown. */
+/** Article servi par l'API : en-tête, titre et corps compilés à l'enregistrement. */
 export interface ArticleMarkdown extends Article {
   /** `<title>` et `og:title` (sans le suffixe « — Namorama »). */
   title: string;
@@ -66,7 +59,7 @@ export const AUTEUR = {
   role: 'créateur de Namorama',
 };
 
-const ARTICLES_ECRITS_A_LA_MAIN: Article[] = [
+export const ARTICLES_ECRITS_A_LA_MAIN: Article[] = [
   {
     path: '/verifier-disponibilite-nom-de-marque',
     titre: "Vérifier la disponibilité d'un nom de marque",
@@ -78,21 +71,19 @@ const ARTICLES_ECRITS_A_LA_MAIN: Article[] = [
   },
 ];
 
-/** Articles du plus récent au plus ancien (à date égale, ordre de déclaration). */
-export const ARTICLES: readonly Article[] = [...ARTICLES_MARKDOWN, ...ARTICLES_ECRITS_A_LA_MAIN].sort((a, b) =>
-  b.publie.localeCompare(a.publie),
-);
-
-/** Article Markdown servi à ce chemin. */
-export function articleMarkdownDe(chemin: string): ArticleMarkdown | undefined {
-  const propre = chemin.split(/[?#]/)[0].replace(/(.)\/$/, '$1');
-  return ARTICLES_MARKDOWN.find((a) => a.path === propre);
+/**
+ * Index du blog : les articles parus (API) et les entrées écrites à la main, du plus
+ * récent au plus ancien — à date égale, les articles de la base d'abord, dans l'ordre
+ * où l'API les rend.
+ */
+export function indexDuBlog(parus: readonly Article[]): Article[] {
+  return [...parus, ...ARTICLES_ECRITS_A_LA_MAIN].sort((a, b) => b.publie.localeCompare(a.publie));
 }
 
-/** Article servi à ce chemin (query string et slash final ignorés). */
-export function articleDe(chemin: string): Article | undefined {
+/** Entrée écrite à la main servie à ce chemin (query string et slash final ignorés). */
+export function articleEcritALaMainDe(chemin: string): Article | undefined {
   const propre = chemin.split(/[?#]/)[0].replace(/(.)\/$/, '$1');
-  return ARTICLES.find((a) => a.path === propre);
+  return ARTICLES_ECRITS_A_LA_MAIN.find((a) => a.path === propre);
 }
 
 const MOIS = [
