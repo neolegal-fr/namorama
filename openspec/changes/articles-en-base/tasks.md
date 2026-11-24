@@ -257,24 +257,29 @@
 
 ## 10. Livraison
 
-- [ ] 10.1 Appliquer `2026-11-…-articles-en-base.sql` en production **avant** toute
+- [x] 10.1 Appliquer `2026-11-…-articles-en-base.sql` en production **avant** toute
   image.
   Vérification : `DESCRIBE article` sur la base de prod.
-- [ ] 10.2 Déployer l'image `api` seule.
+  24/11/2026 : sauvegarde `backups/namorama-2026-11-24-avant-articles-en-base.sql.gz` (16 Mo, dump complet) ; migration appliquée ; `article`, `article_revision`, `jeton_api` présentes.
+- [x] 10.2 Déployer l'image `api` seule.
   Vérification : `GET https://api.namorama.com/articles` → `[]` en 200 ; le site sert
   toujours les pages prérendues.
-- [ ] 10.3 Import en production : jeton « import » créé dans l'administration de prod,
+  24/11/2026 : PR #206 fusionnée (`74a8285`), CI de `main` verte ; image `api` seule : démarrage propre, `GET /articles` → `[]`, site toujours prérendu.
+- [x] 10.3 Import en production : jeton « import » créé dans l'administration de prod,
   `just article-importer` sur le dossier extrait du commit **précédant** la fusion
   (`git archive <fusion>^1 web/src/content/articles`), puis jeton révoqué.
   Vérification : `GET /articles` → 22 articles au 23/11/2026 (ou le nombre paru à la
   date de livraison) ; l'admin en liste 31 ; jeton « import » révoqué.
-- [ ] 10.4 Ajouter le service `blog` au `docker-compose.yml` de prod (sauvegarde datée),
+  24/11/2026 : jeton « import » créé par `POST /admin/jetons` avec la session de l'administrateur (fenêtre Playwright ; l'insertion directe en base a été refusée par le mode auto). `article-importer` sur les 31 fichiers de `93ef0f9` : 31 créés, 31 publiés ; `GET /articles` → 22, 9 programmés. Jeton révoqué (17:47:50 UTC), refusé ensuite en 401, copie locale effacée.
+- [x] 10.4 Ajouter le service `blog` au `docker-compose.yml` de prod (sauvegarde datée),
   `API_INTERNE_URL=http://api:3000`, `restart: unless-stopped`.
   Vérification : `docker compose config` valide ; `docker compose ps` montre `blog` sain.
-- [ ] 10.5 Déployer `web` et `blog`.
+  24/11/2026 : sauvegarde `docker-compose.yml.2026-11-24-avant-blog` ; service `blog` ajouté (`API_INTERNE_URL: http://api:3000`, `restart: unless-stopped`, journaux 20 Mo × 5) ; `docker compose config` valide, quatre services.
+- [x] 10.5 Déployer `web` et `blog`.
   Vérification : `comparer-rendus.mjs` entre l'ancienne image (conservée en local) et la
   production : aucun écart ; `curl` 301 `/guides`, 404 `/blog/brief-de-namming`,
   `sitemap.xml` complet ; `python3 - errors` sans `blog_source_unavailable`.
+  24/11/2026 : `web` et `blog` déployés. `comparer-rendus.mjs` entre les pages capturées juste avant et la production : **27 identiques sur 27**. `/guides` et `/blog/` → 301, `/blog/brief-de-namming` et l'article programmé → 404, `sitemap.xml` 28 URL, `BlogPosting` servi à GPTBot. Journaux : aucune erreur `blog` ni `api`, aucun `blog_source_unavailable` ; 32 rendus, médiane 184 ms, max 775 ms (premier rendu).
 
 ## Workflow follow-up
 
