@@ -499,6 +499,7 @@
       "REPORT_SHARE_COPY_LINK": "Copy the public link",
       "SEARCH_COST_HINT": "1 credit per suggestion found, 10 at most.",
       "CREDITS_LOW": "Only {{n}} credits left — 1 per suggestion, {{report}} for a brand report.",
+      "CREDITS_ZERO": "No credits left: {{gratuits}} free credits come back on the 1st of the month. Or buy a pack.",
       "SEARCH_ERROR_SUMMARY": "Search unavailable",
       "SEARCH_ERROR": "The search failed. Please try again in a moment.",
       "WIDEN_NOTE": "Only {{found}} names out of {{requested}}: invented names are scarce in this market. Descriptive names are easier to find available, but longer and less distinctive.",

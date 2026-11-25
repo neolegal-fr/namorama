@@ -499,6 +499,7 @@
       "REPORT_SHARE_COPY_LINK": "Copier le lien public",
       "SEARCH_COST_HINT": "1 crédit par suggestion trouvée, 10 au maximum.",
       "CREDITS_LOW": "Plus que {{n}} crédits — 1 par suggestion, {{report}} pour un rapport de marque.",
+      "CREDITS_ZERO": "Plus aucun crédit : {{gratuits}} crédits offerts reviennent le 1er du mois. Ou achetez un pack.",
       "SEARCH_ERROR_SUMMARY": "Recherche impossible",
       "SEARCH_ERROR": "La recherche a échoué. Réessayez dans un instant.",
       "WIDEN_NOTE": "Seulement {{found}} noms sur {{requested}} : en noms inventés, ce marché est saturé. Les noms descriptifs sont plus faciles à trouver libres, mais plus longs et moins distinctifs.",

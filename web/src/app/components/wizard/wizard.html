@@ -832,16 +832,25 @@
               {{ 'WIZARD.STEP3.SEARCH_COST_HINT' | translate }}
             </span>
             <ng-container *ngIf="domains().length > 0">
-              <ng-container *ngIf="(userService.credits$ | async) as totalCredits">
-                <span (click)="ouvrirCredits('solde')"
+              <!-- Le solde passe par un objet, toujours vrai : un `*ngIf … as`
+                   sur le nombre lui-même tient 0 pour faux, et la ligne
+                   disparaissait précisément à zéro. Relevé du 25/11/2026 :
+                   six comptes ont vidé leurs 100 crédits en une séance et sont
+                   repartis sans qu'une ligne leur dise où ils en étaient ni
+                   que le quota revient le 1er du mois. -->
+              <ng-container *ngIf="{ n: (userService.credits$ | async) ?? 0 } as solde">
+                <span (click)="ouvrirCredits(solde.n > 0 ? 'solde' : 'solde_epuise')"
                       class="wizard-credits wizard-credits--clickable"
-                      [class.wizard-credits--low]="totalCredits <= SEUIL_CREDITS_BAS">
-                  <i *ngIf="totalCredits <= SEUIL_CREDITS_BAS" class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-                  <ng-container *ngIf="totalCredits > SEUIL_CREDITS_BAS">
-                    {{ 'WIZARD.STEP3.CREDITS_LEFT' | translate : { n: totalCredits } }}
+                      [class.wizard-credits--low]="solde.n <= SEUIL_CREDITS_BAS">
+                  <i *ngIf="solde.n <= SEUIL_CREDITS_BAS" class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                  <ng-container *ngIf="solde.n > SEUIL_CREDITS_BAS">
+                    {{ 'WIZARD.STEP3.CREDITS_LEFT' | translate : { n: solde.n } }}
                   </ng-container>
-                  <ng-container *ngIf="totalCredits <= SEUIL_CREDITS_BAS">
-                    {{ 'WIZARD.STEP3.CREDITS_LOW' | translate : { n: totalCredits, report: brandReportCost } }}
+                  <ng-container *ngIf="solde.n > 0 && solde.n <= SEUIL_CREDITS_BAS">
+                    {{ 'WIZARD.STEP3.CREDITS_LOW' | translate : { n: solde.n, report: brandReportCost } }}
+                  </ng-container>
+                  <ng-container *ngIf="solde.n <= 0">
+                    {{ 'WIZARD.STEP3.CREDITS_ZERO' | translate : { gratuits: CREDITS_MENSUELS } }}
                   </ng-container>
                 </span>
               </ng-container>
