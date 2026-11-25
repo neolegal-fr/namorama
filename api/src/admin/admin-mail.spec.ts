@@ -1,4 +1,4 @@
-import { composer, construireContexte, consignes, langueDe, prenomLisible, lireBrouillon, mettreEnPage, signature, verifierBrouillon, versionTexte } from './admin-mail.service';
+import { GABARITS, OBJET, composer, construireContexte, consignes, langueDe, prenomLisible, lireBrouillon, mettreEnPage, signature, verifierBrouillon, versionTexte } from './admin-mail.service';
 
 const qui = { prenom: 'Nicolas', nomComplet: 'Nicolas Riousset' };
 const liens = {
@@ -41,6 +41,55 @@ describe('mettreEnPage', () => {
 
   it("n'a ni logo ni pied de page : un courriel personnel, pas une campagne", () => {
     expect(mettreEnPage('Bonjour')).not.toMatch(/<img|<hr/);
+  });
+
+  describe('réponses en boutons (refondre-le-courriel-de-retour)', () => {
+    const corps = composer('fr', 'Léa', null, qui, { ...liens, desinscription });
+    const html = mettreEnPage(corps);
+    const boutons = [...html.matchAll(/<a href="([^"]+)" style="([^"]+)">([^<]+)<\/a>/g)];
+
+    it('deux liens de réponse donnent deux boutons de styles identiques, dans un seul tableau', () => {
+      expect(boutons.map((b) => [b[1], b[3]])).toEqual([[liens.oui, 'Oui, j&#39;en ai un'], [liens.non, 'Pas encore']]);
+      expect(boutons[0][2]).toBe(boutons[1][2]);
+      expect(boutons[0][2]).toMatch(/background-color:#0d7a4e/);
+      expect(boutons[0][2]).toMatch(/padding:14px 22px/);
+      expect(html.match(/<table /g)).toHaveLength(1);
+      // Deux cellules de même largeur : un bouton plus large paraîtrait le principal.
+      expect(html.match(/<td align="center" width="48%" style="width:48%;border-radius:8px;background-color:#0d7a4e;">/g)).toHaveLength(2);
+      expect(html).toContain('<td width="4%" style="width:4%;"></td>');
+      expect(html).toContain('max-width:340px');
+    });
+
+    it('les autres liens restent des liens simples, et rien d’autre ne change', () => {
+      expect(html).toContain(`<a href="${liens.formulaire}">ce court formulaire</a>`);
+      expect(html).toContain(`<a href="${desinscription}">Se désinscrire</a>`);
+      expect(html).toContain('<p>Avez-vous trouvé un nom qui vous plaît ?</p>');
+      expect(html).not.toMatch(/<img|<hr/);
+    });
+
+    it('un guillemet dans un libellé reste échappé', () => {
+      const h = mettreEnPage(`[Oui "vraiment"](${liens.oui})\n[Non](${liens.non})`);
+      expect(h).toContain('Oui &quot;vraiment&quot;');
+      expect(h).not.toContain('"vraiment"');
+    });
+
+    it('la version texte garde chaque réponse lisible, suivie de son adresse', () => {
+      expect(versionTexte(corps)).toContain(`Oui, j'en ai un (${liens.oui})\nPas encore (${liens.non})`);
+    });
+
+    it('un brouillon retouché qui garde les deux liens garde ses boutons', () => {
+      const retouche = corps.replace('Avez-vous trouvé un nom qui vous plaît ?', 'Alors, ce nom, trouvé ?')
+        .replace('[Pas encore]', '[Toujours pas]');
+      const h = mettreEnPage(retouche);
+      expect(h.match(/style="display:inline-block/g)).toHaveLength(2);
+      expect(h).toContain('>Toujours pas</a>');
+    });
+
+    it('un lien de réponse glissé dans une phrase prend le style de bouton, sans tableau', () => {
+      const h = mettreEnPage(`Trouvé ? [Oui](${liens.oui}), merci.`);
+      expect(h).toContain(`<p>Trouvé ? <a href="${liens.oui}" style="display:inline-block`);
+      expect(h).not.toContain('<table');
+    });
   });
 });
 
@@ -111,31 +160,42 @@ describe('consignes', () => {
 describe('composer', () => {
   const ctx = "J'ai vu que vous aviez cherché un nom pour une boulangerie bio à Nantes.";
 
-  it('manuel : présentation et phrase du modèle, puis les deux temps, puis la signature', () => {
+  it('manuel : la question et ses réponses, puis la présentation et la phrase du modèle, puis le détail et la signature', () => {
     const m = composer('fr', 'Léa', ctx, qui, liens);
-    expect(m.startsWith(`Bonjour Léa,\n\nJe suis Nicolas, le créateur de [namorama.com](https://namorama.com). ${ctx}`)).toBe(true);
-    expect(m).toContain(`Namorama vous a-t-il été utile ? [Oui](${liens.oui}) · [Non](${liens.non})`);
-    expect(m).toContain('100 crédits');
+    expect(m.startsWith(
+      `Bonjour Léa,\n\nAvez-vous trouvé un nom qui vous plaît ?\n\n[Oui, j'en ai un](${liens.oui})\n[Pas encore](${liens.non})` +
+      `\n\nUn clic suffit : il vous rapporte 100 crédits.\n\nJe suis Nicolas, le créateur de [namorama.com](https://namorama.com). ${ctx}`,
+    )).toBe(true);
     expect(m).toContain(`[ce court formulaire](${liens.formulaire}). Je vous offrirai 500 crédits de plus.`);
-    // Ordre : la question d'utilité avant la demande détaillée.
-    expect(m.indexOf(liens.oui)).toBeLessThan(m.indexOf(liens.formulaire));
+    // Ordre : la question, puis la phrase du modèle, puis la demande détaillée.
+    expect(m.indexOf(liens.non)).toBeLessThan(m.indexOf(ctx));
+    expect(m.indexOf(ctx)).toBeLessThan(m.indexOf(liens.formulaire));
     expect(m.endsWith("Merci d'avance,\n\nNicolas Riousset\nCréateur de Namorama")).toBe(true);
     expect(m).not.toContain('désinscrire');
     expect(verifierBrouillon(m, liens)).toEqual([]);
   });
 
-  it('automatique : aucune phrase du modèle, ouverture « hier », pied de désinscription en dernier', () => {
+  it('automatique : la question en tête, la présentation « hier » ensuite, pied de désinscription en dernier', () => {
     const m = composer('fr', 'Léa', null, qui, { ...liens, desinscription });
-    expect(m).toContain('Vous avez créé votre compte hier');
+    expect(m.split('\n\n').slice(0, 2)).toEqual(['Bonjour Léa,', 'Avez-vous trouvé un nom qui vous plaît ?']);
+    expect(m).toContain("Je suis Nicolas, le créateur de [namorama.com](https://namorama.com). Vous avez créé votre compte hier, d'où cette question.");
+    expect(m.indexOf('100 crédits')).toBeLessThan(m.indexOf('Je suis Nicolas'));
     expect(m).not.toContain("J'ai vu que");
+    expect(m).not.toContain('utile ?');
     expect(m.endsWith(`[Se désinscrire](${desinscription})`)).toBe(true);
     expect(m.indexOf('Créateur de Namorama')).toBeLessThan(m.indexOf('Se désinscrire'));
     expect(verifierBrouillon(m, { ...liens, desinscription })).toEqual([]);
   });
 
-  it('sans liens de réponse, la question d\'utilité disparaît', () => {
+  it('en anglais : « Did you find a name you like? », « Yes, I have one », « Not yet »', () => {
+    const m = composer('en', 'Kim', null, qui, liens);
+    expect(m).toContain(`Did you find a name you like?\n\n[Yes, I have one](${liens.oui})\n[Not yet](${liens.non})`);
+  });
+
+  it('sans liens de réponse, la question disparaît avec ses réponses', () => {
     const m = composer('fr', 'Léa', ctx, qui, { ...liens, oui: null, non: null });
-    expect(m).not.toContain('utile ?');
+    expect(m).not.toContain('un nom qui vous plaît');
+    expect(m).not.toContain('100 crédits');
     expect(m).toContain('500 crédits');
   });
 
@@ -149,6 +209,24 @@ describe('composer', () => {
     for (const l of ['fr', 'en', 'de', 'es', 'pt', 'it', 'nl']) {
       expect(verifierBrouillon(composer(l, 'Kim', 'X.', qui, liens), liens)).toEqual([]);
       expect(verifierBrouillon(composer(l, 'Kim', null, qui, { ...liens, desinscription }), { ...liens, desinscription })).toEqual([]);
+    }
+  });
+});
+
+describe('objet et réponses', () => {
+  it("l'objet est la question, dans chaque langue, sans emoji", () => {
+    expect(OBJET.fr).toBe('Avez-vous trouvé un nom qui vous plaît ?');
+    for (const l of Object.keys(GABARITS)) {
+      expect(OBJET[l]).toBe(GABARITS[l].nomTrouve);
+      expect(OBJET[l]).not.toMatch(/\p{Extended_Pictographic}/u);
+    }
+  });
+
+  it('chaque réponse tient en moins de 20 caractères, pour deux boutons par ligne à 390 px', () => {
+    for (const g of Object.values(GABARITS)) {
+      const libelles = [...g.reponses('https://a', 'https://b').matchAll(/\[([^\]]+)\]/g)].map((m) => m[1]);
+      expect(libelles).toHaveLength(2);
+      for (const t of libelles) expect(t.length).toBeLessThan(20);
     }
   });
 });

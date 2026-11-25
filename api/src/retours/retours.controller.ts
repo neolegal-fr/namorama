@@ -13,7 +13,7 @@ import { RetoursService } from './retours.service';
 export class RetoursController {
   constructor(private readonly retours: RetoursService) {}
 
-  /** « Namorama vous a-t-il été utile ? » — appelée par la page `/retour`. */
+  /** La réponse en un clic du courriel de retour — appelée par la page `/retour`. */
   @Public()
   @Post('utilite')
   @HttpCode(200)

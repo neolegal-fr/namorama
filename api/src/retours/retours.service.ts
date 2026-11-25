@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DataSource } from 'typeorm';
 import { User } from '../users/entities/user.entity';
+import { AdminMail } from '../admin/entities/admin-mail.entity';
 import { AppLoggerService } from '../common/logging/app-logger.service';
 import { verifierLien } from './liens-de-retour';
 
@@ -64,8 +65,17 @@ export class RetoursService {
       const delaiDepuisEnvoiS = user.demandeRetourAt && user.utiliteAt
         ? Math.round((new Date(user.utiliteAt).getTime() - new Date(user.demandeRetourAt).getTime()) / 1000)
         : null;
+      // La version du gabarit auquel la personne répond : celle du dernier
+      // courriel délivré. Un lien d'avant un changement de gabarit reste
+      // valable 90 jours, et sa réponse doit compter pour l'ancienne version.
+      const dernier = await manager.findOne(AdminMail, {
+        where: { keycloakId, delivered: true },
+        order: { createdAt: 'DESC', id: 'DESC' },
+      });
       // Un délai de quelques secondes signale un analyseur qui exécute la page.
-      this.events.event('feedback_utility_answered', { userId: keycloakId, reponse: action, delaiDepuisEnvoiS });
+      this.events.event('feedback_utility_answered', {
+        userId: keycloakId, reponse: action, delaiDepuisEnvoiS, version: dernier?.promptVersion ?? null,
+      });
       return { enregistree: true, dejaRepondu: false, reponse: action, credits: CREDITS_UTILITE };
     });
   }

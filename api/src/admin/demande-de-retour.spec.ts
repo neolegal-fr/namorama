@@ -1,5 +1,5 @@
 import { DemandeDeRetourService, LOT_MAX } from './demande-de-retour.service';
-import { AdminMailService } from './admin-mail.service';
+import { AdminMailService, CONSIGNES_VERSION } from './admin-mail.service';
 
 /**
  * Chantier `demande-de-retour-automatique` : la demande part seule, une fois
@@ -39,8 +39,9 @@ describe('demande de retour automatique : envoi', () => {
     await expect(svc.envoyer(lea)).resolves.toBe('envoye');
     const envoi = mail.send.mock.calls[0][0];
     expect(envoi.to).toBe('lea@example.com');
-    expect(envoi.subject).toMatch(/Namorama/);
-    expect(envoi.text).toMatch(/^Hallo Léa,/);
+    // L'objet est la question elle-même (chantier `refondre-le-courriel-de-retour`).
+    expect(envoi.subject).toBe('Haben Sie einen Namen gefunden, der Ihnen gefällt?');
+    expect(envoi.text).toMatch(/^Hallo Léa,\n\nHaben Sie einen Namen gefunden, der Ihnen gefällt\?/);
     expect(envoi.text).toContain('gestern');
     expect(envoi.text).toMatch(/https:\/\/namorama\.com\/retour\?j=/);
     expect(envoi.text).toMatch(/https:\/\/namorama\.com\/desinscription\?j=/);
@@ -48,7 +49,9 @@ describe('demande de retour automatique : envoi', () => {
     expect(envoi.headers['List-Unsubscribe']).toMatch(/^<https:\/\/api\.namorama\.com\/retours\/desinscription\?j=.+>$/);
     expect(envoi.headers['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
     expect(mailsEnregistres[0]).toMatchObject({ userId: 7, adminSub: null, automatique: true, aiDrafted: false, delivered: true });
-    expect(events.event).toHaveBeenCalledWith('feedback_request_sent', { userId: 'sub-lea', delivered: true, langue: 'de' });
+    expect(mailsEnregistres[0].promptVersion).toBe(CONSIGNES_VERSION);
+    expect(CONSIGNES_VERSION).toBe('2026-11-25.1');
+    expect(events.event).toHaveBeenCalledWith('feedback_request_sent', { userId: 'sub-lea', delivered: true, langue: 'de', version: CONSIGNES_VERSION });
     expect(JSON.stringify(events.event.mock.calls)).not.toContain('lea@example.com');
   });
 
@@ -56,6 +59,7 @@ describe('demande de retour automatique : envoi', () => {
     const { svc, mail } = fabrique();
     await svc.envoyer({ ...lea, langueInscription: null });
     expect(mail.send.mock.calls[0][0].text).toMatch(/^Bonjour Léa,/);
+    expect(mail.send.mock.calls[0][0].subject).toBe('Avez-vous trouvé un nom qui vous plaît ?');
   });
 
   it('réservation déjà prise par un autre passage : aucun envoi', async () => {

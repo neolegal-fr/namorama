@@ -147,7 +147,7 @@ import { AdminReplayService } from '../../services/admin-replay.service';
                 <span *ngIf="user.demandeRetourAt" class="nm-retour-marque" pTooltip="Demande de retour automatique envoyée" tooltipPosition="top">auto</span>
                 <span *ngIf="user.utilite" class="nm-retour-marque"
                       [class.nm-retour-marque--oui]="user.utilite === 'oui'" [class.nm-retour-marque--non]="user.utilite === 'non'"
-                      pTooltip="Réponse à « Namorama vous a-t-il été utile ? »" tooltipPosition="top">{{ user.utilite }}</span>
+                      pTooltip="Réponse en un clic à la demande de retour" tooltipPosition="top">{{ user.utilite }}</span>
                 <span *ngIf="user.desinscritRetoursAt" class="nm-retour-marque nm-retour-marque--desinscrit"
                       pTooltip="Désinscrit des demandes de retour" tooltipPosition="top">désinscrit</span>
               </td>

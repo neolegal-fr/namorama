@@ -3,6 +3,7 @@
 ## 1. Point de départ et décisions
 
 - [ ] 1.1 Relever en production, en lecture seule, l'état de départ avec la requête préparée (courriels de demande délivrés et comptes touchés, réponses recopiées, feedbacks reçus après un courriel, feedbacks récompensés, délai moyen entre inscription et courriel, inscriptions mesurées des 30 derniers jours avec adresse et avec langue, inscrits jamais contactés). Vérification : chiffres et date notés sous cette tâche, et la phrase « le volume ne se mesure pas encore » de proposal.md remplacée par eux.
+  - Non faite avant la mise en service, et irréalisable après coup : l'état de départ n'existe plus. Le suivi du 25/11/2026 (voir Workflow follow-up) sert de point de comparaison au chantier suivant.
 - [x] 1.2 Faire confirmer par l'utilisateur les quatre décisions prises par défaut (design, « Décisions produit tranchées sans consultation »), et le texte français de D2. Vérification : réponse notée sous cette tâche, et design et spécification amendés si une décision change.
   - 31/10/2026 : « ok pour les 4 décisions ». Les quatre sont confirmées telles quelles, sans amendement.
   - Le texte français de D2 n'a pas été commenté. Il est pris comme base, et reste relisible sur le premier courriel capturé en local (tâche 4.3).
@@ -78,10 +79,22 @@
 
 ## 7. Livraison
 
-- [ ] 7.1 Appliquer la migration en production après sauvegarde datée, et vérifier les colonnes. Vérification : `SHOW COLUMNS` en production.
-- [ ] 7.2 Ajouter `FEEDBACK_LINK_SECRET`, `FEEDBACK_SIGNATAIRE` et `FEEDBACK_AUTO_DEPUIS` au `docker-compose.yml` de prod (sauvegarde datée du fichier avant), merger, attendre le build, puis déployer. Vérification : conteneurs `Up`, et `demande_retour_passage` journalisé dans les 10 minutes avec `eligibles: 0`, puisque aucun compte n'a encore 24 h depuis la mise en service.
+- [x] 7.1 Appliquer la migration en production après sauvegarde datée, et vérifier les colonnes. Vérification : `SHOW COLUMNS` en production.
+  - Relevé du 25/11/2026 : `user.demandeRetourAt`, `utilite`, `utiliteAt`, `desinscritRetoursAt`, `langueInscription`, `admin_mail.automatique` présents, et `admin_mail.adminSub` nullable.
+- [x] 7.2 Ajouter `FEEDBACK_LINK_SECRET`, `FEEDBACK_SIGNATAIRE` et `FEEDBACK_AUTO_DEPUIS` au `docker-compose.yml` de prod (sauvegarde datée du fichier avant), merger, attendre le build, puis déployer. Vérification : conteneurs `Up`, et `demande_retour_passage` journalisé dans les 10 minutes avec `eligibles: 0`, puisque aucun compte n'a encore 24 h depuis la mise en service.
+  - Relevé du 25/11/2026 : les trois variables sont dans le `docker-compose.yml` de prod, et `demande_retour_passage` est journalisé chaque heure (598 passages sur 30 jours de logs).
 
 ## Workflow follow-up
+
+Suivi lu le 25/11/2026, sur les logs et la base de production :
+
+- Premiers envois réels délivrés (`feedback_request_sent`, `delivered: true`), aucun échec : 33 envois automatiques et 3 manuels depuis le 01/11.
+- **Aucune réponse oui / non**, aucun retour détaillé (dernier feedback le 20/10), **une désinscription** 22 s après l'envoi, depuis un vrai téléphone. Aucun appel à `/retour` en 14 jours de journal nginx.
+- La délivrabilité est écartée : SPF, DKIM et DMARC publiés, mail-tester à 10/10.
+- Suite : chantier `refondre-le-courriel-de-retour` (question, ordre, boutons, version du gabarit dans la mesure).
+
+Prévu à l'origine :
+
 
 - Le lendemain du déploiement : vérifier le premier envoi réel (`feedback_request_sent`, `delivered: true`) et l'absence d'échec.
 - Après 30 jours : taux de réponse oui / non, part de oui, feedbacks détaillés reçus, désinscriptions, à comparer au relevé de la tâche 1.1. Signaler les réponses de moins de 10 s (analyseurs qui exécutent la page).

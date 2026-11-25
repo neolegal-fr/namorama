@@ -171,7 +171,8 @@ export class DemandeDeRetourService implements OnModuleInit, OnModuleDestroy {
       // L'envoi a eu lieu (ou non) : la trace manquante ne doit pas le refaire.
       this.logger.error(`Demande de retour envoyée à ${user.id} sans trace en base : ${e instanceof Error ? e.message : e}`);
     }
-    this.events.event('feedback_request_sent', { userId: user.keycloakId, delivered, langue });
+    // `version` : le gabarit envoyé, pour comparer les versions entre elles (`python3 - retours`).
+    this.events.event('feedback_request_sent', { userId: user.keycloakId, delivered, langue, version: CONSIGNES_VERSION });
     if (!delivered) this.logger.error(`Demande de retour automatique non délivrée (compte ${user.id})`);
     return delivered ? 'envoye' : 'echec';
   }
