@@ -42,6 +42,7 @@
   - un clic sur chaque bouton ouvre `/retour` et enregistre la réponse dans la base du worktree.
 
   Noter les résultats sous la tâche.
+  - **Non faite, décision de l'utilisateur du 25/11/2026 : livrer sans ce test.** Fait à la place : rendu HTML des sept langues au navigateur à 390 px (deux boutons de 163 × 46 px, côte à côte, identiques). La note mail-tester et le rendu Gmail / Outlook se vérifient sur le premier envoi réel (Workflow follow-up).
 
 ## 4. La version dans la mesure
 
@@ -69,5 +70,6 @@
 ## Workflow follow-up
 
 - Au premier envoi réel : `feedback_request_sent` porte la nouvelle `version`, et `admin_mail` montre le nouvel objet.
+- Tâche 3.3 non faite avant livraison : faire passer un courriel de la nouvelle version par mail-tester (10/10 attendu), et regarder son rendu sur Gmail mobile, Gmail web et Outlook.com — envoi manuel depuis l'admin vers un compte de test non interne.
 - Après 30 envois de la nouvelle version (environ un mois), lancer `python3 - retours` et comparer à `2026-11-01.1` (0 réponse sur 33). Noter ici : taux de réponse, part de « oui », désinscriptions, réponses en moins de 10 s (analyseurs).
 - Archiver le chantier, puis vérifier que `openspec validate --all` passe.
