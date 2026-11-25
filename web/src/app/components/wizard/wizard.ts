@@ -797,6 +797,8 @@ export class WizardComponent implements OnInit, OnDestroy {
    * et ne veut plus rien dire.
    */
   readonly SEUIL_CREDITS_BAS = 20;
+  /** Quota offert chaque mois, rendu au premier passage du mois (`FREE_MONTHLY_QUOTA` côté API). */
+  readonly CREDITS_MENSUELS = 100;
   readonly brandReport = signal<BrandReport | null>(null);
   readonly brandReportLoading = signal(false);
   readonly brandReportError = signal<string | null>(null);
