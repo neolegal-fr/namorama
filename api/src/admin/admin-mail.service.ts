@@ -15,11 +15,13 @@ import { FREE_MONTHLY_QUOTA } from '../users/users.service';
 import { ActionDeRetour, signerLien } from '../retours/liens-de-retour';
 
 /**
- * Version des consignes de rédaction. À CHANGER à chaque modification du
- * prompt : chaque envoi la garde, et c'est ce qui dit, après coup, à qui
- * l'ancienne version a écrit.
+ * Version des consignes de rédaction ET du gabarit. À CHANGER à chaque
+ * modification de l'un ou de l'autre : chaque envoi la garde (`admin_mail`),
+ * et les événements `feedback_request_sent` et `feedback_utility_answered` la
+ * portent (`version`) — c'est ce qui compare les gabarits entre eux.
+ * `2026-11-01.1` : « Namorama vous a-t-il été utile ? » en liens texte.
  */
-export const CONSIGNES_VERSION = '2026-11-01.1';
+export const CONSIGNES_VERSION = '2026-11-25.1';
 
 /** Ce que le modèle sait du destinataire — et rien de plus. */
 export interface ContexteDestinataire {
@@ -91,7 +93,7 @@ export interface Liens {
   /** Page d'avis publics — absente tant qu'aucun profil n'est configuré. */
   avis: string | null;
   /**
-   * Réponses en un clic à « Namorama vous a-t-il été utile ? », signées pour
+   * Réponses en un clic à « Avez-vous trouvé un nom qui vous plaît ? », signées pour
    * le destinataire (chantier `demande-de-retour-automatique`). Absentes sans
    * `FEEDBACK_LINK_SECRET` : le bloc disparaît, et `verifierBrouillon` le dit.
    */
@@ -110,14 +112,19 @@ export interface Brouillon {
 }
 
 /**
- * L'objet est FIXE, décidé et non généré : ce qu'écrirait une personne, et
- * un effort qui paraît léger.
- * Le modèle ne rédige plus que le corps.
+ * L'objet est FIXE, décidé et non généré : c'est la question elle-même, pour
+ * qu'elle se lise dans la boîte de réception. « Une question rapide sur
+ * Namorama » ne la montrait jamais : 0 réponse sur 36 envois délivrés du 01 au
+ * 25/11/2026 (chantier `refondre-le-courriel-de-retour`). Pas d'emoji.
  */
 export const OBJET: Record<string, string> = {
-  fr: 'Une question rapide sur Namorama', en: 'A quick question about Namorama', de: 'Eine kurze Frage zu Namorama',
-  es: 'Una pregunta rápida sobre Namorama', pt: 'Uma pergunta rápida sobre o Namorama',
-  it: 'Una domanda veloce su Namorama', nl: 'Een korte vraag over Namorama',
+  fr: 'Avez-vous trouvé un nom qui vous plaît ?',
+  en: 'Did you find a name you like?',
+  de: 'Haben Sie einen Namen gefunden, der Ihnen gefällt?',
+  es: '¿Ha encontrado un nombre que le guste?',
+  pt: 'Encontrou um nome de que goste?',
+  it: 'Ha trovato un nome che le piace?',
+  nl: 'Hebt u een naam gevonden die u bevalt?',
 };
 
 /** Qui signe : son nom complet, et ce qu'il est pour Namorama, dans la langue du message. */
@@ -173,9 +180,11 @@ export function versionTexte(texte: string): string {
 /**
  * Le texte saisi, en HTML volontairement nu.
  *
- * Pas de logo, pas de bouton, pas de pied de page : c'est ce qui distingue un
+ * Pas de logo, pas d'image, pas de pied de page : c'est ce qui distingue un
  * courriel qu'une personne écrit d'une campagne, pour le lecteur comme pour
- * les filtres. Le corps est du TEXTE, jamais du HTML : il est échappé, les
+ * les filtres. Une seule exception : les deux réponses en un clic, en boutons.
+ * En liens texte sur une ligne, elles étaient la plus petite cible du message,
+ * et n'ont obtenu aucun clic sur 36 envois (01-25/11/2026). Le corps est du TEXTE, jamais du HTML : il est échappé, les
  * lignes vides font les paragraphes et les liens `https://` deviennent
  * cliquables, comme `[texte](https://…)`. Un brouillon du modèle passe par
  * là comme le reste : l'URL d'un lien nommé passe par l'échappement, un
@@ -187,15 +196,69 @@ export function mettreEnPage(texte: string): string {
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean)
-    .map((p) =>
-      echapper(p)
-        .replace(LIEN, (m, texte?: string, url?: string) =>
-          texte && url ? `<a href="${url}">${texte}</a>` : `<a href="${m}">${m}</a>`)
-        .replace(/\n/g, '<br>'),
-    )
-    .map((p) => `<p>${p}</p>`)
+    .map((p) => (queDesReponses(p) ? rangeeDeBoutons(p) : `<p>${enLigne(p)}</p>`))
     .join('\n');
   return `<!DOCTYPE html>\n<html>\n<body>\n${paragraphes}\n</body>\n</html>`;
+}
+
+/**
+ * Les réponses en un clic se reconnaissent à leur ADRESSE, pas à une syntaxe :
+ * le brouillon manuel reste du texte qu'on retouche sans balisage, et tant que
+ * ses deux liens restent, ses boutons restent (chantier
+ * `refondre-le-courriel-de-retour`, D3).
+ */
+const estReponse = (url: string) => /^https:\/\/[^/\s]+\/retour\?j=/.test(url);
+
+/**
+ * Le bouton de réponse d'e-mail (docs/systeme-de-design.md §5) : les e-mails
+ * sont toujours clairs, styles figés, accent `#0d7a4e` (§2). Les deux réponses
+ * ont le MÊME bouton : en mettre une en avant fausserait la mesure. Hauteur
+ * ≈ 48 px (14 + ligne + 14), au-dessus du plancher tactile de 44.
+ */
+const STYLE_BOUTON =
+  'display:inline-block;padding:14px 22px;background-color:#0d7a4e;color:#ffffff;' +
+  'font-weight:bold;text-decoration:none;border-radius:8px;';
+
+/** `pleineCellule` : dans une rangée, le lien occupe toute sa cellule — toute la surface colorée est cliquable. */
+const lienBouton = (url: string, texte: string, pleineCellule = false) =>
+  `<a href="${url}" style="${STYLE_BOUTON}${pleineCellule ? 'display:block;text-align:center;' : ''}">${texte}</a>`;
+
+/** Un paragraphe fait seulement de liens de réponse (et d'espaces ou de « · ») : une rangée de boutons. */
+function queDesReponses(p: string): boolean {
+  let trouves = 0;
+  const reste = p.replace(LIEN_NOMME, (m, _t: string, url: string) => (estReponse(url) ? (trouves++, '') : m));
+  return trouves > 0 && /^[\s·]*$/.test(reste);
+}
+
+/**
+ * Le bouton « à l'épreuve des balles » : la cellule porte le fond (Outlook
+ * ignore le `padding` d'un lien), le lien porte le texte et la cible. Un seul
+ * tableau, cellules côte à côte et de MÊME largeur : sans cela, chaque bouton
+ * prenait la largeur de son libellé (142 contre 117 px en français), et le
+ * plus long paraissait le principal. 340 px tiennent à 390 px, marges comprises.
+ */
+function rangeeDeBoutons(p: string): string {
+  const liensTrouves = [...p.matchAll(LIEN_NOMME)];
+  // L'écart compte dans les 100 % : deux cellules à 50 % l'écrasaient, et les boutons se touchaient.
+  const ECART = 4;
+  const largeur = `${Math.floor((100 - ECART * (liensTrouves.length - 1)) / liensTrouves.length)}%`;
+  const cellules = liensTrouves.map(([, t, url]) =>
+    `<td align="center" width="${largeur}" style="width:${largeur};border-radius:8px;background-color:#0d7a4e;">` +
+    `${lienBouton(echapper(url), echapper(t), true)}</td>`);
+  return '<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" ' +
+    'style="width:100%;max-width:340px;margin:0 0 16px 0;"><tr>' +
+    cellules.join(`<td width="${ECART}%" style="width:${ECART}%;"></td>`) + '</tr></table>';
+}
+
+/** Le texte d'un paragraphe : échappé, liens cliquables, un lien de réponse égaré dans une phrase reste un bouton. */
+function enLigne(p: string): string {
+  return echapper(p)
+    .replace(LIEN, (m, texte?: string, url?: string) => {
+      if (!texte || !url) return `<a href="${m}">${m}</a>`;
+      // L'adresse est déjà échappée ici : `&amp;` ne gêne pas le test, qui ne regarde que `/retour?j=`.
+      return estReponse(url) ? lienBouton(url, texte) : `<a href="${url}">${texte}</a>`;
+    })
+    .replace(/\n/g, '<br>');
 }
 
 /**
@@ -240,10 +303,14 @@ export function verifierBrouillon(body: string, liens: Liens): string[] {
 interface Gabarit {
   bonjour: (prenom: string | null) => string;
   presentation: (prenom: string, site: string) => string;
-  /** Ouverture de l'envoi automatique, à la place de la phrase du modèle. */
+  /** Après la présentation de l'envoi automatique, à la place de la phrase du modèle. */
   hier: string;
-  /** Premier temps : une question, deux liens, 100 crédits. */
-  utilite: (oui: string, non: string) => string;
+  /** Premier temps : la question, aussi objet du courriel (chantier `refondre-le-courriel-de-retour`). */
+  nomTrouve: string;
+  /** Les deux réponses, une par ligne : `mettreEnPage` en fait deux boutons. Moins de 20 caractères chacune. */
+  reponses: (oui: string, non: string) => string;
+  /** La récompense, sous les réponses. */
+  unClic: string;
   /** Second temps : le retour détaillé, 500 crédits. */
   question: string;
   reponse: (formulaire: string) => string;
@@ -255,8 +322,10 @@ interface Gabarit {
 /**
  * Le message, écrit par Nicolas et traduit. Deux temps (chantier
  * `demande-de-retour-automatique`) : d'abord une question en un clic,
- * « Namorama vous a-t-il été utile ? », récompensée de 100 crédits quelle que
- * soit la réponse ; ensuite, pour qui veut en dire plus, le retour détaillé à
+ * « Avez-vous trouvé un nom qui vous plaît ? » depuis le chantier
+ * `refondre-le-courriel-de-retour` (avant : « Namorama vous a-t-il été
+ * utile ? », 0 réponse sur 36), récompensée de 100 crédits quelle que soit la
+ * réponse, et posée AVANT la présentation : c'est elle que montre l'aperçu ; ensuite, pour qui veut en dire plus, le retour détaillé à
  * 500 crédits. Le modèle n'écrit au plus qu'UNE phrase, dans le courriel
  * manuel ; l'envoi automatique n'en contient aucune.
  */
@@ -264,9 +333,10 @@ export const GABARITS: Record<string, Gabarit> = {
   fr: {
     bonjour: (p) => (p ? `Bonjour ${p},` : 'Bonjour,'),
     presentation: (p, site) => `Je suis ${p}, le créateur de [namorama.com](${site}).`,
-    hier: 'Vous avez créé votre compte hier, et j\'ai une seule question à vous poser.',
-    utilite: (oui, non) =>
-      `Namorama vous a-t-il été utile ? [Oui](${oui}) · [Non](${non})\n\nUn clic suffit, et il vous rapporte 100 crédits.`,
+    hier: 'Vous avez créé votre compte hier, d\'où cette question.',
+    nomTrouve: 'Avez-vous trouvé un nom qui vous plaît ?',
+    reponses: (oui, non) => `[Oui, j'en ai un](${oui})\n[Pas encore](${non})`,
+    unClic: 'Un clic suffit : il vous rapporte 100 crédits.',
     question: 'Si vous avez deux minutes de plus, dites-moi ce que vous avez aimé, ce qui vous a bloqué ou ce qui mériterait d\'être amélioré :',
     reponse: (f) => `répondez simplement à ce courriel, ou passez par [ce court formulaire](${f}). Je vous offrirai 500 crédits de plus.`,
     avis: (u) => `Si vous le souhaitez, vous pouvez aussi partager votre expérience, quelle qu'elle soit, dans [un avis sur Trustpilot](${u}).`,
@@ -276,9 +346,10 @@ export const GABARITS: Record<string, Gabarit> = {
   en: {
     bonjour: (p) => (p ? `Hello ${p},` : 'Hello,'),
     presentation: (p, site) => `I'm ${p}, the creator of [namorama.com](${site}).`,
-    hier: 'You created your account yesterday, and I have just one question.',
-    utilite: (oui, non) =>
-      `Was Namorama useful to you? [Yes](${oui}) · [No](${non})\n\nOne click is all it takes, and it earns you 100 credits.`,
+    hier: 'You created your account yesterday, hence this question.',
+    nomTrouve: 'Did you find a name you like?',
+    reponses: (oui, non) => `[Yes, I have one](${oui})\n[Not yet](${non})`,
+    unClic: 'One click is enough, and it earns you 100 credits.',
     question: 'If you have two more minutes, tell me what you liked, what got in your way, or what should be improved:',
     reponse: (f) => `simply reply to this email, or use [this short form](${f}). I'll give you 500 more credits.`,
     avis: (u) => `If you'd like, you can also share your experience, whatever it was, in [a Trustpilot review](${u}).`,
@@ -287,10 +358,11 @@ export const GABARITS: Record<string, Gabarit> = {
   },
   de: {
     bonjour: (p) => (p ? `Hallo ${p},` : 'Guten Tag,'),
-    presentation: (p, site) => `ich bin ${p}, der Gründer von [namorama.com](${site}).`,
-    hier: 'Sie haben gestern Ihr Konto erstellt, und ich habe nur eine Frage.',
-    utilite: (oui, non) =>
-      `War Namorama für Sie nützlich? [Ja](${oui}) · [Nein](${non})\n\nEin Klick genügt, und er bringt Ihnen 100 Credits.`,
+    presentation: (p, site) => `Ich bin ${p}, der Gründer von [namorama.com](${site}).`,
+    hier: 'Sie haben gestern Ihr Konto erstellt, daher diese Frage.',
+    nomTrouve: 'Haben Sie einen Namen gefunden, der Ihnen gefällt?',
+    reponses: (oui, non) => `[Ja, habe ich](${oui})\n[Noch nicht](${non})`,
+    unClic: 'Ein Klick genügt, und er bringt Ihnen 100 Credits.',
     question: 'Wenn Sie zwei Minuten mehr haben, sagen Sie mir, was Ihnen gefallen hat, was Sie gebremst hat oder was verbessert werden sollte:',
     reponse: (f) => `antworten Sie einfach auf diese E-Mail oder nutzen Sie [dieses kurze Formular](${f}). Ich schenke Ihnen weitere 500 Credits.`,
     avis: (u) => `Wenn Sie möchten, können Sie Ihre Erfahrung, wie auch immer sie war, auch in [einer Bewertung auf Trustpilot](${u}) teilen.`,
@@ -300,9 +372,10 @@ export const GABARITS: Record<string, Gabarit> = {
   es: {
     bonjour: (p) => (p ? `Hola, ${p}:` : 'Hola:'),
     presentation: (p, site) => `Soy ${p}, el creador de [namorama.com](${site}).`,
-    hier: 'Creó su cuenta ayer y solo tengo una pregunta.',
-    utilite: (oui, non) =>
-      `¿Le ha sido útil Namorama? [Sí](${oui}) · [No](${non})\n\nBasta con un clic, y le reporta 100 créditos.`,
+    hier: 'Creó su cuenta ayer, de ahí esta pregunta.',
+    nomTrouve: '¿Ha encontrado un nombre que le guste?',
+    reponses: (oui, non) => `[Sí, ya tengo uno](${oui})\n[Todavía no](${non})`,
+    unClic: 'Basta con un clic, y le reporta 100 créditos.',
     question: 'Si dispone de dos minutos más, dígame qué le gustó, qué le frenó o qué debería mejorarse:',
     reponse: (f) => `responda simplemente a este correo o use [este breve formulario](${f}). Le regalaré 500 créditos más.`,
     avis: (u) => `Si lo desea, también puede compartir su experiencia, sea cual sea, en [una reseña en Trustpilot](${u}).`,
@@ -312,9 +385,10 @@ export const GABARITS: Record<string, Gabarit> = {
   pt: {
     bonjour: (p) => (p ? `Olá ${p},` : 'Olá,'),
     presentation: (p, site) => `Sou o ${p}, criador do [namorama.com](${site}).`,
-    hier: 'Criou a sua conta ontem e tenho apenas uma pergunta.',
-    utilite: (oui, non) =>
-      `O Namorama foi-lhe útil? [Sim](${oui}) · [Não](${non})\n\nBasta um clique, e vale-lhe 100 créditos.`,
+    hier: 'Criou a sua conta ontem, daí esta pergunta.',
+    nomTrouve: 'Encontrou um nome de que goste?',
+    reponses: (oui, non) => `[Sim, já tenho](${oui})\n[Ainda não](${non})`,
+    unClic: 'Basta um clique, e vale-lhe 100 créditos.',
     question: 'Se tiver mais dois minutos, diga-me o que gostou, o que o impediu de avançar ou o que deveria ser melhorado:',
     reponse: (f) => `responda simplesmente a este e-mail ou use [este breve formulário](${f}). Ofereço-lhe mais 500 créditos.`,
     avis: (u) => `Se quiser, também pode partilhar a sua experiência, seja ela qual for, numa [avaliação no Trustpilot](${u}).`,
@@ -323,10 +397,11 @@ export const GABARITS: Record<string, Gabarit> = {
   },
   it: {
     bonjour: (p) => (p ? `Buongiorno ${p},` : 'Buongiorno,'),
-    presentation: (p, site) => `sono ${p}, il creatore di [namorama.com](${site}).`,
-    hier: 'Ha creato il suo account ieri, e ho una sola domanda.',
-    utilite: (oui, non) =>
-      `Namorama le è stato utile? [Sì](${oui}) · [No](${non})\n\nBasta un clic, e le vale 100 crediti.`,
+    presentation: (p, site) => `Sono ${p}, il creatore di [namorama.com](${site}).`,
+    hier: 'Ha creato il suo account ieri, da qui questa domanda.',
+    nomTrouve: 'Ha trovato un nome che le piace?',
+    reponses: (oui, non) => `[Sì, ce l'ho](${oui})\n[Non ancora](${non})`,
+    unClic: 'Basta un clic, e le vale 100 crediti.',
     question: 'Se ha due minuti in più, mi dica cosa le è piaciuto, cosa non ha funzionato o cosa andrebbe migliorato:',
     reponse: (f) => `risponda semplicemente a questa email o usi [questo breve modulo](${f}). Le offrirò altri 500 crediti.`,
     avis: (u) => `Se lo desidera, può anche condividere la sua esperienza, qualunque sia stata, in [una recensione su Trustpilot](${u}).`,
@@ -336,9 +411,10 @@ export const GABARITS: Record<string, Gabarit> = {
   nl: {
     bonjour: (p) => (p ? `Hallo ${p},` : 'Hallo,'),
     presentation: (p, site) => `Ik ben ${p}, de maker van [namorama.com](${site}).`,
-    hier: 'U hebt gisteren uw account aangemaakt, en ik heb maar één vraag.',
-    utilite: (oui, non) =>
-      `Was Namorama nuttig voor u? [Ja](${oui}) · [Nee](${non})\n\nEén klik is genoeg, en levert u 100 credits op.`,
+    hier: 'U hebt gisteren uw account aangemaakt, vandaar deze vraag.',
+    nomTrouve: 'Hebt u een naam gevonden die u bevalt?',
+    reponses: (oui, non) => `[Ja, die heb ik](${oui})\n[Nog niet](${non})`,
+    unClic: 'Eén klik is genoeg, en levert u 100 credits op.',
     question: 'Hebt u twee minuten meer? Vertel me wat u goed vond, waar u op vastliep of wat er beter kan:',
     reponse: (f) => `antwoord gewoon op deze e-mail of gebruik [dit korte formulier](${f}). Ik geef u 500 extra credits.`,
     avis: (u) => `Als u wilt, kunt u uw ervaring, hoe die ook was, ook delen in [een review op Trustpilot](${u}).`,
@@ -362,10 +438,12 @@ export function composer(
   liens: Liens,
 ): string {
   const g = GABARITS[langue] ?? GABARITS.fr;
+  const reponses = liens.oui && liens.non;
   return [
     g.bonjour(prenom),
+    // La question d'abord : c'est elle que montre l'aperçu de la boîte de réception.
+    ...(reponses ? [g.nomTrouve, g.reponses(liens.oui!, liens.non!), g.unClic] : []),
     `${g.presentation(qui.prenom, liens.site)} ${contexte ?? g.hier}`,
-    ...(liens.oui && liens.non ? [g.utilite(liens.oui, liens.non)] : []),
     `${g.question} ${g.reponse(liens.formulaire)}`,
     ...(liens.avis ? [g.avis(liens.avis)] : []),
     `${g.merci}\n\n${signature(qui, langue)}`,
@@ -381,8 +459,8 @@ export function composer(
 export function consignes(langue: string | null): string {
   return [
     "Tu écris UNE phrase qui sera insérée dans un courriel du créateur de Namorama à l'un de ses utilisateurs, " +
-      'juste après sa présentation et avant la question « Namorama vous a-t-il été utile ? » (oui / non), ' +
-      'elle-même suivie de la demande « ce que vous avez aimé, ce qui vous a bloqué, ce qui mériterait d’être amélioré ». ' +
+      'juste après sa présentation. Avant elles, le courriel a posé la question « Avez-vous trouvé un nom qui vous plaît ? » ' +
+      '(deux réponses en un clic) ; après, il demande « ce que vous avez aimé, ce qui vous a bloqué, ce qui mériterait d’être amélioré ». ' +
       "Namorama aide à trouver un nom de marque et un domaine disponibles à partir de la description d'un produit ; " +
       'un rapport de marque payant vérifie domaines, réseaux sociaux et dépôts INPI.',
     '',

@@ -687,11 +687,14 @@ fallait savoir l'ouvrir pour le trouver. Pour juger le déplacement :
   d'un nom non vérifié qui ne coûte rien.
 
 La demande de retour automatique (voir « Demander un retour à un utilisateur ») émet
-`feedback_request_sent` (`delivered`, `langue`) à chaque envoi,
-`feedback_utility_answered` (`reponse` : `oui` ou `non`, `delaiDepuisEnvoiS`) à la
-première réponse en un clic, et `feedback_unsubscribed` à la désinscription — avec le
-seul `sub`, jamais l'adresse. Ensemble, ils donnent le taux de réponse, la part de
-« oui », et combien la demande fait fuir.
+`feedback_request_sent` (`delivered`, `langue`, `version`) à chaque envoi,
+`feedback_utility_answered` (`reponse` : `oui` ou `non`, `delaiDepuisEnvoiS`,
+`version`) à la première réponse en un clic, et `feedback_unsubscribed` à la
+désinscription — avec le seul `sub`, jamais l'adresse. Ensemble, ils donnent le taux
+de réponse, la part de « oui », et combien la demande fait fuir. `version` est la
+`CONSIGNES_VERSION` du gabarit envoyé ; pour une réponse, celle du dernier courriel
+délivré au compte. Les événements antérieurs au 25/11/2026, sans `version`, relèvent
+de `2026-11-01.1`. `python3 - retours` compare les versions entre elles.
 
 `name_feedback_added` (`origine` : `suggestion` ou `saisie`, `actifs` : nombre de retours
 après ajout) marque un retour sur les noms enregistré — à la fin de la recherche qui le
@@ -812,6 +815,9 @@ ssh namorama-prod "python3 - ajouts"   < scripts/analyze-logs.py
 
 # Réponses au bandeau de cookies : part des visites enregistrables (rejeu)
 ssh namorama-prod "python3 - consentement" < scripts/analyze-logs.py
+
+# Demandes de retour par version du gabarit : réponses, part de « oui », désinscriptions
+ssh namorama-prod "python3 - retours" < scripts/analyze-logs.py
 
 # Requêtes les plus lentes / codes de statut par route / lignes brutes
 ssh namorama-prod "python3 - slow"   < scripts/analyze-logs.py
@@ -1262,11 +1268,33 @@ haut (« D'où vient une visite »).
 Deux voies, un même message en deux temps (chantier `demande-de-retour-automatique`,
 01/11/2026) :
 
-1. **« Namorama vous a-t-il été utile ? »** — deux liens, **Oui** et **Non**. L'une ou
-   l'autre réponse rapporte **100 crédits**, une seule fois par compte, sans connexion.
+1. **« Avez-vous trouvé un nom qui vous plaît ? »** — deux boutons, **Oui, j'en ai
+   un** et **Pas encore** (enregistrés `oui` / `non`). L'une ou l'autre réponse rapporte
+   **100 crédits**, une seule fois par compte, sans connexion.
 2. **Le retour détaillé** — ce qui a plu, ce qui a bloqué, ce qui mérite d'être
    amélioré — par réponse au courriel ou par `/app?avis=1`, contre **500 crédits**
    validés à la main dans l'onglet Feedbacks.
+
+#### La question d'abord, en boutons
+
+Du 01 au 25/11/2026, la question était « Namorama vous a-t-il été utile ? », en deux
+liens texte sur une ligne, sous une présentation, avec l'objet « Une question rapide
+sur Namorama ». Résultat : **34 courriels délivrés, 0 réponse, 0 retour écrit, une
+désinscription** 22 s après l'envoi. La délivrabilité n'y était pour rien (mail-tester
+10/10, lu en boîte de réception Gmail). D'où le chantier `refondre-le-courriel-de-retour` :
+
+- **La question est l'objet** du courriel (`OBJET`, sans emoji) et sa première ligne
+  après « Bonjour ». La présentation du signataire vient **après** les réponses :
+  c'est la question que doit montrer l'aperçu.
+- **Une question sur la personne, pas sur le produit.** « Utile ? » demandait de juger
+  un outil quitté la veille ; « avez-vous trouvé un nom ? » mesure aussi le résultat.
+- **Deux boutons identiques** (`mettreEnPage`) : tout lien nommé vers `/retour?j=`
+  devient un bouton ; seul dans son paragraphe, il rejoint une rangée de deux cellules
+  de même largeur (163 × 46 px à 390 px). Même couleur pour les deux : en mettre un en
+  avant fausserait la mesure. Le reste reste du texte nu ; voir
+  `docs/systeme-de-design.md` §5, « Bouton de réponse d'e-mail ».
+- **Comparer avant / après, pas en A/B** : à ~35 envois par mois, deux groupes ne
+  départageraient rien. Chaque envoi et chaque réponse portent `version`.
 
 #### Envoi automatique, 24 h après l'inscription
 
@@ -1283,8 +1311,8 @@ leur premier jour, relevé du 22/09/2026).
 - **Un seul envoi par compte**, garanti par la ligne : `user.demandeRetourAt` est posé
   par `UPDATE … WHERE demandeRetourAt IS NULL` **avant** l'envoi. Un refus SMTP laisse
   la réservation — pas de relance en boucle — et se lit dans l'historique du dialogue.
-- **Aucun appel au modèle** : gabarit fixe, ouverture « vous avez créé votre compte
-  hier », signature de `FEEDBACK_SIGNATAIRE`. Une phrase générée partirait sans
+- **Aucun appel au modèle** : gabarit fixe, présentation suivie de « vous avez créé
+  votre compte hier, d'où cette question », signature de `FEEDBACK_SIGNATAIRE`. Une phrase générée partirait sans
   relecture, sur un compte qui n'a souvent presque rien fait.
 - **Langue** : `locale` Keycloak, sinon `user.langueInscription` (premier
   `Accept-Language` traduit, capté à la création du compte), sinon français.
@@ -1331,11 +1359,11 @@ envoi. Il sert aux comptes antérieurs à l'envoi automatique et aux relances ch
 - **De la correspondance, pas de la prospection.** Un message qui pourrait partir
   tel quel à quelqu'un d'autre est un publipostage : les consignes exigent un ou
   deux faits concrets du compte et des questions adaptées à l'endroit où il s'est
-  arrêté. HTML nu, sans logo ni pied de page, avec une version texte.
+  arrêté. HTML nu, sans logo ni pied de page — seuls les deux liens de réponse deviennent des boutons —, avec une version texte.
 - **Un gabarit fixe, une phrase personnalisée.** Le message est le texte de Nicolas,
-  traduit (`GABARITS`, sept langues) : présentation en une ligne, la question d'utilité
-  et ses liens signés pour le destinataire, puis la demande détaillée et les 500
-  crédits. Le modèle n'écrit qu'**une phrase**
+  traduit (`GABARITS`, sept langues) : la question et ses deux boutons signés pour le
+  destinataire, puis la présentation en une ligne suivie de la phrase du modèle, puis
+  la demande détaillée et les 500 crédits. Le modèle n'écrit qu'**une phrase**
   de 30 mots au plus, « J'ai vu que vous… », qui rappelle le sujet de sa recherche
   et au plus un nom (rapport acheté, sinon favori). Des faits, aucune hypothèse.
   **Jamais le nom du projet** : il est généré par `suggest_name`, l'utilisateur ne
@@ -1350,8 +1378,8 @@ envoi. Il sert aux comptes antérieurs à l'envoi automatique et aux relances ch
   modèle la déduit alors en croisant descriptions, prénom et extension de l'adresse
   — une description en anglais ne suffit pas, beaucoup de francophones décrivent
   ainsi un produit international — et la renvoie : objet et signature la suivent.
-- **Objet fixe**, traduit : « Une question rapide sur Namorama » (`OBJET`) — ce
-  qu'écrirait une personne.
+- **Objet fixe**, traduit : la question elle-même, « Avez-vous trouvé un nom qui vous
+  plaît ? » (`OBJET`), comme pour l'envoi automatique.
 - **Expéditeur : « Namorama » <`SMTP_FROM`>**, réponses à la même adresse. Un nom de
   personne sur une adresse générique ressemble à une usurpation : c'est ce qu'a
   montré un test Gmail le 25/09/2026 (SPF, DKIM et DMARC pourtant à « pass »). La

@@ -60,7 +60,7 @@ alternance sombre → clair → sombre est une composition, fixe. L'application 
 | Sections claires de l'accueil (4 contrôles, comparatif, FAQ) | éditorial, **toujours clair** | palette `--nm-*-light` |
 | Wizard, grille de résultats, rapport (deux états), dialogues, tiroir des projets, compte, pages SEO, admin | applicatif, **suit le thème** | rôles `--nm-app-*` uniquement |
 | Rapport imprimé / PDF | toujours clair | forcé par `@media print` (`theme.css`) |
-| E-mails, thème Keycloak | toujours clair, styles figés | valeurs recopiées, accent `#0d7a4e` |
+| E-mails, thème Keycloak | toujours clair, styles figés | valeurs recopiées, accent `#0d7a4e` ; seul bouton : le bouton de réponse (§5) |
 
 - **Un composant applicatif n'emploie jamais un jeton de palette** (`--nm-text-dark-2`) : il
   ne basculerait pas. Un composant éditorial n'emploie jamais un rôle : il basculerait.
@@ -178,6 +178,31 @@ résorbent vers lui, chantier après chantier.
   `severity="danger"` **uniquement** pour une action destructrice (supprimer un projet, un
   compte). Pas de `success`, pas de `[rounded]` hors icône seule.
 - Désactivé et focus sont dans les classes : on ne les redéfinit pas.
+
+### Bouton de réponse d'e-mail
+
+Le seul bouton qu'un e-mail se permet. Les e-mails restent du **texte nu** : ni logo, ni
+image, ni bandeau, ni pied de page, pour ressembler à ce qu'ils sont, un message d'une
+personne. Le bouton sert uniquement à une **réponse en un clic** : aujourd'hui, « Oui, j'en
+ai un » / « Pas encore » sous « Avez-vous trouvé un nom qui vous plaît ? » dans la demande de
+retour. Il ne sert jamais à un appel commercial (acheter, découvrir, revenir).
+
+- **Rendu** : `mettreEnPage` (`api/src/admin/admin-mail.service.ts`). Une cellule de tableau
+  porte le fond, un lien porte le texte. Fond `#0d7a4e`, texte blanc gras, `padding`
+  14 × 22 px, rayon 8. Deux cellules de **même largeur** (48 % chacune, écart de 4 %), dans
+  un tableau de 340 px au plus : 163 × 46 px chacun à 390 px, au-dessus du plancher tactile
+  de 44. Sans largeur imposée, chaque bouton prenait celle de son libellé, et le plus long
+  paraissait le principal.
+- **Déclenchement par l'adresse** : tout lien nommé vers `/retour?j=` devient un bouton. Un
+  paragraphe qui ne contient que de tels liens devient une rangée de boutons. Le corps reste
+  du texte qu'on retouche sans balisage.
+- **Libellés de moins de 20 caractères**, pour tenir à deux par ligne à 390 px. La version
+  texte du courriel garde « libellé (adresse) ».
+- **Exception assumée à la règle 5** (« un seul bouton principal par zone ») : les deux
+  réponses ont le **même** bouton. Elles valent pareil et rapportent pareil ; en mettre une
+  en avant fausserait la mesure. Décision du chantier `refondre-le-courriel-de-retour`, après
+  0 clic sur 36 envois quand les réponses étaient deux liens texte sur une ligne.
+- Le lien de désinscription reste un lien texte, en bas du message.
 
 ### Verdict de disponibilité
 

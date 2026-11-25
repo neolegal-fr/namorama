@@ -1,6 +1,7 @@
 import { RetoursController } from './retours.controller';
 import { CREDITS_UTILITE, RetoursService } from './retours.service';
 import { signerLien } from './liens-de-retour';
+import { AdminMail } from '../admin/entities/admin-mail.entity';
 
 /**
  * Chantier `demande-de-retour-automatique` : un clic « oui » ou « non »
@@ -10,7 +11,10 @@ import { signerLien } from './liens-de-retour';
 const SECRET = 'secret-de-test';
 const SUB = 'sub-lea';
 
-function fabrique(compte: { utilite?: string | null; utiliteAt?: Date | null; desinscritRetoursAt?: Date | null; demandeRetourAt?: Date | null } | null) {
+function fabrique(
+  compte: { utilite?: string | null; utiliteAt?: Date | null; desinscritRetoursAt?: Date | null; demandeRetourAt?: Date | null } | null,
+  dernierCourriel: { promptVersion: string | null } | null = null,
+) {
   const etat = compte ? { keycloakId: SUB, extraCredits: 0, utilite: null, utiliteAt: null, desinscritRetoursAt: null, demandeRetourAt: null, ...compte } : null;
   // `UPDATE … WHERE <champ> IS NULL` : ne touche la ligne que si le champ est vide.
   const update = (champ: 'utiliteAt' | 'desinscritRetoursAt') => ({
@@ -27,7 +31,8 @@ function fabrique(compte: { utilite?: string | null; utiliteAt?: Date | null; de
   });
   const manager = {
     createQueryBuilder: () => ({ update: () => update('utiliteAt') }),
-    findOne: async () => etat,
+    // Le compte, ou le dernier courriel délivré (version du gabarit de la réponse).
+    findOne: jest.fn(async (entite: any) => (entite === AdminMail ? dernierCourriel : etat)),
     increment: jest.fn(async (_e: any, _w: any, _c: string, n: number) => { if (etat) etat.extraCredits += n; }),
   };
   const dataSource = {
@@ -49,6 +54,30 @@ describe('POST /retours/utilite', () => {
     expect(etat!.extraCredits).toBe(100);
     expect(etat!.utilite).toBe('non');
     expect(events.event).toHaveBeenCalledWith('feedback_utility_answered', expect.objectContaining({ userId: SUB, reponse: 'non' }));
+  });
+
+  describe('version du gabarit (refondre-le-courriel-de-retour)', () => {
+    it('réponse au courriel du nouveau gabarit : sa version', async () => {
+      const { ctrl, events, manager } = fabrique({}, { promptVersion: '2026-11-25.1' });
+      await ctrl.repondre({ j: signerLien(SECRET, SUB, 'oui') });
+      expect(events.event).toHaveBeenCalledWith('feedback_utility_answered', expect.objectContaining({ reponse: 'oui', version: '2026-11-25.1' }));
+      expect(manager.findOne).toHaveBeenCalledWith(AdminMail, expect.objectContaining({
+        where: { keycloakId: SUB, delivered: true }, order: { createdAt: 'DESC', id: 'DESC' },
+      }));
+    });
+
+    it('lien d\'un courriel antérieur, encore valide : enregistré et crédité, rattaché à l\'ancienne version', async () => {
+      const { ctrl, etat, events } = fabrique({}, { promptVersion: '2026-11-01.1' });
+      await expect(ctrl.repondre({ j: signerLien(SECRET, SUB, 'oui') })).resolves.toMatchObject({ enregistree: true, credits: 100 });
+      expect(etat!.extraCredits).toBe(100);
+      expect(events.event).toHaveBeenCalledWith('feedback_utility_answered', expect.objectContaining({ version: '2026-11-01.1' }));
+    });
+
+    it('aucun courriel délivré retrouvé : version nulle', async () => {
+      const { ctrl, events } = fabrique({}, null);
+      await ctrl.repondre({ j: signerLien(SECRET, SUB, 'non') });
+      expect(events.event).toHaveBeenCalledWith('feedback_utility_answered', expect.objectContaining({ version: null }));
+    });
   });
 
   it('second clic, même sur l\'autre réponse : rien ne change, aucun crédit', async () => {

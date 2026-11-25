@@ -20,7 +20,7 @@ La demande SHALL poser d'abord la question « Avez-vous trouvé un nom qui vous 
 ### Requirement: Réponse oui ou non en un clic
 Un clic sur l'une des deux réponses SHALL enregistrer la réponse du compte (« oui » pour « Oui, j'en ai un », « non » pour « Pas encore ») et lui accorder 100 crédits, sans connexion. Les deux réponses MUST rapporter les mêmes crédits. Un compte MUST n'être récompensé qu'une fois, quel que soit le nombre de clics.
 
-#### Scenario: Premier clic sur « Pas encore »
+#### Scenario: Premier clic sur Non
 - **WHEN** l'utilisateur clique « Pas encore » dans sa demande
 - **THEN** la réponse « non » est enregistrée, son solde augmente de 100 crédits, et la page affichée le confirme
 

@@ -48,9 +48,10 @@ Ordre : salutation → **question** → les deux réponses → « Un clic suffit
 
 - Reconnaître les liens **par leur adresse**, et non par une syntaxe nouvelle, garde le corps éditable. Dans le dialogue manuel, l'administrateur retouche le texte sans connaître de balisage. Tant que les deux liens restent, les boutons restent.
 - Le bouton est un « bulletproof button » : une cellule de tableau qui porte le fond, et un `<a>` qui porte le texte, avec des styles en ligne. C'est la seule forme qu'Outlook et Gmail rendent pareil. Valeurs : fond `#0d7a4e` (l'accent des e-mails, §2 du système de design), texte blanc gras, `padding` de 14 px × 22 px, rayon 8 px. Le bouton fait ainsi environ 48 px de haut, au-dessus du plancher `--nm-touch-min` (44). Le `<a>` occupe toute la cellule.
-- **Les deux boutons sont identiques** : même couleur, même taille. C'est une exception assumée à « un seul bouton principal par zone » (§1, règle 5). Les deux réponses valent pareil et rapportent pareil ; en mettre une en avant fausserait la mesure, pour la même raison qui fait récompenser les deux également.
+- **Les deux boutons sont identiques** : même couleur, même taille. La taille est imposée par deux cellules de 48 % (écart de 4 %) dans un tableau de 340 px au plus. Sans elle, chaque bouton prenait la largeur de son libellé : relevé à la réalisation, 142 contre 117 px en français. C'est une exception assumée à « un seul bouton principal par zone » (§1, règle 5). Les deux réponses valent pareil et rapportent pareil ; en mettre une en avant fausserait la mesure, pour la même raison qui fait récompenser les deux également.
 - La version texte ne change pas : « Oui, j'en ai un (https://…) ».
 - `verifierBrouillon` vérifie toujours la présence des deux liens. Les boutons ne dépendent que d'eux.
+- Un lien de réponse glissé dans une phrase (brouillon manuel retouché) prend le même style de bouton, en ligne, sans tableau. Outlook pour Windows n'en rend pas le `padding`, mais le lien reste visible et cliquable. Ajouté à la réalisation (tâche 3.1).
 
 *Écarté : une syntaxe de bouton dans le texte* (`[[Oui]](…)`). C'est un balisage de plus à préserver dans le dialogue, et il s'afficherait tel quel dans la version texte. *Écarté : boutons de styles différents* (plein pour « Oui », contour pour « Pas encore ») : cela pousse vers une réponse. *Écarté : des liens texte agrandis*, chacun sur sa ligne : plus proche d'une lettre, mais la cible au doigt reste la hauteur d'une ligne de texte. *Écarté : passer tout le courriel en gabarit HTML* (logo, bandeau) : c'est ce qui le ferait ressembler à une campagne, ce que la règle du « HTML nu » évitait déjà.
 
@@ -74,7 +75,7 @@ Les nouveaux libellés (question, deux réponses, phrase des 100 crédits, objet
 
 - Événements : `feedback_request_sent` et `feedback_utility_answered` gagnent `version` (chaîne). Les champs existants ne changent pas.
 - Courriels : l'objet, l'ordre et les libellés changent, et le HTML contient deux boutons. Le jeton, les routes `/retours/*`, l'en-tête `List-Unsubscribe` et la version texte ne changent pas de forme.
-- Modèle : la consigne du courriel manuel (`consignes()`) ne change pas. Seule l'insertion de la phrase dans le gabarit change de place.
+- Modèle : la consigne du courriel manuel (`consignes()`) change d'une phrase. Elle situait la phrase du modèle « avant la question « Namorama vous a-t-il été utile ? » » : elle dit maintenant que la question « Avez-vous trouvé un nom qui vous plaît ? » vient avant, et la demande détaillée après. Les règles de rédaction ne changent pas. Écart relevé à la réalisation (tâche 2.1) : une consigne qui décrit un ordre faux aurait pu pousser le modèle à reprendre la question.
 - Aucune route, aucune migration, aucune variable d'environnement.
 
 ## Risks / Trade-offs

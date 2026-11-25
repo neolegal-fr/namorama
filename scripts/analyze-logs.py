@@ -14,6 +14,7 @@ Modes :
   rapports — rapports de marque : demandes, issues, et détail par utilisateur
   ajouts   — recherches qui rendent moins que demandé : seuil d’arrêt, tentatives
   consentement — réponses au bandeau, et part des visites enregistrables (rejeu)
+  retours  — demandes de retour par version du gabarit : réponses, « oui », désinscriptions
   slow     — requêtes les plus lentes
   http     — répartition des codes de statut par route
   raw      — dernières lignes, brutes
@@ -453,6 +454,70 @@ def consentement(rows):
         print(f"{modifs} modification(s) via « Gérer les cookies ».")
 
 
+# Les événements antérieurs au chantier `refondre-le-courriel-de-retour` ne
+# portent pas de version : un seul gabarit existait alors.
+VERSION_SANS_CHAMP = "2026-11-01.1"
+
+
+def retours(rows):
+    """Demandes de retour automatiques, par version du gabarit : qui répond.
+
+    Envois délivrés (`feedback_request_sent`), réponses en un clic
+    (`feedback_utility_answered`, avec la version du dernier courriel reçu) et
+    désinscriptions (`feedback_unsubscribed`, rattachées à la version du
+    dernier envoi au même compte). Les envois manuels n'émettent pas
+    d'événement d'envoi : leurs réponses comptent, pas leurs envois.
+    """
+    envois = defaultdict(int)
+    echecs = defaultdict(int)
+    dernier_envoi = {}
+    reponses = defaultdict(list)
+    desinscriptions = defaultdict(int)
+    for r in rows:
+        ctx = r.get("context")
+        if ctx == "feedback_request_sent":
+            v = r.get("version") or VERSION_SANS_CHAMP
+            if r.get("delivered") is False:
+                echecs[v] += 1
+                continue
+            envois[v] += 1
+            if r.get("userId"):
+                dernier_envoi[r["userId"]] = v
+        elif ctx == "feedback_utility_answered":
+            v = r.get("version") if "version" in r else VERSION_SANS_CHAMP
+            reponses[v or "inconnue"].append(r)
+        elif ctx == "feedback_unsubscribed":
+            desinscriptions[dernier_envoi.get(r.get("userId"), "inconnue")] += 1
+
+    versions = sorted(set(envois) | set(echecs) | set(reponses) | set(desinscriptions))
+    if not versions:
+        print("Aucune demande de retour dans les logs.")
+        return
+    print(f"  {'version':<14} {'délivrés':>9} {'échecs':>7} {'réponses':>9} {'taux':>7} {'« oui »':>8} {'délai méd.':>11} {'désinscr.':>10}")
+    for v in versions:
+        rep = reponses.get(v, [])
+        n = envois.get(v, 0)
+        oui = sum(1 for r in rep if r.get("reponse") == "oui")
+        delais = sorted(r["delaiDepuisEnvoiS"] for r in rep if isinstance(r.get("delaiDepuisEnvoiS"), (int, float)))
+        taux = f"{100 * len(rep) / n:.0f} %" if n else "—"
+        part_oui = f"{100 * oui / len(rep):.0f} %" if rep else "—"
+        median = _duree(delais[len(delais) // 2]) if delais else "—"
+        print(f"  {v:<14} {n:>9} {echecs.get(v, 0):>7} {len(rep):>9} {taux:>7} {part_oui:>8} {median:>11} {desinscriptions.get(v, 0):>10}")
+
+    rapides = [r for rep in reponses.values() for r in rep
+               if isinstance(r.get("delaiDepuisEnvoiS"), (int, float)) and r["delaiDepuisEnvoiS"] < 10]
+    if rapides:
+        print(f"\n{len(rapides)} réponse(s) en moins de 10 s : analyseur de messagerie qui exécute la page ?")
+
+
+def _duree(secondes):
+    if secondes < 3600:
+        return f"{secondes / 60:.0f} min"
+    if secondes < 86400:
+        return f"{secondes / 3600:.1f} h"
+    return f"{secondes / 86400:.1f} j"
+
+
 def raw(rows):
     for r in rows[-30:]:
         print(json.dumps(r, ensure_ascii=False)[:220])
@@ -466,6 +531,7 @@ MODES = {
     "nom": nom,
     "ajouts": ajouts,
     "consentement": consentement,
+    "retours": retours,
     "slow": slow,
     "http": http,
     "raw": raw,
