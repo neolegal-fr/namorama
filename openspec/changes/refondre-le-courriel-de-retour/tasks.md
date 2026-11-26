@@ -65,7 +65,8 @@
 
 ## 5. Livraison
 
-- [ ] 5.1 Rebaser sur `main`, ouvrir la PR, attendre la CI verte, merger, attendre le build, puis déployer l'API seule (`docker compose pull api && docker compose up -d api`). Vérification : conteneur `Up`, et `demande_retour_passage` journalisé au passage horaire suivant, sans erreur.
+- [x] 5.1 Rebaser sur `main`, ouvrir la PR, attendre la CI verte, merger, attendre le build, puis déployer l'API seule (`docker compose pull api && docker compose up -d api`). Vérification : conteneur `Up`, et `demande_retour_passage` journalisé au passage horaire suivant, sans erreur.
+  - PR #209 (CI verte), fusionnée le 25/11/2026 ; API et web déployés (le web pour l'infobulle admin). Conteneurs `Up`, image contenant `2026-11-25.1`, aucun avertissement au démarrage. Premier passage le 26/11 à 08:21 : `demande_retour_passage` sans échec (`eligibles: 0`).
 
 ## Workflow follow-up
 
